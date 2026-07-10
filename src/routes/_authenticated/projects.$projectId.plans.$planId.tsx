@@ -94,6 +94,7 @@ function PlanEditorPage() {
   const deleteBundleFn = useServerFn(deleteBundle);
   const listFreePortsFn = useServerFn(listFreePorts);
   const createCableFromPortFn = useServerFn(createCableFromPort);
+  const listPlanBranchesFn = useServerFn(listPlanBranches);
   const qc = useQueryClient();
 
 
