@@ -836,8 +836,9 @@ function PlanEditorPage() {
               })}
               {/* Racks */}
               {(racks.data ?? []).map((r) => {
-                const cx = Number(r.x);
-                const cy = Number(r.y);
+                const isDragging = dragTarget?.kind === "rack" && dragTarget.id === r.id && dragPos;
+                const cx = isDragging ? dragPos!.x : Number(r.x);
+                const cy = isDragging ? dragPos!.y : Number(r.y);
                 const s = 0.018 / zoom;
                 return (
                   <g key={r.id}>
@@ -849,6 +850,13 @@ function PlanEditorPage() {
                       fill="hsl(var(--foreground))"
                       stroke="hsl(var(--background))"
                       strokeWidth={0.002 / zoom}
+                      style={{ cursor: "grab" }}
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                        dragMovedRef.current = false;
+                        setDragTarget({ kind: "rack", id: r.id });
+                        setDragPos({ x: cx, y: cy });
+                      }}
                     />
                     <text
                       x={cx}
