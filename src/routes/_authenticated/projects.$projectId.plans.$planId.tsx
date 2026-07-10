@@ -34,6 +34,13 @@ import {
   updateRoutePoints,
 } from "@/lib/cableRoutes.functions";
 import {
+  addCablesToEndpoint,
+  assignRouteToEndpointCables,
+  listEndpointCables,
+  listUnassignedCables,
+  removeCableFromEndpoint,
+} from "@/lib/endpointGroups.functions";
+import {
   computeCableLength,
   metersPerNormUnit,
   normDistance,
