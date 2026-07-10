@@ -67,29 +67,45 @@ function ProjectDetailPage() {
             />
           </div>
 
-          <div className="mt-10 rounded-sm border border-dashed border-border p-6">
-            <h2 className="text-sm font-semibold">Obsah přijde v Checkpointu B</h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Dokumentace, plány s kalibrací, endpointy a kabelový registr.
-              V Checkpointu A je aktivní pouze základní struktura projektu, členů,
-              rolí a auditu.
-            </p>
-            <div className="mt-4 flex gap-2">
-              <Button asChild variant="outline" size="sm">
-                <Link to="/projects/$projectId/members" params={{ projectId }}>
-                  Členové
-                </Link>
-              </Button>
-              <Button asChild variant="outline" size="sm">
-                <Link to="/projects/$projectId/settings" params={{ projectId }}>
-                  Nastavení
-                </Link>
-              </Button>
+          <div className="mt-10">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-muted-foreground">
+              Sekce projektu
+            </h2>
+            <div className="grid gap-2 md:grid-cols-3">
+              <SectionLink projectId={projectId} to="/projects/$projectId/documents" title="Dokumenty" desc="Podklady, půdorysy, PDF" />
+              <SectionLink projectId={projectId} to="/projects/$projectId/plans" title="Plány" desc="Kalibrace, endpointy, trasy" />
+              <SectionLink projectId={projectId} to="/projects/$projectId/endpoints" title="Endpointy" desc="Seznam koncových bodů" />
+              <SectionLink projectId={projectId} to="/projects/$projectId/cable-types" title="Typy kabelů" desc="Číselník s rezervou" />
+              <SectionLink projectId={projectId} to="/projects/$projectId/cables" title="Kabelový registr" desc="Kabely, stavy, délky" />
+              <SectionLink projectId={projectId} to="/projects/$projectId/members" title="Členové" desc="Přístupy a role" />
             </div>
           </div>
         </>
       )}
     </AppShell>
+  );
+}
+
+function SectionLink({
+  projectId,
+  to,
+  title,
+  desc,
+}: {
+  projectId: string;
+  to: string;
+  title: string;
+  desc: string;
+}) {
+  return (
+    <Link
+      to={to as never}
+      params={{ projectId } as never}
+      className="rounded-sm border border-border bg-card p-4 transition-colors hover:border-accent"
+    >
+      <div className="font-semibold">{title}</div>
+      <div className="mt-1 text-xs text-muted-foreground">{desc}</div>
+    </Link>
   );
 }
 
