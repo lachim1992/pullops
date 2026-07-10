@@ -909,18 +909,27 @@ function PlanEditorPage() {
                     : isPatch
                       ? "hsl(var(--foreground))"
                       : "hsl(var(--primary))";
-                const cx = Number(ep.norm_x);
-                const cy = Number(ep.norm_y);
+                const isDragging = dragTarget?.kind === "endpoint" && dragTarget.id === ep.id && dragPos;
+                const cx = isDragging ? dragPos!.x : Number(ep.norm_x);
+                const cy = isDragging ? dragPos!.y : Number(ep.norm_y);
                 const r = 0.012 / zoom;
                 const sw = 0.002 / zoom;
+                const onHandleDown = (e: React.MouseEvent) => {
+                  e.stopPropagation();
+                  dragMovedRef.current = false;
+                  setDragTarget({ kind: "endpoint", id: ep.id });
+                  setDragPos({ x: cx, y: cy });
+                };
                 return (
                   <g
                     key={ep.id}
-                    style={{ cursor: "pointer" }}
+                    style={{ cursor: "grab" }}
                     onClick={(e) => {
                       e.stopPropagation();
+                      if (dragMovedRef.current) return;
                       setSelectedEndpointId(ep.id);
                     }}
+                    onMouseDown={onHandleDown}
                   >
                     {isPatch ? (
                       <rect
