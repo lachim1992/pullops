@@ -136,6 +136,9 @@ function CableDetailPage() {
           routeId: routeId || null,
           fromEndpointId: fromId || null,
           toEndpointId: toId || null,
+          fromPortId: fromPortId || null,
+          toPortId: toPortId || null,
+
           overrideLengthM: overrideNum,
           notes: notes.trim() ? notes.trim() : null,
         },
