@@ -48,7 +48,7 @@ import {
   metersPerNormUnit,
   normDistance,
   polylineNormLength,
-  closestPointOnPolyline,
+  
   type Calibration,
   type NormPoint,
 } from "@/lib/length";
