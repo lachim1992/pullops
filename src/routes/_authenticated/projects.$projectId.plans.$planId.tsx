@@ -166,6 +166,13 @@ function PlanEditorPage() {
   const [selectedEndpointId, setSelectedEndpointId] = useState<string | null>(null);
   const [draftPoints, setDraftPoints] = useState<NormPoint[]>([]);
   const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
+  type DragTarget =
+    | { kind: "endpoint"; id: string }
+    | { kind: "rack"; id: string }
+    | { kind: "bundle"; id: string; idx: number };
+  const [dragTarget, setDragTarget] = useState<DragTarget | null>(null);
+  const [dragPos, setDragPos] = useState<NormPoint | null>(null);
+  const dragMovedRef = useRef(false);
   // Rack mode
   const [pendingRackPos, setPendingRackPos] = useState<NormPoint | null>(null);
   const [newRackCode, setNewRackCode] = useState("");
