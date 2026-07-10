@@ -1038,3 +1038,230 @@ function RouteEndpointsForm({
     </div>
   );
 }
+
+type EndpointRow = {
+  id: string;
+  code: string;
+  label: string | null;
+  endpoint_kind: string;
+  norm_x: number | string;
+  norm_y: number | string;
+};
+
+type RouteRow = {
+  id: string;
+  name: string | null;
+  from_endpoint_id: string | null;
+  to_endpoint_id: string | null;
+  rack_endpoint_id?: string | null;
+};
+
+type EndpointCableRow = {
+  id: string;
+  sequence: number;
+  cable: {
+    id: string;
+    code: string;
+    status: string;
+    cable_type_id: string | null;
+    route_id: string | null;
+    computed_length_m: number | string | null;
+  } | null;
+};
+
+type UnassignedCable = { id: string; code: string; status: string };
+
+function EndpointOperationalPanel({
+  endpointId,
+  endpoint,
+  routes,
+  cables,
+  listUnassignedFn,
+  addFn,
+  removeFn,
+  assignRouteFn,
+  onClose,
+}: {
+  projectId: string;
+  floorPlanId: string;
+  endpointId: string;
+  endpoint: EndpointRow | null;
+  routes: RouteRow[];
+  cables: EndpointCableRow[];
+  listUnassignedFn: () => Promise<UnassignedCable[]>;
+  addFn: (cableIds: string[]) => Promise<void>;
+  removeFn: (cableId: string) => Promise<void>;
+  assignRouteFn: (routeId: string) => Promise<number>;
+  onClose: () => void;
+}) {
+  const [showAdd, setShowAdd] = useState(false);
+  const [unassigned, setUnassigned] = useState<UnassignedCable[]>([]);
+  const [pickedIds, setPickedIds] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState("");
+
+  const routeForEndpoint = routes.find(
+    (r) => r.to_endpoint_id === endpointId || r.from_endpoint_id === endpointId,
+  );
+
+  async function openAdd() {
+    setShowAdd(true);
+    setPickedIds(new Set());
+    try {
+      const list = await listUnassignedFn();
+      setUnassigned(list);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Chyba");
+    }
+  }
+
+  async function confirmAdd() {
+    if (pickedIds.size === 0) return setShowAdd(false);
+    try {
+      await addFn(Array.from(pickedIds));
+      toast.success(`Přidáno ${pickedIds.size} kabelů`);
+      setShowAdd(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Chyba");
+    }
+  }
+
+  async function useRouteForGroup() {
+    if (!routeForEndpoint) return toast.error("Endpoint nemá trasu");
+    try {
+      const n = await assignRouteFn(routeForEndpoint.id);
+      toast.success(`Trasa přiřazena ${n} kabelům`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Chyba");
+    }
+  }
+
+  const filtered = search
+    ? unassigned.filter((c) => c.code.toLowerCase().includes(search.toLowerCase()))
+    : unassigned;
+
+  return (
+    <div className="rounded-sm border-2 border-destructive p-3 text-sm">
+      <div className="mb-2 flex items-center justify-between">
+        <div>
+          <div className="font-semibold">
+            Endpoint {endpoint?.code ?? "…"}
+          </div>
+          <div className="text-[11px] text-muted-foreground">
+            {endpoint?.label ?? endpoint?.endpoint_kind} · operační jednotka
+          </div>
+        </div>
+        <Button size="sm" variant="ghost" onClick={onClose}>
+          ✕
+        </Button>
+      </div>
+
+      <div className="mb-2 flex items-center justify-between text-xs">
+        <span className="font-mono">
+          Kabelů: <span className="font-semibold">{cables.length}</span>
+        </span>
+        <Button size="sm" variant="outline" onClick={openAdd}>
+          + Přidat kabely
+        </Button>
+      </div>
+
+      <div className="max-h-64 divide-y divide-border overflow-y-auto rounded-sm border border-border">
+        {cables.length === 0 ? (
+          <div className="p-3 text-center text-xs text-muted-foreground">
+            Zatím žádné kabely. Přidejte je z registru.
+          </div>
+        ) : (
+          cables.map((row) => (
+            <div key={row.id} className="flex items-center gap-2 p-2">
+              <div className="flex-1">
+                <div className="font-mono text-xs">{row.cable?.code}</div>
+                <div className="text-[10px] text-muted-foreground">
+                  {row.cable?.status}
+                  {row.cable?.route_id ? " · má trasu" : " · bez trasy"}
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => row.cable && removeFn(row.cable.id)}
+              >
+                ✕
+              </Button>
+            </div>
+          ))
+        )}
+      </div>
+
+      {cables.length > 0 && routeForEndpoint && (
+        <Button
+          size="sm"
+          variant="secondary"
+          className="mt-2 w-full"
+          onClick={useRouteForGroup}
+        >
+          Použít trasu „{routeForEndpoint.name ?? routeForEndpoint.id.slice(0, 6)}" pro celou skupinu
+        </Button>
+      )}
+      {cables.length > 0 && !routeForEndpoint && (
+        <div className="mt-2 rounded-sm bg-muted/40 p-2 text-[11px] text-muted-foreground">
+          Endpoint zatím nemá trasu. V módu „Trasy" vytvořte trasu Rack → tento endpoint.
+        </div>
+      )}
+
+      <Dialog open={showAdd} onOpenChange={setShowAdd}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Přidat kabely do skupiny</DialogTitle>
+          </DialogHeader>
+          <Input
+            placeholder="Hledat podle kódu…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <div className="max-h-72 divide-y divide-border overflow-y-auto rounded-sm border border-border">
+            {filtered.length === 0 ? (
+              <div className="p-3 text-center text-xs text-muted-foreground">
+                Žádné nezařazené kabely.
+              </div>
+            ) : (
+              filtered.map((c) => {
+                const picked = pickedIds.has(c.id);
+                return (
+                  <label
+                    key={c.id}
+                    className="flex cursor-pointer items-center gap-2 p-2 hover:bg-muted/40"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={picked}
+                      onChange={() => {
+                        setPickedIds((s) => {
+                          const n = new Set(s);
+                          if (picked) n.delete(c.id);
+                          else n.add(c.id);
+                          return n;
+                        });
+                      }}
+                    />
+                    <span className="flex-1 font-mono text-xs">{c.code}</span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {c.status}
+                    </span>
+                  </label>
+                );
+              })
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAdd(false)}>
+              Zrušit
+            </Button>
+            <Button onClick={confirmAdd}>
+              Přidat ({pickedIds.size})
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
