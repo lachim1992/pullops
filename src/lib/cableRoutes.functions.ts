@@ -51,7 +51,7 @@ export const listRoutes = createServerFn({ method: "GET" })
     let q = supabase
       .from("cable_routes")
       .select(
-        "id, name, floor_plan_id, from_endpoint_id, to_endpoint_id, manual_length_m, updated_at",
+        "id, name, floor_plan_id, from_endpoint_id, to_endpoint_id, rack_endpoint_id, manual_length_m, updated_at",
       )
       .eq("project_id", data.projectId);
     if (data.floorPlanId) q = q.eq("floor_plan_id", data.floorPlanId);
