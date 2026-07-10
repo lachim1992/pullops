@@ -75,6 +75,7 @@ export type Database = {
           created_by: string | null
           floor_plan_id: string
           id: string
+          is_primary: boolean
           notes: string | null
           points: Json
           project_id: string
@@ -87,6 +88,7 @@ export type Database = {
           created_by?: string | null
           floor_plan_id: string
           id?: string
+          is_primary?: boolean
           notes?: string | null
           points?: Json
           project_id: string
@@ -99,6 +101,7 @@ export type Database = {
           created_by?: string | null
           floor_plan_id?: string
           id?: string
+          is_primary?: boolean
           notes?: string | null
           points?: Json
           project_id?: string
@@ -277,6 +280,7 @@ export type Database = {
           default_reserve_m: number
           description: string | null
           id: string
+          meters_per_hour: number | null
           organization_id: string
           project_id: string
           updated_at: string
@@ -288,6 +292,7 @@ export type Database = {
           default_reserve_m?: number
           description?: string | null
           id?: string
+          meters_per_hour?: number | null
           organization_id: string
           project_id: string
           updated_at?: string
@@ -299,6 +304,7 @@ export type Database = {
           default_reserve_m?: number
           description?: string | null
           id?: string
+          meters_per_hour?: number | null
           organization_id?: string
           project_id?: string
           updated_at?: string
@@ -1050,6 +1056,76 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pull_tasks: {
+        Row: {
+          cable_id: string
+          created_at: string
+          created_by: string | null
+          done_at: string | null
+          id: string
+          notes: string | null
+          order_index: number
+          organization_id: string
+          project_id: string
+          spool_group: string | null
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          cable_id: string
+          created_at?: string
+          created_by?: string | null
+          done_at?: string | null
+          id?: string
+          notes?: string | null
+          order_index?: number
+          organization_id: string
+          project_id: string
+          spool_group?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          cable_id?: string
+          created_at?: string
+          created_by?: string | null
+          done_at?: string | null
+          id?: string
+          notes?: string | null
+          order_index?: number
+          organization_id?: string
+          project_id?: string
+          spool_group?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pull_tasks_cable_id_fkey"
+            columns: ["cable_id"]
+            isOneToOne: false
+            referencedRelation: "cables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pull_tasks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pull_tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
