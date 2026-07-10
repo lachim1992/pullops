@@ -689,6 +689,29 @@ function PlanEditorPage() {
                   ))}
                 </>
               )}
+              {/* Branch lines: bundle anchor → cable endpoint */}
+              {(branches.data ?? []).map((br) => {
+                const pts = br.branchPoints ?? [];
+                if (pts.length < 2) return null;
+                return (
+                  <g key={br.id}>
+                    <polyline
+                      points={pts.map((p) => `${p.x},${p.y}`).join(" ")}
+                      fill="none"
+                      stroke="hsl(var(--accent))"
+                      strokeOpacity={0.75}
+                      strokeWidth={0.003 / zoom}
+                      strokeLinejoin="round"
+                    />
+                    <circle
+                      cx={pts[0].x}
+                      cy={pts[0].y}
+                      r={0.004 / zoom}
+                      fill="hsl(var(--accent))"
+                    />
+                  </g>
+                );
+              })}
               {/* Racks */}
               {(racks.data ?? []).map((r) => {
                 const cx = Number(r.x);
