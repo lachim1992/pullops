@@ -864,7 +864,7 @@ function NewRouteDialog({
 }: {
   projectId: string;
   floorPlanId: string;
-  endpoints: Array<{ id: string; code: string }>;
+  endpoints: Array<{ id: string; code: string; endpoint_kind: string }>;
   onCreated: (id: string) => void | Promise<void>;
   createFn: (input: {
     projectId: string;
@@ -872,29 +872,41 @@ function NewRouteDialog({
     name?: string;
     fromEndpointId?: string | null;
     toEndpointId?: string | null;
+    rackEndpointId?: string | null;
   }) => Promise<string>;
 }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
-  const [fromId, setFromId] = useState<string>("");
-  const [toId, setToId] = useState<string>("");
+  const [rackId, setRackId] = useState<string>("");
+  const [endId, setEndId] = useState<string>("");
+
+  const rackCandidates = endpoints.filter((e) => e.endpoint_kind === "PATCH");
+  const endCandidates = endpoints.filter((e) => e.endpoint_kind !== "PATCH");
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!rackId || !endId) {
+      toast.error("Vyberte rack point i end point");
+      return;
+    }
     try {
+      const rackEp = endpoints.find((x) => x.id === rackId);
+      const endEp = endpoints.find((x) => x.id === endId);
+      const autoName = name.trim() || `${rackEp?.code ?? "RACK"} → ${endEp?.code ?? ""}`;
       const id = await createFn({
         projectId,
         floorPlanId,
-        name: name.trim() || undefined,
-        fromEndpointId: fromId || null,
-        toEndpointId: toId || null,
+        name: autoName,
+        rackEndpointId: rackId,
+        fromEndpointId: rackId,
+        toEndpointId: endId,
       });
       toast.success("Trasa vytvořena");
       await onCreated(id);
       setOpen(false);
       setName("");
-      setFromId("");
-      setToId("");
+      setRackId("");
+      setEndId("");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Chyba");
     }
@@ -909,44 +921,53 @@ function NewRouteDialog({
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Nová trasa</DialogTitle>
+          <DialogTitle>Nová trasa Rack → Endpoint</DialogTitle>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-3">
-          <div className="space-y-1.5">
-            <Label>Název</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="např. 201-CSO01" />
-          </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1.5">
-              <Label>Od</Label>
+              <Label>Rack point (start)</Label>
               <select
                 className="w-full rounded-sm border border-input bg-background px-3 py-1.5 text-sm"
-                value={fromId}
-                onChange={(e) => setFromId(e.target.value)}
+                value={rackId}
+                onChange={(e) => setRackId(e.target.value)}
               >
                 <option value="">—</option>
-                {endpoints.map((ep) => (
+                {rackCandidates.map((ep) => (
                   <option key={ep.id} value={ep.id}>
                     {ep.code}
                   </option>
                 ))}
               </select>
+              {rackCandidates.length === 0 && (
+                <div className="text-[10px] text-destructive">
+                  Vytvořte endpoint typu PATCH.
+                </div>
+              )}
             </div>
             <div className="space-y-1.5">
-              <Label>Do</Label>
+              <Label>End point (cíl)</Label>
               <select
                 className="w-full rounded-sm border border-input bg-background px-3 py-1.5 text-sm"
-                value={toId}
-                onChange={(e) => setToId(e.target.value)}
+                value={endId}
+                onChange={(e) => setEndId(e.target.value)}
               >
                 <option value="">—</option>
-                {endpoints.map((ep) => (
+                {endCandidates.map((ep) => (
                   <option key={ep.id} value={ep.id}>
                     {ep.code}
                   </option>
                 ))}
               </select>
             </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Název (volitelné)</Label>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="auto: RACK → CODE"
+            />
           </div>
           <DialogFooter>
             <Button type="submit">Vytvořit</Button>
