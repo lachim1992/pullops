@@ -134,10 +134,6 @@ function PlanEditorPage() {
     queryFn: () => listEpCablesFn({ data: { endpointId: selectedEndpointId! } }),
     enabled: !!selectedEndpointId,
   });
-  const cableCountsByEp = useMemo(() => {
-    // rough map from routes / endpointCables cannot cover all; we fetch per selected only.
-    return new Map<string, number>();
-  }, []);
 
   const cal = plan.data?.calibration;
   const calibration: Calibration | null = cal
