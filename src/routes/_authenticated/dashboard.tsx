@@ -245,3 +245,41 @@ function NewProjectDialog({ organizationId }: { organizationId: string }) {
     </Dialog>
   );
 }
+
+function SeedDemoButton({ organizationId }: { organizationId: string }) {
+  const [loading, setLoading] = useState(false);
+  const seed = useServerFn(seedCeskeBudejoviceDemo);
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
+  async function run() {
+    if (!confirm("Vytvořit demo projekt McDonald's České Budějovice II?")) return;
+    setLoading(true);
+    try {
+      const { projectId, panels, cables, endpoints } = await seed({
+        data: { organizationId },
+      });
+      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+      toast.success(
+        `Demo vytvořeno: ${panels} panelů, ${endpoints} endpointů, ${cables} kabelů`,
+      );
+      navigate({ to: "/projects/$projectId", params: { projectId } });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Chyba");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Button variant="outline" onClick={run} disabled={loading}>
+      {loading ? (
+        <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+      ) : (
+        <Sparkles className="mr-1 h-4 w-4" />
+      )}
+      Nahrát demo ČB2
+    </Button>
+  );
+}
+
