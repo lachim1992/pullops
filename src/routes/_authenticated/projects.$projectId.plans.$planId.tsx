@@ -34,6 +34,13 @@ import {
   updateRoutePoints,
 } from "@/lib/cableRoutes.functions";
 import {
+  addCablesToEndpoint,
+  assignRouteToEndpointCables,
+  listEndpointCables,
+  listUnassignedCables,
+  removeCableFromEndpoint,
+} from "@/lib/endpointGroups.functions";
+import {
   computeCableLength,
   metersPerNormUnit,
   normDistance,
@@ -70,6 +77,11 @@ function PlanEditorPage() {
   const updateRoutePointsFn = useServerFn(updateRoutePoints);
   const deleteRouteFn = useServerFn(deleteRoute);
   const listDocsFn = useServerFn(listProjectDocuments);
+  const listEpCablesFn = useServerFn(listEndpointCables);
+  const listUnassignedFn = useServerFn(listUnassignedCables);
+  const addCablesFn = useServerFn(addCablesToEndpoint);
+  const removeCableFn = useServerFn(removeCableFromEndpoint);
+  const assignRouteFn = useServerFn(assignRouteToEndpointCables);
   const qc = useQueryClient();
 
 
@@ -112,9 +124,16 @@ function PlanEditorPage() {
   >("WORKSTATION");
   const [pendingPos, setPendingPos] = useState<NormPoint | null>(null);
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
+  const [selectedEndpointId, setSelectedEndpointId] = useState<string | null>(null);
   const [draftPoints, setDraftPoints] = useState<NormPoint[]>([]);
   const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+
+  const endpointCables = useQuery({
+    queryKey: ["endpoint-cables", selectedEndpointId],
+    queryFn: () => listEpCablesFn({ data: { endpointId: selectedEndpointId! } }),
+    enabled: !!selectedEndpointId,
+  });
 
   const cal = plan.data?.calibration;
   const calibration: Calibration | null = cal
@@ -378,24 +397,65 @@ function PlanEditorPage() {
                 strokeDasharray="0.01 0.005"
               />
             )}
-            {(endpoints.data ?? []).map((ep) => (
-              <g key={ep.id}>
-                <circle
-                  cx={Number(ep.norm_x)}
-                  cy={Number(ep.norm_y)}
-                  r={0.01}
-                  fill={
-                    mode === "route" &&
-                    (ep.id === currentRoute?.from_endpoint_id ||
-                      ep.id === currentRoute?.to_endpoint_id)
-                      ? "hsl(var(--accent))"
-                      : "hsl(var(--primary))"
-                  }
-                  stroke="white"
-                  strokeWidth={0.002}
-                />
-              </g>
-            ))}
+            {(endpoints.data ?? []).map((ep) => {
+              const isPatch = ep.endpoint_kind === "PATCH";
+              const isRouteEnd =
+                mode === "route" &&
+                (ep.id === currentRoute?.from_endpoint_id ||
+                  ep.id === currentRoute?.to_endpoint_id ||
+                  ep.id === currentRoute?.rack_endpoint_id);
+              const isSelected = ep.id === selectedEndpointId;
+              const fill = isRouteEnd
+                ? "hsl(var(--accent))"
+                : isSelected
+                  ? "hsl(var(--destructive))"
+                  : isPatch
+                    ? "hsl(var(--foreground))"
+                    : "hsl(var(--primary))";
+              const cx = Number(ep.norm_x);
+              const cy = Number(ep.norm_y);
+              return (
+                <g
+                  key={ep.id}
+                  style={{ cursor: "pointer" }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedEndpointId(ep.id);
+                  }}
+                >
+                  {isPatch ? (
+                    <rect
+                      x={cx - 0.012}
+                      y={cy - 0.012}
+                      width={0.024}
+                      height={0.024}
+                      fill={fill}
+                      stroke="white"
+                      strokeWidth={0.002}
+                    />
+                  ) : (
+                    <circle
+                      cx={cx}
+                      cy={cy}
+                      r={0.012}
+                      fill={fill}
+                      stroke="white"
+                      strokeWidth={0.002}
+                    />
+                  )}
+                  <text
+                    x={cx}
+                    y={cy - 0.018}
+                    textAnchor="middle"
+                    fontSize={0.014}
+                    fill="hsl(var(--foreground))"
+                    style={{ pointerEvents: "none", userSelect: "none" }}
+                  >
+                    {ep.code}
+                  </text>
+                </g>
+              );
+            })}
             {mode === "route" && draftPoints.length > 1 && (
               <polyline
                 points={draftPoints.map((p) => `${p.x},${p.y}`).join(" ")}
@@ -458,6 +518,50 @@ function PlanEditorPage() {
               PDF nebo obrázek nahraný v sekci Dokumenty.
             </div>
           </div>
+
+          {selectedEndpointId && (
+            <EndpointOperationalPanel
+              projectId={projectId}
+              floorPlanId={planId}
+              endpointId={selectedEndpointId}
+              endpoint={
+                (endpoints.data ?? []).find((e) => e.id === selectedEndpointId) ?? null
+              }
+              routes={routes.data ?? []}
+              cables={endpointCables.data ?? []}
+              listUnassignedFn={async () =>
+                listUnassignedFn({ data: { projectId } })
+              }
+              addFn={async (cableIds) => {
+                await addCablesFn({
+                  data: { projectId, endpointId: selectedEndpointId, cableIds },
+                });
+                await qc.invalidateQueries({
+                  queryKey: ["endpoint-cables", selectedEndpointId],
+                });
+              }}
+              removeFn={async (cableId) => {
+                await removeCableFn({
+                  data: { endpointId: selectedEndpointId, cableId },
+                });
+                await qc.invalidateQueries({
+                  queryKey: ["endpoint-cables", selectedEndpointId],
+                });
+              }}
+              assignRouteFn={async (routeId) => {
+                const res = await assignRouteFn({
+                  data: { endpointId: selectedEndpointId, routeId },
+                });
+                await qc.invalidateQueries({
+                  queryKey: ["endpoint-cables", selectedEndpointId],
+                });
+                await qc.invalidateQueries({ queryKey: ["cables", projectId] });
+                return res.count ?? 0;
+              }}
+              onClose={() => setSelectedEndpointId(null)}
+            />
+          )}
+
 
           {mode === "calibrate" && (
             <div className="rounded-sm border border-border p-3 text-sm">
@@ -713,7 +817,7 @@ function PdfPlanBackground({ url, title }: { url: string; title: string }) {
         const context = canvas.getContext("2d");
         if (!context) throw new Error("Canvas není dostupný");
 
-        const task = page.render({ canvas, canvasContext: context, viewport });
+        const task = page.render({ canvasContext: context, viewport });
         renderTask = task;
         await task.promise;
         if (!cancelled) setStatus("ready");
@@ -760,7 +864,7 @@ function NewRouteDialog({
 }: {
   projectId: string;
   floorPlanId: string;
-  endpoints: Array<{ id: string; code: string }>;
+  endpoints: Array<{ id: string; code: string; endpoint_kind: string }>;
   onCreated: (id: string) => void | Promise<void>;
   createFn: (input: {
     projectId: string;
@@ -768,29 +872,41 @@ function NewRouteDialog({
     name?: string;
     fromEndpointId?: string | null;
     toEndpointId?: string | null;
+    rackEndpointId?: string | null;
   }) => Promise<string>;
 }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
-  const [fromId, setFromId] = useState<string>("");
-  const [toId, setToId] = useState<string>("");
+  const [rackId, setRackId] = useState<string>("");
+  const [endId, setEndId] = useState<string>("");
+
+  const rackCandidates = endpoints.filter((e) => e.endpoint_kind === "PATCH");
+  const endCandidates = endpoints.filter((e) => e.endpoint_kind !== "PATCH");
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!rackId || !endId) {
+      toast.error("Vyberte rack point i end point");
+      return;
+    }
     try {
+      const rackEp = endpoints.find((x) => x.id === rackId);
+      const endEp = endpoints.find((x) => x.id === endId);
+      const autoName = name.trim() || `${rackEp?.code ?? "RACK"} → ${endEp?.code ?? ""}`;
       const id = await createFn({
         projectId,
         floorPlanId,
-        name: name.trim() || undefined,
-        fromEndpointId: fromId || null,
-        toEndpointId: toId || null,
+        name: autoName,
+        rackEndpointId: rackId,
+        fromEndpointId: rackId,
+        toEndpointId: endId,
       });
       toast.success("Trasa vytvořena");
       await onCreated(id);
       setOpen(false);
       setName("");
-      setFromId("");
-      setToId("");
+      setRackId("");
+      setEndId("");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Chyba");
     }
@@ -805,44 +921,53 @@ function NewRouteDialog({
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Nová trasa</DialogTitle>
+          <DialogTitle>Nová trasa Rack → Endpoint</DialogTitle>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-3">
-          <div className="space-y-1.5">
-            <Label>Název</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="např. 201-CSO01" />
-          </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1.5">
-              <Label>Od</Label>
+              <Label>Rack point (start)</Label>
               <select
                 className="w-full rounded-sm border border-input bg-background px-3 py-1.5 text-sm"
-                value={fromId}
-                onChange={(e) => setFromId(e.target.value)}
+                value={rackId}
+                onChange={(e) => setRackId(e.target.value)}
               >
                 <option value="">—</option>
-                {endpoints.map((ep) => (
+                {rackCandidates.map((ep) => (
                   <option key={ep.id} value={ep.id}>
                     {ep.code}
                   </option>
                 ))}
               </select>
+              {rackCandidates.length === 0 && (
+                <div className="text-[10px] text-destructive">
+                  Vytvořte endpoint typu PATCH.
+                </div>
+              )}
             </div>
             <div className="space-y-1.5">
-              <Label>Do</Label>
+              <Label>End point (cíl)</Label>
               <select
                 className="w-full rounded-sm border border-input bg-background px-3 py-1.5 text-sm"
-                value={toId}
-                onChange={(e) => setToId(e.target.value)}
+                value={endId}
+                onChange={(e) => setEndId(e.target.value)}
               >
                 <option value="">—</option>
-                {endpoints.map((ep) => (
+                {endCandidates.map((ep) => (
                   <option key={ep.id} value={ep.id}>
                     {ep.code}
                   </option>
                 ))}
               </select>
             </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Název (volitelné)</Label>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="auto: RACK → CODE"
+            />
           </div>
           <DialogFooter>
             <Button type="submit">Vytvořit</Button>
@@ -934,3 +1059,230 @@ function RouteEndpointsForm({
     </div>
   );
 }
+
+type EndpointRow = {
+  id: string;
+  code: string;
+  label: string | null;
+  endpoint_kind: string;
+  norm_x: number | string;
+  norm_y: number | string;
+};
+
+type RouteRow = {
+  id: string;
+  name: string | null;
+  from_endpoint_id: string | null;
+  to_endpoint_id: string | null;
+  rack_endpoint_id?: string | null;
+};
+
+type EndpointCableRow = {
+  id: string;
+  sequence: number;
+  cable: {
+    id: string;
+    code: string;
+    status: string;
+    cable_type_id: string | null;
+    route_id: string | null;
+    computed_length_m: number | string | null;
+  } | null;
+};
+
+type UnassignedCable = { id: string; code: string; status: string };
+
+function EndpointOperationalPanel({
+  endpointId,
+  endpoint,
+  routes,
+  cables,
+  listUnassignedFn,
+  addFn,
+  removeFn,
+  assignRouteFn,
+  onClose,
+}: {
+  projectId: string;
+  floorPlanId: string;
+  endpointId: string;
+  endpoint: EndpointRow | null;
+  routes: RouteRow[];
+  cables: EndpointCableRow[];
+  listUnassignedFn: () => Promise<UnassignedCable[]>;
+  addFn: (cableIds: string[]) => Promise<void>;
+  removeFn: (cableId: string) => Promise<void>;
+  assignRouteFn: (routeId: string) => Promise<number>;
+  onClose: () => void;
+}) {
+  const [showAdd, setShowAdd] = useState(false);
+  const [unassigned, setUnassigned] = useState<UnassignedCable[]>([]);
+  const [pickedIds, setPickedIds] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState("");
+
+  const routeForEndpoint = routes.find(
+    (r) => r.to_endpoint_id === endpointId || r.from_endpoint_id === endpointId,
+  );
+
+  async function openAdd() {
+    setShowAdd(true);
+    setPickedIds(new Set());
+    try {
+      const list = await listUnassignedFn();
+      setUnassigned(list);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Chyba");
+    }
+  }
+
+  async function confirmAdd() {
+    if (pickedIds.size === 0) return setShowAdd(false);
+    try {
+      await addFn(Array.from(pickedIds));
+      toast.success(`Přidáno ${pickedIds.size} kabelů`);
+      setShowAdd(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Chyba");
+    }
+  }
+
+  async function useRouteForGroup() {
+    if (!routeForEndpoint) return toast.error("Endpoint nemá trasu");
+    try {
+      const n = await assignRouteFn(routeForEndpoint.id);
+      toast.success(`Trasa přiřazena ${n} kabelům`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Chyba");
+    }
+  }
+
+  const filtered = search
+    ? unassigned.filter((c) => c.code.toLowerCase().includes(search.toLowerCase()))
+    : unassigned;
+
+  return (
+    <div className="rounded-sm border-2 border-destructive p-3 text-sm">
+      <div className="mb-2 flex items-center justify-between">
+        <div>
+          <div className="font-semibold">
+            Endpoint {endpoint?.code ?? "…"}
+          </div>
+          <div className="text-[11px] text-muted-foreground">
+            {endpoint?.label ?? endpoint?.endpoint_kind} · operační jednotka
+          </div>
+        </div>
+        <Button size="sm" variant="ghost" onClick={onClose}>
+          ✕
+        </Button>
+      </div>
+
+      <div className="mb-2 flex items-center justify-between text-xs">
+        <span className="font-mono">
+          Kabelů: <span className="font-semibold">{cables.length}</span>
+        </span>
+        <Button size="sm" variant="outline" onClick={openAdd}>
+          + Přidat kabely
+        </Button>
+      </div>
+
+      <div className="max-h-64 divide-y divide-border overflow-y-auto rounded-sm border border-border">
+        {cables.length === 0 ? (
+          <div className="p-3 text-center text-xs text-muted-foreground">
+            Zatím žádné kabely. Přidejte je z registru.
+          </div>
+        ) : (
+          cables.map((row) => (
+            <div key={row.id} className="flex items-center gap-2 p-2">
+              <div className="flex-1">
+                <div className="font-mono text-xs">{row.cable?.code}</div>
+                <div className="text-[10px] text-muted-foreground">
+                  {row.cable?.status}
+                  {row.cable?.route_id ? " · má trasu" : " · bez trasy"}
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => row.cable && removeFn(row.cable.id)}
+              >
+                ✕
+              </Button>
+            </div>
+          ))
+        )}
+      </div>
+
+      {cables.length > 0 && routeForEndpoint && (
+        <Button
+          size="sm"
+          variant="secondary"
+          className="mt-2 w-full"
+          onClick={useRouteForGroup}
+        >
+          Použít trasu „{routeForEndpoint.name ?? routeForEndpoint.id.slice(0, 6)}" pro celou skupinu
+        </Button>
+      )}
+      {cables.length > 0 && !routeForEndpoint && (
+        <div className="mt-2 rounded-sm bg-muted/40 p-2 text-[11px] text-muted-foreground">
+          Endpoint zatím nemá trasu. V módu „Trasy" vytvořte trasu Rack → tento endpoint.
+        </div>
+      )}
+
+      <Dialog open={showAdd} onOpenChange={setShowAdd}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Přidat kabely do skupiny</DialogTitle>
+          </DialogHeader>
+          <Input
+            placeholder="Hledat podle kódu…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <div className="max-h-72 divide-y divide-border overflow-y-auto rounded-sm border border-border">
+            {filtered.length === 0 ? (
+              <div className="p-3 text-center text-xs text-muted-foreground">
+                Žádné nezařazené kabely.
+              </div>
+            ) : (
+              filtered.map((c) => {
+                const picked = pickedIds.has(c.id);
+                return (
+                  <label
+                    key={c.id}
+                    className="flex cursor-pointer items-center gap-2 p-2 hover:bg-muted/40"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={picked}
+                      onChange={() => {
+                        setPickedIds((s) => {
+                          const n = new Set(s);
+                          if (picked) n.delete(c.id);
+                          else n.add(c.id);
+                          return n;
+                        });
+                      }}
+                    />
+                    <span className="flex-1 font-mono text-xs">{c.code}</span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {c.status}
+                    </span>
+                  </label>
+                );
+              })
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAdd(false)}>
+              Zrušit
+            </Button>
+            <Button onClick={confirmAdd}>
+              Přidat ({pickedIds.size})
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+

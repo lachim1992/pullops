@@ -9,6 +9,7 @@ const CreateInput = z.object({
   name: z.string().max(200).optional(),
   fromEndpointId: z.string().uuid().nullable().optional(),
   toEndpointId: z.string().uuid().nullable().optional(),
+  rackEndpointId: z.string().uuid().nullable().optional(),
   manualLengthM: z.number().min(0).nullable().optional(),
 });
 
@@ -50,7 +51,7 @@ export const listRoutes = createServerFn({ method: "GET" })
     let q = supabase
       .from("cable_routes")
       .select(
-        "id, name, floor_plan_id, from_endpoint_id, to_endpoint_id, manual_length_m, updated_at",
+        "id, name, floor_plan_id, from_endpoint_id, to_endpoint_id, rack_endpoint_id, manual_length_m, updated_at",
       )
       .eq("project_id", data.projectId);
     if (data.floorPlanId) q = q.eq("floor_plan_id", data.floorPlanId);
@@ -95,8 +96,9 @@ export const createRoute = createServerFn({ method: "POST" })
         organization_id,
         floor_plan_id: data.floorPlanId,
         name: data.name ?? null,
-        from_endpoint_id: data.fromEndpointId ?? null,
+        from_endpoint_id: data.fromEndpointId ?? data.rackEndpointId ?? null,
         to_endpoint_id: data.toEndpointId ?? null,
+        rack_endpoint_id: data.rackEndpointId ?? null,
         manual_length_m: data.manualLengthM ?? null,
       })
       .select("id")
@@ -114,6 +116,7 @@ export const updateRoute = createServerFn({ method: "POST" })
         name: z.string().max(200).nullable().optional(),
         fromEndpointId: z.string().uuid().nullable().optional(),
         toEndpointId: z.string().uuid().nullable().optional(),
+        rackEndpointId: z.string().uuid().nullable().optional(),
         manualLengthM: z.number().min(0).nullable().optional(),
       })
       .parse(d),
@@ -124,6 +127,7 @@ export const updateRoute = createServerFn({ method: "POST" })
     if (data.name !== undefined) patch.name = data.name;
     if (data.fromEndpointId !== undefined) patch.from_endpoint_id = data.fromEndpointId;
     if (data.toEndpointId !== undefined) patch.to_endpoint_id = data.toEndpointId;
+    if (data.rackEndpointId !== undefined) patch.rack_endpoint_id = data.rackEndpointId;
     if (data.manualLengthM !== undefined) patch.manual_length_m = data.manualLengthM;
     const { error } = await supabase.from("cable_routes").update(patch as never).eq("id", data.id);
     if (error) throw new Error(error.message);
