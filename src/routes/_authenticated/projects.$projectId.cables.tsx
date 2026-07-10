@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { createFileRoute, useParams } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -161,7 +161,15 @@ function CablesPage() {
             <tbody className="divide-y divide-border">
               {filtered.map((c) => (
                 <tr key={c.id}>
-                  <td className="p-2 font-mono">{c.code}</td>
+                  <td className="p-2 font-mono">
+                    <Link
+                      to="/projects/$projectId/cables/$cableId"
+                      params={{ projectId, cableId: c.id }}
+                      className="hover:underline"
+                    >
+                      {c.code}
+                    </Link>
+                  </td>
                   <td className="p-2">{c.cable_type_id ? typeById.get(c.cable_type_id) : "—"}</td>
                   <td className="p-2 font-mono text-xs">
                     {c.from_endpoint_id ? epById.get(c.from_endpoint_id) : "—"}
