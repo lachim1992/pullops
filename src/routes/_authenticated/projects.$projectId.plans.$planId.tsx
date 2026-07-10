@@ -444,6 +444,25 @@ function PlanEditorPage() {
         </div>
 
         <aside className="space-y-4">
+          <div className="rounded-sm border border-border p-3 text-sm">
+            <div className="mb-2 font-semibold">Podklad plánu</div>
+            <select
+              className="w-full rounded-sm border border-input bg-background px-2 py-1.5 text-xs"
+              value={plan.data?.plan.document_id ?? ""}
+              onChange={(e) => changeBackgroundDoc(e.target.value || null)}
+            >
+              <option value="">— žádný —</option>
+              {(docs.data ?? []).map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.title}
+                </option>
+              ))}
+            </select>
+            <div className="mt-1 text-[11px] text-muted-foreground">
+              PDF nebo obrázek nahraný v sekci Dokumenty.
+            </div>
+          </div>
+
           {mode === "calibrate" && (
             <div className="rounded-sm border border-border p-3 text-sm">
               <div className="mb-2 font-semibold">Kalibrace</div>
