@@ -85,6 +85,21 @@ function PlanEditorPage() {
     queryKey: ["routes", projectId, planId],
     queryFn: () => listRoutesFn({ data: { projectId, floorPlanId: planId } }),
   });
+  const docs = useQuery({
+    queryKey: ["docs", projectId],
+    queryFn: () => listDocsFn({ data: { projectId } }),
+  });
+
+  async function changeBackgroundDoc(documentId: string | null) {
+    try {
+      await updatePlanFn({ data: { id: planId, documentId } });
+      toast.success("Podklad plánu aktualizován");
+      qc.invalidateQueries({ queryKey: ["plan", planId] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Chyba");
+    }
+  }
+
 
   const [mode, setMode] = useState<Mode>("endpoint");
   const [calA, setCalA] = useState<NormPoint | null>(null);
