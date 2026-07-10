@@ -80,3 +80,48 @@ export function computeCableLength(input: LengthInput): LengthResult {
   const meters = polylineNormLength(input.routePoints) * mpu + 2 * reserve;
   return { meters, source: "polyline" };
 }
+
+/** Closest point on a segment (a→b) to p, plus the squared distance. */
+function projectOnSegment(p: NormPoint, a: NormPoint, b: NormPoint) {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len2 = dx * dx + dy * dy;
+  if (len2 === 0) {
+    const ddx = p.x - a.x;
+    const ddy = p.y - a.y;
+    return { point: { ...a }, dist2: ddx * ddx + ddy * ddy };
+  }
+  let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2;
+  t = Math.max(0, Math.min(1, t));
+  const point = { x: a.x + t * dx, y: a.y + t * dy };
+  const ddx = p.x - point.x;
+  const ddy = p.y - point.y;
+  return { point, dist2: ddx * ddx + ddy * ddy };
+}
+
+/** Closest point on a polyline to p; returns null if <2 points. */
+export function closestPointOnPolyline(p: NormPoint, poly: NormPoint[]) {
+  if (poly.length < 2) return null;
+  let best: { point: NormPoint; dist2: number } | null = null;
+  for (let i = 1; i < poly.length; i++) {
+    const r = projectOnSegment(p, poly[i - 1], poly[i]);
+    if (!best || r.dist2 < best.dist2) best = r;
+  }
+  return best;
+}
+
+/** Pick nearest bundle from a list; returns bundle id + anchor point + distance. */
+export function nearestBundle(
+  p: NormPoint,
+  bundles: Array<{ id: string; points: NormPoint[] }>,
+): { id: string; anchor: NormPoint; dist: number } | null {
+  let best: { id: string; anchor: NormPoint; dist: number } | null = null;
+  for (const b of bundles) {
+    const r = closestPointOnPolyline(p, b.points);
+    if (!r) continue;
+    const d = Math.sqrt(r.dist2);
+    if (!best || d < best.dist) best = { id: b.id, anchor: r.point, dist: d };
+  }
+  return best;
+}
+
