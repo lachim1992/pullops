@@ -735,8 +735,13 @@ function PlanEditorPage() {
               )}
               {/* Bundles (kmeny) */}
               {(bundles.data ?? []).map((b) => {
-                const pts = (b.points as unknown as NormPoint[]) ?? [];
-                if (pts.length < 2) return null;
+                const rawPts = (b.points as unknown as NormPoint[]) ?? [];
+                if (rawPts.length < 2) return null;
+                const pts = rawPts.map((p, i) =>
+                  dragTarget && dragTarget.kind === "bundle" && dragTarget.id === b.id && dragTarget.idx === i && dragPos
+                    ? dragPos
+                    : p,
+                );
                 return (
                   <g key={b.id}>
                     <polyline
@@ -747,9 +752,27 @@ function PlanEditorPage() {
                       strokeWidth={0.014 / zoom}
                       strokeLinejoin="round"
                     />
+                    {pts.map((p, i) => (
+                      <circle
+                        key={i}
+                        cx={p.x}
+                        cy={p.y}
+                        r={0.008 / zoom}
+                        fill="hsl(var(--primary))"
+                        stroke="white"
+                        strokeWidth={0.002 / zoom}
+                        style={{ cursor: "grab" }}
+                        onMouseDown={(e) => {
+                          e.stopPropagation();
+                          dragMovedRef.current = false;
+                          setDragTarget({ kind: "bundle", id: b.id, idx: i });
+                          setDragPos(p);
+                        }}
+                      />
+                    ))}
                     <text
                       x={pts[0].x}
-                      y={pts[0].y - 0.006 / zoom}
+                      y={pts[0].y - 0.012 / zoom}
                       fontSize={0.014 / zoom}
                       fill="hsl(var(--primary))"
                       style={{ pointerEvents: "none", userSelect: "none" }}
