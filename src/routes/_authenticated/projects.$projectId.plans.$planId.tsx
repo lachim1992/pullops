@@ -503,28 +503,13 @@ function PlanEditorPage() {
             )}
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant={mode === "endpoint" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setMode("endpoint")}
-          >
-            Endpointy
-          </Button>
-          <Button
-            variant={mode === "route" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setMode("route")}
-          >
-            Trasy
-          </Button>
-          <Button
-            variant={mode === "calibrate" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setMode("calibrate")}
-          >
-            Kalibrace
-          </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant={mode === "endpoint" ? "default" : "outline"} size="sm" onClick={() => setMode("endpoint")}>Endpointy</Button>
+          <Button variant={mode === "rack" ? "default" : "outline"} size="sm" onClick={() => setMode("rack")}>Racky</Button>
+          <Button variant={mode === "bundle" ? "default" : "outline"} size="sm" onClick={() => setMode("bundle")}>Kmeny</Button>
+          <Button variant={mode === "port" ? "default" : "outline"} size="sm" onClick={() => setMode("port")}>Trasa z portu</Button>
+          <Button variant={mode === "route" ? "default" : "outline"} size="sm" onClick={() => setMode("route")}>Trasy (staré)</Button>
+          <Button variant={mode === "calibrate" ? "default" : "outline"} size="sm" onClick={() => setMode("calibrate")}>Kalibrace</Button>
         </div>
       </header>
 
