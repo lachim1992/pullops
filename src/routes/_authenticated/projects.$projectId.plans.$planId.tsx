@@ -699,8 +699,8 @@ function PlanEditorPage() {
               className="absolute inset-0 h-full w-full cursor-crosshair"
               onClick={handleSvgClick}
               onMouseMove={handleSvgMove}
-              onMouseUp={() => setDraggingIdx(null)}
-              onMouseLeave={() => setDraggingIdx(null)}
+              onMouseUp={() => { setDraggingIdx(null); void commitDrag(); }}
+              onMouseLeave={() => { setDraggingIdx(null); void commitDrag(); }}
             >
               {calibration && (
                 <>
