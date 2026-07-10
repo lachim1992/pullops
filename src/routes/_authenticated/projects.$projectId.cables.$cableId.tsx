@@ -44,8 +44,10 @@ function CableDetailPage() {
   const listTypesFn = useServerFn(listCableTypes);
   const listEpFn = useServerFn(listEndpoints);
   const listRoutesFn = useServerFn(listRoutes);
+  const listPortsFn = useServerFn(listProjectPatchPorts);
   const listAuditFn = useServerFn(listEntityAuditEvents);
   const qc = useQueryClient();
+
 
   const cable = useQuery({
     queryKey: ["cable", cableId],
