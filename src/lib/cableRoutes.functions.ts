@@ -125,7 +125,7 @@ export const updateRoute = createServerFn({ method: "POST" })
     if (data.fromEndpointId !== undefined) patch.from_endpoint_id = data.fromEndpointId;
     if (data.toEndpointId !== undefined) patch.to_endpoint_id = data.toEndpointId;
     if (data.manualLengthM !== undefined) patch.manual_length_m = data.manualLengthM;
-    const { error } = await supabase.from("cable_routes").update(patch).eq("id", data.id);
+    const { error } = await supabase.from("cable_routes").update(patch as never).eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

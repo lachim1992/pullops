@@ -110,7 +110,7 @@ export const updateCable = createServerFn({ method: "POST" })
     if (data.status !== undefined) patch.status = data.status;
     if (data.overrideLengthM !== undefined) patch.override_length_m = data.overrideLengthM;
     if (data.notes !== undefined) patch.notes = data.notes;
-    const { error } = await supabase.from("cables").update(patch).eq("id", data.id);
+    const { error } = await supabase.from("cables").update(patch as never).eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

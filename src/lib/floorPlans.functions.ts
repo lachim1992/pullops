@@ -123,7 +123,7 @@ export const updateFloorPlan = createServerFn({ method: "POST" })
     if (data.name !== undefined) patch.name = data.name;
     if (data.level !== undefined) patch.level = data.level;
     if (data.displayOrder !== undefined) patch.display_order = data.displayOrder;
-    const { error } = await supabase.from("floor_plans").update(patch).eq("id", data.id);
+    const { error } = await supabase.from("floor_plans").update(patch as never).eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

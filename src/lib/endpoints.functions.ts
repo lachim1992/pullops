@@ -99,7 +99,7 @@ export const updateEndpoint = createServerFn({ method: "POST" })
     if (data.x !== undefined) patch.norm_x = data.x;
     if (data.y !== undefined) patch.norm_y = data.y;
     if (data.notes !== undefined) patch.notes = data.notes;
-    const { error } = await supabase.from("endpoints").update(patch).eq("id", data.id);
+    const { error } = await supabase.from("endpoints").update(patch as never).eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
