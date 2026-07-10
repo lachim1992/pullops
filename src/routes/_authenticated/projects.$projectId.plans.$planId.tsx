@@ -77,6 +77,11 @@ function PlanEditorPage() {
   const updateRoutePointsFn = useServerFn(updateRoutePoints);
   const deleteRouteFn = useServerFn(deleteRoute);
   const listDocsFn = useServerFn(listProjectDocuments);
+  const listEpCablesFn = useServerFn(listEndpointCables);
+  const listUnassignedFn = useServerFn(listUnassignedCables);
+  const addCablesFn = useServerFn(addCablesToEndpoint);
+  const removeCableFn = useServerFn(removeCableFromEndpoint);
+  const assignRouteFn = useServerFn(assignRouteToEndpointCables);
   const qc = useQueryClient();
 
 
