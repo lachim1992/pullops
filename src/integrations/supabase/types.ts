@@ -68,6 +68,469 @@ export type Database = {
           },
         ]
       }
+      cable_route_points: {
+        Row: {
+          created_at: string
+          floor_plan_id: string
+          id: string
+          norm_x: number
+          norm_y: number
+          project_id: string
+          route_id: string
+          sequence: number
+        }
+        Insert: {
+          created_at?: string
+          floor_plan_id: string
+          id?: string
+          norm_x: number
+          norm_y: number
+          project_id: string
+          route_id: string
+          sequence: number
+        }
+        Update: {
+          created_at?: string
+          floor_plan_id?: string
+          id?: string
+          norm_x?: number
+          norm_y?: number
+          project_id?: string
+          route_id?: string
+          sequence?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cable_route_points_floor_plan_id_fkey"
+            columns: ["floor_plan_id"]
+            isOneToOne: false
+            referencedRelation: "floor_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cable_route_points_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cable_route_points_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "cable_routes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cable_routes: {
+        Row: {
+          created_at: string
+          floor_plan_id: string
+          from_endpoint_id: string | null
+          id: string
+          manual_length_m: number | null
+          name: string | null
+          organization_id: string
+          project_id: string
+          to_endpoint_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          floor_plan_id: string
+          from_endpoint_id?: string | null
+          id?: string
+          manual_length_m?: number | null
+          name?: string | null
+          organization_id: string
+          project_id: string
+          to_endpoint_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          floor_plan_id?: string
+          from_endpoint_id?: string | null
+          id?: string
+          manual_length_m?: number | null
+          name?: string | null
+          organization_id?: string
+          project_id?: string
+          to_endpoint_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cable_routes_floor_plan_id_fkey"
+            columns: ["floor_plan_id"]
+            isOneToOne: false
+            referencedRelation: "floor_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cable_routes_from_endpoint_id_fkey"
+            columns: ["from_endpoint_id"]
+            isOneToOne: false
+            referencedRelation: "endpoints"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cable_routes_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cable_routes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cable_routes_to_endpoint_id_fkey"
+            columns: ["to_endpoint_id"]
+            isOneToOne: false
+            referencedRelation: "endpoints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cable_types: {
+        Row: {
+          code: string
+          color_hint: string | null
+          created_at: string
+          default_reserve_m: number
+          description: string | null
+          id: string
+          organization_id: string
+          project_id: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          color_hint?: string | null
+          created_at?: string
+          default_reserve_m?: number
+          description?: string | null
+          id?: string
+          organization_id: string
+          project_id: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          color_hint?: string | null
+          created_at?: string
+          default_reserve_m?: number
+          description?: string | null
+          id?: string
+          organization_id?: string
+          project_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cable_types_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cable_types_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cables: {
+        Row: {
+          cable_type_id: string | null
+          code: string
+          computed_length_m: number | null
+          created_at: string
+          created_by: string | null
+          from_endpoint_id: string | null
+          id: string
+          notes: string | null
+          organization_id: string
+          override_length_m: number | null
+          project_id: string
+          route_id: string | null
+          status: Database["public"]["Enums"]["cable_status"]
+          to_endpoint_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          cable_type_id?: string | null
+          code: string
+          computed_length_m?: number | null
+          created_at?: string
+          created_by?: string | null
+          from_endpoint_id?: string | null
+          id?: string
+          notes?: string | null
+          organization_id: string
+          override_length_m?: number | null
+          project_id: string
+          route_id?: string | null
+          status?: Database["public"]["Enums"]["cable_status"]
+          to_endpoint_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cable_type_id?: string | null
+          code?: string
+          computed_length_m?: number | null
+          created_at?: string
+          created_by?: string | null
+          from_endpoint_id?: string | null
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          override_length_m?: number | null
+          project_id?: string
+          route_id?: string | null
+          status?: Database["public"]["Enums"]["cable_status"]
+          to_endpoint_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cables_cable_type_id_fkey"
+            columns: ["cable_type_id"]
+            isOneToOne: false
+            referencedRelation: "cable_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cables_from_endpoint_id_fkey"
+            columns: ["from_endpoint_id"]
+            isOneToOne: false
+            referencedRelation: "endpoints"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cables_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cables_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cables_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "cable_routes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cables_to_endpoint_id_fkey"
+            columns: ["to_endpoint_id"]
+            isOneToOne: false
+            referencedRelation: "endpoints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      endpoints: {
+        Row: {
+          code: string
+          created_at: string
+          endpoint_kind: Database["public"]["Enums"]["endpoint_kind"]
+          floor_plan_id: string
+          id: string
+          label: string | null
+          norm_x: number
+          norm_y: number
+          notes: string | null
+          organization_id: string
+          project_id: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          endpoint_kind?: Database["public"]["Enums"]["endpoint_kind"]
+          floor_plan_id: string
+          id?: string
+          label?: string | null
+          norm_x: number
+          norm_y: number
+          notes?: string | null
+          organization_id: string
+          project_id: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          endpoint_kind?: Database["public"]["Enums"]["endpoint_kind"]
+          floor_plan_id?: string
+          id?: string
+          label?: string | null
+          norm_x?: number
+          norm_y?: number
+          notes?: string | null
+          organization_id?: string
+          project_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "endpoints_floor_plan_id_fkey"
+            columns: ["floor_plan_id"]
+            isOneToOne: false
+            referencedRelation: "floor_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoints_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoints_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      floor_plan_calibrations: {
+        Row: {
+          calibrated_at: string
+          calibrated_by: string | null
+          created_at: string
+          floor_plan_id: string
+          id: string
+          point_a_norm_x: number
+          point_a_norm_y: number
+          point_b_norm_x: number
+          point_b_norm_y: number
+          project_id: string
+          real_distance_m: number
+          updated_at: string
+        }
+        Insert: {
+          calibrated_at?: string
+          calibrated_by?: string | null
+          created_at?: string
+          floor_plan_id: string
+          id?: string
+          point_a_norm_x: number
+          point_a_norm_y: number
+          point_b_norm_x: number
+          point_b_norm_y: number
+          project_id: string
+          real_distance_m: number
+          updated_at?: string
+        }
+        Update: {
+          calibrated_at?: string
+          calibrated_by?: string | null
+          created_at?: string
+          floor_plan_id?: string
+          id?: string
+          point_a_norm_x?: number
+          point_a_norm_y?: number
+          point_b_norm_x?: number
+          point_b_norm_y?: number
+          project_id?: string
+          real_distance_m?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "floor_plan_calibrations_floor_plan_id_fkey"
+            columns: ["floor_plan_id"]
+            isOneToOne: true
+            referencedRelation: "floor_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "floor_plan_calibrations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      floor_plans: {
+        Row: {
+          created_at: string
+          display_order: number
+          document_id: string | null
+          id: string
+          level: number
+          name: string
+          organization_id: string
+          project_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          document_id?: string | null
+          id?: string
+          level?: number
+          name: string
+          organization_id: string
+          project_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          document_id?: string | null
+          id?: string
+          level?: number
+          name?: string
+          organization_id?: string
+          project_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "floor_plans_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "project_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "floor_plans_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "floor_plans_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_members: {
         Row: {
           joined_at: string
@@ -155,6 +618,63 @@ export type Database = {
             columns: ["default_organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_documents: {
+        Row: {
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["document_kind"]
+          mime_type: string | null
+          organization_id: string
+          page_count: number | null
+          project_id: string
+          storage_path: string
+          title: string
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["document_kind"]
+          mime_type?: string | null
+          organization_id: string
+          page_count?: number | null
+          project_id: string
+          storage_path: string
+          title: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["document_kind"]
+          mime_type?: string | null
+          organization_id?: string
+          page_count?: number | null
+          project_id?: string
+          storage_path?: string
+          title?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_documents_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -409,6 +929,9 @@ export type Database = {
         | "rack_technician"
         | "test_technician"
         | "viewer"
+      cable_status: "PLANNED" | "PULLED" | "TERMINATED" | "TESTED" | "CANCELLED"
+      document_kind: "FLOOR_PLAN" | "SCHEMATIC" | "OTHER"
+      endpoint_kind: "WORKSTATION" | "AP" | "CAMERA" | "PATCH" | "OTHER"
       project_status:
         | "planning"
         | "active"
@@ -551,6 +1074,9 @@ export const Constants = {
         "test_technician",
         "viewer",
       ],
+      cable_status: ["PLANNED", "PULLED", "TERMINATED", "TESTED", "CANCELLED"],
+      document_kind: ["FLOOR_PLAN", "SCHEMATIC", "OTHER"],
+      endpoint_kind: ["WORKSTATION", "AP", "CAMERA", "PATCH", "OTHER"],
       project_status: [
         "planning",
         "active",
