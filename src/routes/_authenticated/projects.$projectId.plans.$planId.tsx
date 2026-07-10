@@ -40,11 +40,15 @@ import {
   listUnassignedCables,
   removeCableFromEndpoint,
 } from "@/lib/endpointGroups.functions";
+import { createRack, listRacks, deleteRack } from "@/lib/racks.functions";
+import { createBundle, listBundles, deleteBundle } from "@/lib/cableBundles.functions";
+import { createCableFromPort, listFreePorts } from "@/lib/cablesFromPort.functions";
 import {
   computeCableLength,
   metersPerNormUnit,
   normDistance,
   polylineNormLength,
+  
   type Calibration,
   type NormPoint,
 } from "@/lib/length";
@@ -58,7 +62,7 @@ export const Route = createFileRoute(
   component: PlanEditorPage,
 });
 
-type Mode = "calibrate" | "endpoint" | "route";
+type Mode = "calibrate" | "endpoint" | "route" | "rack" | "bundle" | "port";
 
 function PlanEditorPage() {
   const { projectId, planId } = useParams({
@@ -82,6 +86,14 @@ function PlanEditorPage() {
   const addCablesFn = useServerFn(addCablesToEndpoint);
   const removeCableFn = useServerFn(removeCableFromEndpoint);
   const assignRouteFn = useServerFn(assignRouteToEndpointCables);
+  const listRacksFn = useServerFn(listRacks);
+  const createRackFn = useServerFn(createRack);
+  const deleteRackFn = useServerFn(deleteRack);
+  const listBundlesFn = useServerFn(listBundles);
+  const createBundleFn = useServerFn(createBundle);
+  const deleteBundleFn = useServerFn(deleteBundle);
+  const listFreePortsFn = useServerFn(listFreePorts);
+  const createCableFromPortFn = useServerFn(createCableFromPort);
   const qc = useQueryClient();
 
 
@@ -100,6 +112,18 @@ function PlanEditorPage() {
   const docs = useQuery({
     queryKey: ["docs", projectId],
     queryFn: () => listDocsFn({ data: { projectId } }),
+  });
+  const racks = useQuery({
+    queryKey: ["racks", projectId, planId],
+    queryFn: () => listRacksFn({ data: { projectId, floorPlanId: planId } }),
+  });
+  const bundles = useQuery({
+    queryKey: ["bundles", projectId, planId],
+    queryFn: () => listBundlesFn({ data: { projectId, floorPlanId: planId } }),
+  });
+  const freePorts = useQuery({
+    queryKey: ["free-ports", projectId],
+    queryFn: () => listFreePortsFn({ data: { projectId } }),
   });
 
   async function changeBackgroundDoc(documentId: string | null) {
@@ -127,6 +151,18 @@ function PlanEditorPage() {
   const [selectedEndpointId, setSelectedEndpointId] = useState<string | null>(null);
   const [draftPoints, setDraftPoints] = useState<NormPoint[]>([]);
   const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
+  // Rack mode
+  const [pendingRackPos, setPendingRackPos] = useState<NormPoint | null>(null);
+  const [newRackCode, setNewRackCode] = useState("");
+  const [newRackName, setNewRackName] = useState("");
+  // Bundle mode
+  const [draftBundlePoints, setDraftBundlePoints] = useState<NormPoint[]>([]);
+  const [newBundleCode, setNewBundleCode] = useState("");
+  // Port mode
+  const [selectedPortId, setSelectedPortId] = useState<string | null>(null);
+  const [pendingPortPos, setPendingPortPos] = useState<NormPoint | null>(null);
+  const [newPortEpCode, setNewPortEpCode] = useState("");
+  const [newPortCableCode, setNewPortCableCode] = useState("");
   const svgRef = useRef<SVGSVGElement>(null);
 
   // Zoom & pan state
@@ -251,6 +287,16 @@ function PlanEditorPage() {
         return;
       }
       setDraftPoints((pts) => [...pts, pos]);
+    } else if (mode === "rack") {
+      setPendingRackPos(pos);
+    } else if (mode === "bundle") {
+      setDraftBundlePoints((pts) => [...pts, pos]);
+    } else if (mode === "port") {
+      if (!selectedPortId) {
+        toast.error("Nejprve vyberte volný port ze seznamu");
+        return;
+      }
+      setPendingPortPos(pos);
     }
   }
 
@@ -310,6 +356,101 @@ function PlanEditorPage() {
     qc.invalidateQueries({ queryKey: ["endpoints", projectId, planId] });
   }
 
+  async function saveRack() {
+    if (!pendingRackPos) return;
+    if (!newRackCode.trim()) return toast.error("Zadejte kód racku");
+    try {
+      await createRackFn({
+        data: {
+          projectId,
+          floorPlanId: planId,
+          code: newRackCode.trim(),
+          name: newRackName.trim() || undefined,
+          x: pendingRackPos.x,
+          y: pendingRackPos.y,
+        },
+      });
+      setPendingRackPos(null);
+      setNewRackCode("");
+      setNewRackName("");
+      qc.invalidateQueries({ queryKey: ["racks", projectId, planId] });
+      toast.success("Rack přidán");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Chyba");
+    }
+  }
+  async function removeRack(id: string) {
+    if (!confirm("Smazat rack? Panely ztratí vazbu.")) return;
+    try {
+      await deleteRackFn({ data: { id } });
+      qc.invalidateQueries({ queryKey: ["racks", projectId, planId] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Chyba");
+    }
+  }
+  async function saveBundle() {
+    if (draftBundlePoints.length < 2) return toast.error("Alespoň 2 body");
+    if (!newBundleCode.trim()) return toast.error("Zadejte kód kmenu");
+    try {
+      await createBundleFn({
+        data: {
+          projectId,
+          floorPlanId: planId,
+          code: newBundleCode.trim(),
+          points: draftBundlePoints,
+        },
+      });
+      setDraftBundlePoints([]);
+      setNewBundleCode("");
+      qc.invalidateQueries({ queryKey: ["bundles", projectId, planId] });
+      toast.success("Kmen uložen");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Chyba");
+    }
+  }
+  async function removeBundle(id: string) {
+    if (!confirm("Smazat kmen?")) return;
+    try {
+      await deleteBundleFn({ data: { id } });
+      qc.invalidateQueries({ queryKey: ["bundles", projectId, planId] });
+      qc.invalidateQueries({ queryKey: ["cables", projectId] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Chyba");
+    }
+  }
+  async function savePortCable() {
+    if (!pendingPortPos || !selectedPortId) return;
+    if (!newPortEpCode.trim() || !newPortCableCode.trim())
+      return toast.error("Vyplňte kód endpointu i kabelu");
+    try {
+      await createCableFromPortFn({
+        data: {
+          projectId,
+          floorPlanId: planId,
+          portId: selectedPortId,
+          cableCode: newPortCableCode.trim(),
+          endpoint: {
+            code: newPortEpCode.trim(),
+            kind: "WORKSTATION",
+            x: pendingPortPos.x,
+            y: pendingPortPos.y,
+          },
+        },
+      });
+      setPendingPortPos(null);
+      setSelectedPortId(null);
+      setNewPortEpCode("");
+      setNewPortCableCode("");
+      qc.invalidateQueries({ queryKey: ["endpoints", projectId, planId] });
+      qc.invalidateQueries({ queryKey: ["free-ports", projectId] });
+      qc.invalidateQueries({ queryKey: ["cables", projectId] });
+      toast.success("Endpoint a kabel vytvořeny, trasa přiřazena k nejbližšímu kmeni");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Chyba");
+    }
+  }
+
+
   async function saveRoutePoints() {
     if (!selectedRouteId) return;
     try {
@@ -362,28 +503,13 @@ function PlanEditorPage() {
             )}
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant={mode === "endpoint" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setMode("endpoint")}
-          >
-            Endpointy
-          </Button>
-          <Button
-            variant={mode === "route" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setMode("route")}
-          >
-            Trasy
-          </Button>
-          <Button
-            variant={mode === "calibrate" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setMode("calibrate")}
-          >
-            Kalibrace
-          </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant={mode === "endpoint" ? "default" : "outline"} size="sm" onClick={() => setMode("endpoint")}>Endpointy</Button>
+          <Button variant={mode === "rack" ? "default" : "outline"} size="sm" onClick={() => setMode("rack")}>Racky</Button>
+          <Button variant={mode === "bundle" ? "default" : "outline"} size="sm" onClick={() => setMode("bundle")}>Kmeny</Button>
+          <Button variant={mode === "port" ? "default" : "outline"} size="sm" onClick={() => setMode("port")}>Trasa z portu</Button>
+          <Button variant={mode === "route" ? "default" : "outline"} size="sm" onClick={() => setMode("route")}>Trasy (staré)</Button>
+          <Button variant={mode === "calibrate" ? "default" : "outline"} size="sm" onClick={() => setMode("calibrate")}>Kalibrace</Button>
         </div>
       </header>
 
@@ -499,6 +625,113 @@ function PlanEditorPage() {
                   y2={calB.y}
                   stroke="hsl(var(--primary))"
                   strokeWidth={0.003}
+                  strokeDasharray="0.01 0.005"
+                />
+              )}
+              {/* Bundles (kmeny) */}
+              {(bundles.data ?? []).map((b) => {
+                const pts = (b.points as unknown as NormPoint[]) ?? [];
+                if (pts.length < 2) return null;
+                return (
+                  <g key={b.id}>
+                    <polyline
+                      points={pts.map((p) => `${p.x},${p.y}`).join(" ")}
+                      fill="none"
+                      stroke="hsl(var(--primary))"
+                      strokeOpacity={0.55}
+                      strokeWidth={0.008 / zoom}
+                      strokeLinejoin="round"
+                    />
+                    <text
+                      x={pts[0].x}
+                      y={pts[0].y - 0.006 / zoom}
+                      fontSize={0.014 / zoom}
+                      fill="hsl(var(--primary))"
+                      style={{ pointerEvents: "none", userSelect: "none" }}
+                    >
+                      {b.code}
+                    </text>
+                  </g>
+                );
+              })}
+              {/* Draft bundle in progress */}
+              {mode === "bundle" && draftBundlePoints.length > 0 && (
+                <>
+                  {draftBundlePoints.length > 1 && (
+                    <polyline
+                      points={draftBundlePoints.map((p) => `${p.x},${p.y}`).join(" ")}
+                      fill="none"
+                      stroke="hsl(var(--accent))"
+                      strokeWidth={0.006 / zoom}
+                      strokeDasharray="0.01 0.005"
+                    />
+                  )}
+                  {draftBundlePoints.map((p, i) => (
+                    <circle
+                      key={i}
+                      cx={p.x}
+                      cy={p.y}
+                      r={0.01 / zoom}
+                      fill="hsl(var(--accent))"
+                      stroke="white"
+                      strokeWidth={0.002 / zoom}
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        setDraftBundlePoints((pts) => pts.filter((_, j) => j !== i));
+                      }}
+                    />
+                  ))}
+                </>
+              )}
+              {/* Racks */}
+              {(racks.data ?? []).map((r) => {
+                const cx = Number(r.x);
+                const cy = Number(r.y);
+                const s = 0.018 / zoom;
+                return (
+                  <g key={r.id}>
+                    <rect
+                      x={cx - s}
+                      y={cy - s}
+                      width={s * 2}
+                      height={s * 2}
+                      fill="hsl(var(--foreground))"
+                      stroke="hsl(var(--background))"
+                      strokeWidth={0.002 / zoom}
+                    />
+                    <text
+                      x={cx}
+                      y={cy + s + 0.012 / zoom}
+                      textAnchor="middle"
+                      fontSize={0.014 / zoom}
+                      fill="hsl(var(--foreground))"
+                      style={{ pointerEvents: "none", userSelect: "none" }}
+                    >
+                      {r.code}
+                    </text>
+                  </g>
+                );
+              })}
+              {pendingRackPos && mode === "rack" && (
+                <rect
+                  x={pendingRackPos.x - 0.018 / zoom}
+                  y={pendingRackPos.y - 0.018 / zoom}
+                  width={0.036 / zoom}
+                  height={0.036 / zoom}
+                  fill="none"
+                  stroke="hsl(var(--destructive))"
+                  strokeWidth={0.003 / zoom}
+                  strokeDasharray="0.01 0.005"
+                />
+              )}
+              {pendingPortPos && mode === "port" && (
+                <circle
+                  cx={pendingPortPos.x}
+                  cy={pendingPortPos.y}
+                  r={0.014 / zoom}
+                  fill="none"
+                  stroke="hsl(var(--destructive))"
+                  strokeWidth={0.003 / zoom}
                   strokeDasharray="0.01 0.005"
                 />
               )}
@@ -857,6 +1090,140 @@ function PlanEditorPage() {
               )}
             </div>
           )}
+
+          {mode === "rack" && (
+            <div className="rounded-sm border border-border p-3 text-sm">
+              <div className="mb-2 font-semibold">Rack</div>
+              {!pendingRackPos ? (
+                <div className="text-xs text-muted-foreground">
+                  Klikněte do plánu pro umístění racku.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="space-y-1.5">
+                    <Label>Kód</Label>
+                    <Input
+                      value={newRackCode}
+                      onChange={(e) => setNewRackCode(e.target.value)}
+                      placeholder="RACK-A"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Název</Label>
+                    <Input
+                      value={newRackName}
+                      onChange={(e) => setNewRackName(e.target.value)}
+                      placeholder="Serverovna 1.NP"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" className="flex-1" onClick={saveRack}>Uložit</Button>
+                    <Button size="sm" variant="outline" onClick={() => setPendingRackPos(null)}>Zrušit</Button>
+                  </div>
+                </div>
+              )}
+              <div className="mt-3 max-h-48 divide-y divide-border overflow-y-auto rounded-sm border border-border">
+                {(racks.data ?? []).map((r) => (
+                  <div key={r.id} className="flex items-center gap-2 p-2">
+                    <div className="flex-1">
+                      <div className="font-mono text-xs">{r.code}</div>
+                      <div className="text-[10px] text-muted-foreground">{r.name ?? "—"}</div>
+                    </div>
+                    <Button size="sm" variant="ghost" onClick={() => removeRack(r.id)}>✕</Button>
+                  </div>
+                ))}
+                {(racks.data?.length ?? 0) === 0 && (
+                  <div className="p-3 text-center text-xs text-muted-foreground">Zatím žádný rack.</div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {mode === "bundle" && (
+            <div className="rounded-sm border border-border p-3 text-sm">
+              <div className="mb-2 font-semibold">Kmen (svazek)</div>
+              <div className="mb-2 text-xs text-muted-foreground">
+                Klik = přidat bod. Alespoň 2 body. Dvojklik na bod = smazat.
+              </div>
+              <div className="mb-2 font-mono text-xs">
+                Bodů: {draftBundlePoints.length} · Norm. délka: {polylineNormLength(draftBundlePoints).toFixed(4)}
+              </div>
+              <div className="space-y-1.5">
+                <Label>Kód kmenu</Label>
+                <Input
+                  value={newBundleCode}
+                  onChange={(e) => setNewBundleCode(e.target.value)}
+                  placeholder="BND-01"
+                />
+              </div>
+              <div className="mt-2 flex gap-2">
+                <Button size="sm" className="flex-1" onClick={saveBundle}>Uložit kmen</Button>
+                <Button size="sm" variant="outline" onClick={() => setDraftBundlePoints([])}>Vymazat</Button>
+              </div>
+              <div className="mt-3 max-h-48 divide-y divide-border overflow-y-auto rounded-sm border border-border">
+                {(bundles.data ?? []).map((b) => (
+                  <div key={b.id} className="flex items-center gap-2 p-2">
+                    <div className="flex-1 font-mono text-xs">{b.code}</div>
+                    <Button size="sm" variant="ghost" onClick={() => removeBundle(b.id)}>✕</Button>
+                  </div>
+                ))}
+                {(bundles.data?.length ?? 0) === 0 && (
+                  <div className="p-3 text-center text-xs text-muted-foreground">Zatím žádný kmen.</div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {mode === "port" && (
+            <div className="rounded-sm border border-border p-3 text-sm">
+              <div className="mb-2 font-semibold">Trasa z portu</div>
+              <div className="mb-2 text-xs text-muted-foreground">
+                1) Vyber volný port · 2) Klikni na plán · 3) Zadej kód endpointu a kabelu
+              </div>
+              <div className="space-y-1.5">
+                <Label>Volný port</Label>
+                <select
+                  className="w-full rounded-sm border border-input bg-background px-2 py-1 font-mono text-xs"
+                  value={selectedPortId ?? ""}
+                  onChange={(e) => setSelectedPortId(e.target.value || null)}
+                >
+                  <option value="">— vyber —</option>
+                  {(freePorts.data?.freePorts ?? []).map((p) => {
+                    const panel = (freePorts.data?.panels ?? []).find((pp) => pp.id === p.panel_id);
+                    return (
+                      <option key={p.id} value={p.id}>
+                        {panel?.code ?? "?"} · port #{p.port_number}
+                        {p.label ? ` (${p.label})` : ""}
+                      </option>
+                    );
+                  })}
+                </select>
+                <div className="text-[10px] text-muted-foreground">
+                  {(freePorts.data?.freePorts.length ?? 0)} volných portů
+                </div>
+              </div>
+              {pendingPortPos && selectedPortId && (
+                <div className="mt-3 space-y-2 border-t border-border pt-3">
+                  <div className="space-y-1.5">
+                    <Label>Kód endpointu</Label>
+                    <Input value={newPortEpCode} onChange={(e) => setNewPortEpCode(e.target.value)} placeholder="např. 201" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Kód kabelu</Label>
+                    <Input value={newPortCableCode} onChange={(e) => setNewPortCableCode(e.target.value)} placeholder="např. C-201" />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" className="flex-1" onClick={savePortCable}>Vytvořit</Button>
+                    <Button size="sm" variant="outline" onClick={() => setPendingPortPos(null)}>Zrušit</Button>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">
+                    Kabel se auto-přiřadí k nejbližšímu kmenu (pokud existuje).
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
 
           <div className="rounded-sm border border-border">
             <div className="border-b border-border p-3 text-sm font-semibold">
