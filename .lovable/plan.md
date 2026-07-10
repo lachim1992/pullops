@@ -1,68 +1,77 @@
+# Checkpoint C+ — Racky, patch panely a plánovač tras
+
 ## Cíl
 
-Dokončit Checkpoint C (délkový engine na trasách) + rozšířit editor plánu tak, aby endpoint fungoval jako **operační jednotka** — pod jeden endpoint na plánu (např. jedna zásuvka / stolek) lze seskupit více kabelů z registru, které pak v Pull módu (Checkpoint E) potáhneme společně po stejné trase Rack → Endpoint.
+1. Rack je samostatná entita s pozicí na plánu.
+2. Patch panel patří pod rack; jeho porty drží konkrétní kabely.
+3. V editoru se kabel vytváří z **volného portu → cíle na plánu** — trasa vzniká automaticky.
+4. Trasa jde přes **sdílený kmen (bundle)** + krátkou odbočku k endpointu. Nové kabely se auto-přiřadí k nejbližšímu kmenu.
+5. Po kalibraci se spočítá odhadovaná metráž (kmen + větev + rezervy).
 
 ## Datový model (migrace)
 
-**Nová tabulka `public.endpoint_cable_groups`** — spojka endpoint × kabel:
-- `endpoint_id` FK → `endpoints`, `cable_id` FK → `cables` (unique per pár)
-- `project_id`, `sequence` (int, řazení tažení uvnitř skupiny), `notes`
-- RLS: čtení a zápis členy projektu; tenant validace triggerem (endpoint.project = cable.project = row.project)
+- **`racks`** — nová tabulka: `project_id`, `floor_plan_id`, `code`, `name`, `x`, `y`, `notes`. RLS jako ostatní projektové entity, tenant-validace trigger.
+- **`patch_panels`** — doplnit `rack_id uuid null references racks(id) on delete set null`. Ponechat `floor_plan_id` (pro panely mimo rack).
+- **`cable_bundles`** — nová: `project_id`, `floor_plan_id`, `code`, `points jsonb` (polyline v normalizovaných souřadnicích), `rack_id nullable` (kmen typicky vychází z racku), `notes`.
+- **`cables`** — doplnit `bundle_id nullable references cable_bundles`, `branch_points jsonb null` (krátká odbočka od bundle k `to_endpoint_id`).
+- Odstranit využití `endpoints` typu `PATCH` pro racky (data zůstanou, ale editor je nevytváří). Rack pozice slouží jako zdrojová pozice pro kabely v jeho panelech.
 
-**Rozšíření `cable_routes`**:
-- přidat `rack_endpoint_id uuid null` (rack point = endpoint typu PATCH/RACK, definuje start trasy)
-- držíme stávající `from_endpoint_id`/`to_endpoint_id`, ale UI je bude pojmenovávat **Rack point** a **End point**
-- volitelně `default_route boolean` — trasa se automaticky použije pro všechny kabely v endpoint-skupině, které nemají explicitní `cables.route_id`
+Všechny nové tabulky: `GRANT` na `authenticated` + `service_role`, RLS scoped přes `is_project_member`, tenant trigger.
 
-**Rozšíření `endpoints`** (drobné):
-- `endpoint_kind` doplnit hodnotu `RACK` (pro rack pointy patch panelu na plánu)
+## Server functions
 
-Migrace zahrnuje GRANT + RLS policies + tenant trigger `validate_endpoint_cable_group_tenant`.
+- `src/lib/racks.functions.ts` — CRUD (`listRacks`, `createRack`, `updateRack` (pozice), `deleteRack`).
+- `src/lib/patchPanels.functions.ts` — rozšířit `listPatchPanels` o `rack_id`, přidat `assignPanelToRack`. `getPatchPanel` už vrací porty; přidat joined kabely na portu (`cable`).
+- `src/lib/cableBundles.functions.ts` — `listBundles`, `createBundle(points, rackId?)`, `updateBundlePoints`, `deleteBundle`.
+- `src/lib/cables.functions.ts` — nová `createCableFromPort({ portId, toEndpointId | newEndpoint: {x,y,label}, bundleId?, branchPoints? })`. Automaticky:
+  1. vytvoří (nebo použije) `endpoint`,
+  2. spáruje `cables.from_port_id = portId`, `to_endpoint_id`,
+  3. najde nejbližší bundle (pokud `bundleId` nedán) → přiřadí,
+  4. spočítá `branch_points` jako úsečku z bodu na kmeni k endpointu (uživatel může přeeditovat).
+- `src/lib/length.ts` — přidat `computeCableLengthFromBundle({ bundleAnchorIndex, bundlePoints, branchPoints, calibration, reserveM })`. Rozšířit existující engine, ne nahradit.
 
-## Server funkce
+## UI
 
-Nové v `src/lib/endpointGroups.functions.ts`:
-- `listEndpointCables({ endpointId })` — kabely pod endpointem + jejich stav (route_id, patch_port)
-- `addCablesToEndpoint({ endpointId, cableIds })` — hromadné přiřazení
-- `removeCableFromEndpoint({ endpointId, cableId })`
-- `reorderEndpointCables({ endpointId, orderedCableIds })`
-- `assignRouteToEndpointCables({ endpointId, routeId })` — nastaví `cables.route_id` všem kabelům skupiny (pro Pull mode)
+### Záložka Patch panely
+- Levý sloupec: seznam racků + tlačítko „Nový rack". Klik → strom panelů pod rackem + „Přidat panel".
+- Panel řádek expanduje na tabulku portů: `#` · label · **přiřazený kabel (code, cíl endpoint)** · akce „vytvořit endpoint na plánu".
+- Volné porty jsou zvýrazněné (badge „volný").
 
-Doplnit v `src/lib/cableRoutes.functions.ts`:
-- při `updateRoute` umožnit nastavit `rackEndpointId`
-- nový `computeRouteLengthForCable({ cableId })` — používá stávající `computeCableLength` z `@/lib/length` (route points + kalibrace + rezervy z projektu/kabelu), Checkpoint C engine
+### Editor plánu (nový mód „Plánovač tras")
+Přepínač módů: `Endpointy · Racky · Kmeny · Trasy · Kalibrace`.
 
-## Editor plánu (`plans.$planId.tsx`)
+- **Racky mód** — klik na plán = nový rack (dialog: kód, přiřadit panely). Existující racky se táhnou drag&drop.
+- **Kmeny mód** — kliknutím se kreslí polyline (Enter/dvojklik = ukončit). Kmen dostane kód `BND-01` atd. Editace = klik na segment → přidat/smazat bod.
+- **Trasy mód** — vlevo panel „Volné porty" seskupené po panelech/rackách. Vybereš port(y), pak klik na plán = nový endpoint + kabel(y) + auto-přiřazení k nejbližšímu kmeni + auto-větev.
+- Panel detailu kabelu: bundle · anchor bod na kmeni (posuvník podél kmene) · body větve · vypočtená metráž s rozpisem (kmen X m + větev Y m + rezervy Z m).
 
-1. **Přejmenování módů:** „Endpointy" ponechat, „Trasy" upravit tak, že se zakládají volbou **Rack point** (dropdown endpointů typu RACK/PATCH) + **End point** (libovolný endpoint) → automaticky vznikne trasa.
-2. **Klik na endpoint** v plánu (mimo mode=route) otevře **panel Endpoint** vpravo místo generického dropdownu:
-   - hlavička: kód, typ, kolik má kabelů
-   - sekce **Kabely v této jednotce** — seznam přiřazených kabelů (kód, typ, patch port, stav) + tlačítka „Odebrat" / „Změnit pořadí"
-   - dialog **Přidat kabely** — multi-select z nezařazených kabelů projektu (filtr přes ne-přiřazené v této skupině; hledání dle `code`)
-   - tlačítko **Použít trasu pro celou skupinu** — pokud endpoint patří jako `to_endpoint_id` do existující trasy, přiřadí `route_id` všem kabelům
-3. **Vizualizace:** endpointy s ≥1 kabelem dostanou plný badge s počtem, prázdné zůstávají obrysové. Rack pointy vykreslit jinak (čtverec) než běžné endpointy (kruh).
-4. **Trasy panel:** místo dvou volných dropdownů „Od/Do" ukazovat `Rack point` (jen RACK/PATCH endpointy) + `End point`. Délka trasy je nyní **Checkpoint C engine** — z bodů polylinie × mpu + rezervy z projektu.
+Zoom/pan zůstane.
 
-## Napojení na registr kabelů
+### Detail kabelu (`cables.$cableId.tsx`)
+- Sekce „Trasa": kmen (link), délka kmene, délka větve, rezervy, celkem. Náhled mini-plánku s vyznačenou trasou.
 
-- V detailu kabelu (`cables.$cableId.tsx`) přidat pole **Endpoint (jednotka)** — select z endpointů projektu. Zápis → přes `addCablesToEndpoint`.
-- V seznamu kabelů sloupec **Jednotka** (kód endpointu) + filtr „nezařazené".
+## Migrace demo dat
 
-## Demo seed
+`seedCeskeBudejoviceDemo` rozšířit:
+- vytvoří 1–2 racky, k nim přiřadí existující patch panely,
+- vytvoří 1 kmen `BND-01` napříč patrem,
+- pro pár kabelů automaticky vytvoří endpointy + auto-přiřazení k `BND-01` s krátkou větví.
 
-`seedCeskeBudejoviceDemo` rozšířit tak, aby:
-- vytvořil aspoň 2 rack pointy (PATCH1, PATCH2) na plánu,
-- 3–4 endpointy typu WORKSTATION,
-- pod každým 1–3 kabely z demo registru,
-- jednu vzorovou trasu Rack → Endpoint s polyliní a přiřazenými kabely.
+## Postupný rollout (jeden PR = jedna migrace)
 
-## Ověření
+1. **DB migrace** — `racks`, `cable_bundles`, `cables.bundle_id/branch_points`, `patch_panels.rack_id`. RLS + triggery + GRANTy.
+2. **Server functions** — `racks`, `cableBundles`, `createCableFromPort`, length engine rozšíření.
+3. **Patch panels UI** — strom rack → panel → porty s kabely.
+4. **Editor** — nové módy Racky, Kmeny, Trasy; auto-přiřazení, výpočet.
+5. **Cable detail** — sekce Trasa.
+6. **Demo seed** — racky + kmen + auto-větve.
+7. **Verifikace** — `bunx tsgo --noEmit`, Playwright smoke test celého toku (nový rack → panel → port → klik na plán → vidím trasu a metráž).
 
-- `bunx tsgo --noEmit`
-- Playwright: přihlášení do demo projektu → otevřít editor plánu, klik na endpoint → panel se otevře → přidat 2 kabely → vytvořit trasu z rack pointu → „Použít trasu pro skupinu" → zkontrolovat, že kabely v registru mají shodné `route_id` a délka trasy je > 0 m.
+## Technické detaily
 
-## Technické poznámky
+- `branch_points` = pole normalizovaných bodů začínající kolmicí (nebo nejbližším bodem) na kmen. Když je prázdné, engine spočítá kolmici automaticky.
+- Auto-přiřazení k bundlu: pro nový endpoint najdeme kmen s nejmenší kolmou vzdáleností (přes všechny segmenty všech kmenů v plánu); ukládáme jen `bundle_id` — anchor se dopočítává, ale lze ho manuálně zafixovat editací `branch_points[0]`.
+- `computed_length_m` v `cables` zůstává jako cache; přepočítá se v server fn po každé změně bundle/branch/route.
+- PATCH endpointy z předchozí iterace: demo je přestane vytvářet, existující zůstanou (nezasahujeme do produkčních dat).
 
-- Endpoint-skupina je čistě N:1 (kabel má max jeden endpoint jako operační jednotku). Pokud kabel logicky patří pod jiný fyzický endpoint než `cables.to_endpoint_id`, to je OK — `to_endpoint_id` zůstává fyzická destinace, `endpoint_cable_groups` je logická operační skupina pro tažení.
-- Rezervy a kalibrace už existují → engine v `@/lib/length` stačí zavolat s route body a `project.default_*_reserve_m` fallbacky (Checkpoint C).
-- Neimplementovat Pull mode UI (to je E) — jen zajistit, že datově je vše připravené: `cables.route_id` nastavené a `endpoint_cable_groups.sequence` definované.
+Po odsouhlasení začnu bodem 1 (migrace).
