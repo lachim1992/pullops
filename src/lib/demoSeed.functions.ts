@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { closestPointOnPolyline } from "@/lib/length";
 
 const Input = z.object({ organizationId: z.string().uuid() });
 
