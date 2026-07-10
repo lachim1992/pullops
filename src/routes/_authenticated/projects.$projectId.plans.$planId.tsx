@@ -86,6 +86,14 @@ function PlanEditorPage() {
   const addCablesFn = useServerFn(addCablesToEndpoint);
   const removeCableFn = useServerFn(removeCableFromEndpoint);
   const assignRouteFn = useServerFn(assignRouteToEndpointCables);
+  const listRacksFn = useServerFn(listRacks);
+  const createRackFn = useServerFn(createRack);
+  const deleteRackFn = useServerFn(deleteRack);
+  const listBundlesFn = useServerFn(listBundles);
+  const createBundleFn = useServerFn(createBundle);
+  const deleteBundleFn = useServerFn(deleteBundle);
+  const listFreePortsFn = useServerFn(listFreePorts);
+  const createCableFromPortFn = useServerFn(createCableFromPort);
   const qc = useQueryClient();
 
 
