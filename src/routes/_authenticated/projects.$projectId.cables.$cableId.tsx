@@ -292,8 +292,41 @@ function CableDetailPage() {
                   ))}
                 </select>
               </div>
+              <div className="space-y-1.5">
+                <Label>Port od</Label>
+                <select
+                  className="w-full rounded-sm border border-input bg-background px-3 py-1.5 text-sm"
+                  value={fromPortId}
+                  onChange={(e) => setFromPortId(e.target.value)}
+                >
+                  <option value="">—</option>
+                  {(ports.data ?? []).map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.patch_panels.code}/{p.port_number}
+                      {p.label ? ` · ${p.label}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Port do</Label>
+                <select
+                  className="w-full rounded-sm border border-input bg-background px-3 py-1.5 text-sm"
+                  value={toPortId}
+                  onChange={(e) => setToPortId(e.target.value)}
+                >
+                  <option value="">—</option>
+                  {(ports.data ?? []).map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.patch_panels.code}/{p.port_number}
+                      {p.label ? ` · ${p.label}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
+
 
           <div className="rounded-sm border border-border p-4">
             <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-muted-foreground">
