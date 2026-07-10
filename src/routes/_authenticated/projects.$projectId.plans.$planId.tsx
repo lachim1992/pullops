@@ -287,6 +287,16 @@ function PlanEditorPage() {
         return;
       }
       setDraftPoints((pts) => [...pts, pos]);
+    } else if (mode === "rack") {
+      setPendingRackPos(pos);
+    } else if (mode === "bundle") {
+      setDraftBundlePoints((pts) => [...pts, pos]);
+    } else if (mode === "port") {
+      if (!selectedPortId) {
+        toast.error("Nejprve vyberte volný port ze seznamu");
+        return;
+      }
+      setPendingPortPos(pos);
     }
   }
 
