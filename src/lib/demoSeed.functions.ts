@@ -114,7 +114,43 @@ export const seedCeskeBudejoviceDemo = createServerFn({ method: "POST" })
       .single();
     if (ctErr) throw new Error(ctErr.message);
 
-    // 4) patch panels — trigger auto-fills ports 1..N
+    // 4a) rack entities (new model) + calibration
+    const rackEntities: Array<{ code: string; name: string; x: number; y: number }> = [
+      { code: "RACK-A", name: "Hlavní rack", x: 0.08, y: 0.92 },
+      { code: "RACK-B", name: "Vedlejší rack", x: 0.5, y: 0.92 },
+    ];
+    const rackEntityIds: Record<string, string> = {};
+    for (const r of rackEntities) {
+      const { data: row, error } = await supabase
+        .from("racks")
+        .insert({
+          project_id,
+          organization_id,
+          floor_plan_id: fp.id,
+          code: r.code,
+          name: r.name,
+          x: r.x,
+          y: r.y,
+          created_by: userId,
+        })
+        .select("id")
+        .single();
+      if (error) throw new Error(`rack ${r.code}: ${error.message}`);
+      rackEntityIds[r.code] = row.id as string;
+    }
+
+    await supabase.from("floor_plan_calibrations").insert({
+      project_id,
+      organization_id,
+      floor_plan_id: fp.id,
+      point_a_norm_x: 0.1,
+      point_a_norm_y: 0.1,
+      point_b_norm_x: 0.9,
+      point_b_norm_y: 0.1,
+      real_distance_m: 20,
+    });
+
+    // 4) patch panels — trigger auto-fills ports 1..N (assigned to RACK-A)
     const panelIds: Record<string, string> = {};
     for (const p of PANELS) {
       const { data: row, error } = await supabase
@@ -126,6 +162,7 @@ export const seedCeskeBudejoviceDemo = createServerFn({ method: "POST" })
           name: p.name,
           port_count: 24,
           floor_plan_id: fp.id,
+          rack_id: rackEntityIds["RACK-A"],
           created_by: userId,
         })
         .select("id")
@@ -133,6 +170,29 @@ export const seedCeskeBudejoviceDemo = createServerFn({ method: "POST" })
       if (error) throw new Error(`patch_panels ${p.code}: ${error.message}`);
       panelIds[p.code] = row.id as string;
     }
+
+    // 4b) main bundle (kmen) going from rack area across the plan
+    const bundlePoints = [
+      { x: 0.1, y: 0.9 },
+      { x: 0.1, y: 0.5 },
+      { x: 0.6, y: 0.5 },
+      { x: 0.85, y: 0.5 },
+    ];
+    const { data: bundleRow, error: bundleErr } = await supabase
+      .from("cable_bundles")
+      .insert({
+        project_id,
+        organization_id,
+        floor_plan_id: fp.id,
+        code: "BND-01",
+        rack_id: rackEntityIds["RACK-A"],
+        points: bundlePoints,
+        created_by: userId,
+      })
+      .select("id")
+      .single();
+    if (bundleErr) throw new Error(`bundle: ${bundleErr.message}`);
+    const bundleId = bundleRow.id as string;
 
     // 5) fetch generated ports for these panels
     const { data: portRows, error: portErr } = await supabase
