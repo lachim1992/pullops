@@ -713,7 +713,7 @@ function PdfPlanBackground({ url, title }: { url: string; title: string }) {
         const context = canvas.getContext("2d");
         if (!context) throw new Error("Canvas není dostupný");
 
-        const task = page.render({ canvas, canvasContext: context, viewport });
+        const task = page.render({ canvasContext: context, viewport });
         renderTask = task;
         await task.promise;
         if (!cancelled) setStatus("ready");
