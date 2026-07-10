@@ -449,6 +449,7 @@ function PlanEditorPage() {
       qc.invalidateQueries({ queryKey: ["endpoints", projectId, planId] });
       qc.invalidateQueries({ queryKey: ["free-ports", projectId] });
       qc.invalidateQueries({ queryKey: ["cables", projectId] });
+      qc.invalidateQueries({ queryKey: ["plan-branches", projectId, planId] });
       toast.success("Endpoint a kabel vytvořeny, trasa přiřazena k nejbližšímu kmeni");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Chyba");
