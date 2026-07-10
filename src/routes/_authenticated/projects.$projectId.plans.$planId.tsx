@@ -129,6 +129,55 @@ function PlanEditorPage() {
   const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
 
+  // Zoom & pan state
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const panStateRef = useRef<{ startX: number; startY: number; ox: number; oy: number } | null>(
+    null,
+  );
+
+  function clampZoom(z: number) {
+    return Math.max(0.5, Math.min(8, z));
+  }
+  function zoomAt(clientX: number, clientY: number, factor: number) {
+    const rect = viewportRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const px = clientX - rect.left;
+    const py = clientY - rect.top;
+    setZoom((z) => {
+      const nz = clampZoom(z * factor);
+      const real = nz / z;
+      setPan((p) => ({ x: px - (px - p.x) * real, y: py - (py - p.y) * real }));
+      return nz;
+    });
+  }
+  function handleWheel(e: React.WheelEvent) {
+    if (!e.ctrlKey && !e.metaKey && Math.abs(e.deltaY) < 1) return;
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+    zoomAt(e.clientX, e.clientY, factor);
+  }
+  function handleViewportMouseDown(e: React.MouseEvent) {
+    // middle mouse or space+left, or right button → pan
+    if (e.button === 1 || e.button === 2 || (e.button === 0 && e.altKey)) {
+      e.preventDefault();
+      panStateRef.current = { startX: e.clientX, startY: e.clientY, ox: pan.x, oy: pan.y };
+    }
+  }
+  function handleViewportMouseMove(e: React.MouseEvent) {
+    const st = panStateRef.current;
+    if (!st) return;
+    setPan({ x: st.ox + (e.clientX - st.startX), y: st.oy + (e.clientY - st.startY) });
+  }
+  function endPan() {
+    panStateRef.current = null;
+  }
+  function resetView() {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  }
+
   const endpointCables = useQuery({
     queryKey: ["endpoint-cables", selectedEndpointId],
     queryFn: () => listEpCablesFn({ data: { endpointId: selectedEndpointId! } }),
