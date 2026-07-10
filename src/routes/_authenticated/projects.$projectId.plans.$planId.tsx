@@ -40,11 +40,15 @@ import {
   listUnassignedCables,
   removeCableFromEndpoint,
 } from "@/lib/endpointGroups.functions";
+import { createRack, listRacks, deleteRack } from "@/lib/racks.functions";
+import { createBundle, listBundles, deleteBundle } from "@/lib/cableBundles.functions";
+import { createCableFromPort, listFreePorts } from "@/lib/cablesFromPort.functions";
 import {
   computeCableLength,
   metersPerNormUnit,
   normDistance,
   polylineNormLength,
+  closestPointOnPolyline,
   type Calibration,
   type NormPoint,
 } from "@/lib/length";
