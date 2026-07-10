@@ -519,6 +519,50 @@ function PlanEditorPage() {
             </div>
           </div>
 
+          {selectedEndpointId && (
+            <EndpointOperationalPanel
+              projectId={projectId}
+              floorPlanId={planId}
+              endpointId={selectedEndpointId}
+              endpoint={
+                (endpoints.data ?? []).find((e) => e.id === selectedEndpointId) ?? null
+              }
+              routes={routes.data ?? []}
+              cables={endpointCables.data ?? []}
+              listUnassignedFn={async () =>
+                listUnassignedFn({ data: { projectId } })
+              }
+              addFn={async (cableIds) => {
+                await addCablesFn({
+                  data: { projectId, endpointId: selectedEndpointId, cableIds },
+                });
+                await qc.invalidateQueries({
+                  queryKey: ["endpoint-cables", selectedEndpointId],
+                });
+              }}
+              removeFn={async (cableId) => {
+                await removeCableFn({
+                  data: { endpointId: selectedEndpointId, cableId },
+                });
+                await qc.invalidateQueries({
+                  queryKey: ["endpoint-cables", selectedEndpointId],
+                });
+              }}
+              assignRouteFn={async (routeId) => {
+                const res = await assignRouteFn({
+                  data: { endpointId: selectedEndpointId, routeId },
+                });
+                await qc.invalidateQueries({
+                  queryKey: ["endpoint-cables", selectedEndpointId],
+                });
+                await qc.invalidateQueries({ queryKey: ["cables", projectId] });
+                return res.count ?? 0;
+              }}
+              onClose={() => setSelectedEndpointId(null)}
+            />
+          )}
+
+
           {mode === "calibrate" && (
             <div className="rounded-sm border border-border p-3 text-sm">
               <div className="mb-2 font-semibold">Kalibrace</div>
