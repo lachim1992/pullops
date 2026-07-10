@@ -2,7 +2,88 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { nearestBundle, type NormPoint } from "@/lib/length";
+import { closestPointOnPolyline, nearestBundle, type NormPoint } from "@/lib/length";
+
+/**
+ * Auto-assign every cable on a floor plan (that has a to_endpoint on this plan)
+ * to the nearest cable_bundle on the same plan, computing straight-line
+ * branch_points from the bundle anchor to the endpoint position.
+ * Only touches cables that don't yet have a bundle_id.
+ */
+export const autoAssignBundlesForPlan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        projectId: z.string().uuid(),
+        floorPlanId: z.string().uuid(),
+        overwrite: z.boolean().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: bundles } = await supabase
+      .from("cable_bundles")
+      .select("id, points")
+      .eq("project_id", data.projectId)
+      .eq("floor_plan_id", data.floorPlanId);
+    const bundleList = (bundles ?? []).map((b) => ({
+      id: b.id as string,
+      points: (b.points as unknown as NormPoint[]) ?? [],
+    }));
+    if (bundleList.length === 0) {
+      return { assigned: 0, skipped: 0, reason: "no_bundles" as const };
+    }
+    const { data: eps } = await supabase
+      .from("endpoints")
+      .select("id, norm_x, norm_y")
+      .eq("project_id", data.projectId)
+      .eq("floor_plan_id", data.floorPlanId);
+    const epMap = new Map<string, NormPoint>();
+    for (const e of eps ?? []) {
+      epMap.set(e.id as string, { x: Number(e.norm_x), y: Number(e.norm_y) });
+    }
+    if (epMap.size === 0) return { assigned: 0, skipped: 0, reason: "no_endpoints" as const };
+
+    let query = supabase
+      .from("cables")
+      .select("id, bundle_id, to_endpoint_id")
+      .eq("project_id", data.projectId)
+      .in("to_endpoint_id", Array.from(epMap.keys()));
+    if (!data.overwrite) query = query.is("bundle_id", null);
+    const { data: cables, error } = await query;
+    if (error) throw new Error(error.message);
+
+    let assigned = 0;
+    let skipped = 0;
+    for (const c of cables ?? []) {
+      const epId = c.to_endpoint_id as string | null;
+      if (!epId) {
+        skipped++;
+        continue;
+      }
+      const pos = epMap.get(epId);
+      if (!pos) {
+        skipped++;
+        continue;
+      }
+      const nb = nearestBundle(pos, bundleList);
+      if (!nb) {
+        skipped++;
+        continue;
+      }
+      const anchor = closestPointOnPolyline(pos, bundleList.find((b) => b.id === nb.id)!.points);
+      const branch = anchor ? [anchor.point, pos] : [nb.anchor, pos];
+      const { error: uerr } = await supabase
+        .from("cables")
+        .update({ bundle_id: nb.id, branch_points: branch } as never)
+        .eq("id", c.id as string);
+      if (uerr) throw new Error(uerr.message);
+      assigned++;
+    }
+    return { assigned, skipped, reason: "ok" as const };
+  });
 
 /**
  * List cables belonging to a floor plan that have branch_points recorded,
