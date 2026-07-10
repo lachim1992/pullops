@@ -227,6 +227,7 @@ export const seedCeskeBudejoviceDemo = createServerFn({ method: "POST" })
       return { x: 0.05 + (gx / 20) * 0.9, y: 0.05 + (gy / 20) * 0.9 };
     };
     let idx = 0;
+    const endpointPosByCode = new Map<string, { x: number; y: number }>();
     for (const lp of labeled) {
       if (!endpointByCode.has(lp.label)) {
         const { x, y } = rng(idx++);
@@ -246,8 +247,12 @@ export const seedCeskeBudejoviceDemo = createServerFn({ method: "POST" })
           .single();
         if (epErr) throw new Error(`endpoint ${lp.label}: ${epErr.message}`);
         endpointByCode.set(lp.label, ep.id as string);
+        endpointPosByCode.set(lp.label, { x, y });
       }
       const endpointId = endpointByCode.get(lp.label)!;
+      const pos = endpointPosByCode.get(lp.label)!;
+      const anchor = closestPointOnPolyline(pos, bundlePoints);
+      const branch = anchor ? [anchor.point, pos] : null;
       const { error: cErr } = await supabase.from("cables").insert({
         project_id,
         organization_id,
@@ -255,9 +260,11 @@ export const seedCeskeBudejoviceDemo = createServerFn({ method: "POST" })
         cable_type_id: ct.id,
         from_port_id: lp.portId,
         to_endpoint_id: endpointId,
+        bundle_id: bundleId,
+        branch_points: branch,
         status: "PLANNED",
         created_by: userId,
-      });
+      } as never);
       if (cErr) throw new Error(`cable ${lp.label}: ${cErr.message}`);
     }
 
