@@ -322,16 +322,25 @@ function PlanEditorPage() {
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
         <div className="relative aspect-[4/3] w-full overflow-hidden rounded-sm border border-border bg-muted">
           {plan.data?.documentUrl ? (
-            <img
-              src={plan.data.documentUrl}
-              alt={plan.data.plan.name}
-              className="pointer-events-none absolute inset-0 h-full w-full select-none object-contain"
-            />
+            plan.data.document?.mime_type?.includes("pdf") ? (
+              <iframe
+                src={`${plan.data.documentUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                title={plan.data.plan.name}
+                className="pointer-events-none absolute inset-0 h-full w-full select-none border-0"
+              />
+            ) : (
+              <img
+                src={plan.data.documentUrl}
+                alt={plan.data.plan.name}
+                className="pointer-events-none absolute inset-0 h-full w-full select-none object-contain"
+              />
+            )
           ) : (
             <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
-              Bez podkladového obrázku — pracujte v prázdném prostoru
+              Bez podkladového obrázku — vyberte podklad vpravo
             </div>
           )}
+
           <svg
             ref={svgRef}
             viewBox="0 0 1 1"
