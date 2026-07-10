@@ -685,8 +685,8 @@ function PlanEditorPage() {
                       points={pts.map((p) => `${p.x},${p.y}`).join(" ")}
                       fill="none"
                       stroke="hsl(var(--primary))"
-                      strokeOpacity={0.55}
-                      strokeWidth={0.008 / zoom}
+                      strokeOpacity={0.9}
+                      strokeWidth={0.014 / zoom}
                       strokeLinejoin="round"
                     />
                     <text
