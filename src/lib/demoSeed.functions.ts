@@ -180,7 +180,6 @@ export const seedCeskeBudejoviceDemo = createServerFn({ method: "POST" })
       .from("cable_bundles")
       .insert({
         project_id,
-        organization_id,
         floor_plan_id: fp.id,
         code: "BND-01",
         rack_id: rackEntityIds["RACK-A"],
