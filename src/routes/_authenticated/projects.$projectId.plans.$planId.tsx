@@ -62,7 +62,7 @@ export const Route = createFileRoute(
   component: PlanEditorPage,
 });
 
-type Mode = "calibrate" | "endpoint" | "route";
+type Mode = "calibrate" | "endpoint" | "route" | "rack" | "bundle" | "port";
 
 function PlanEditorPage() {
   const { projectId, planId } = useParams({
