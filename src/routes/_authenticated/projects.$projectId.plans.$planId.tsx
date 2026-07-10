@@ -42,7 +42,12 @@ import {
 } from "@/lib/endpointGroups.functions";
 import { createRack, listRacks, deleteRack } from "@/lib/racks.functions";
 import { createBundle, listBundles, deleteBundle } from "@/lib/cableBundles.functions";
-import { createCableFromPort, listFreePorts, listPlanBranches } from "@/lib/cablesFromPort.functions";
+import {
+  autoAssignBundlesForPlan,
+  createCableFromPort,
+  listFreePorts,
+  listPlanBranches,
+} from "@/lib/cablesFromPort.functions";
 import {
   computeCableLength,
   metersPerNormUnit,
@@ -95,6 +100,7 @@ function PlanEditorPage() {
   const listFreePortsFn = useServerFn(listFreePorts);
   const createCableFromPortFn = useServerFn(createCableFromPort);
   const listPlanBranchesFn = useServerFn(listPlanBranches);
+  const autoAssignBundlesFn = useServerFn(autoAssignBundlesForPlan);
   const qc = useQueryClient();
 
 
@@ -234,6 +240,30 @@ function PlanEditorPage() {
       }
     : null;
   const mpu = useMemo(() => metersPerNormUnit(calibration), [calibration]);
+  const calNormDist = useMemo(
+    () => (calibration ? normDistance(calibration.a, calibration.b) : 0),
+    [calibration],
+  );
+  const calibrationSuspicious = calibration != null && calNormDist < 0.05;
+
+  async function autoAssign() {
+    try {
+      const res = await autoAssignBundlesFn({
+        data: { projectId, floorPlanId: planId },
+      });
+      if (res.reason === "no_bundles") {
+        toast.error("Není žádný kmen — nakreslete kmen v režimu 'Kmeny'");
+      } else if (res.reason === "no_endpoints") {
+        toast.error("Na tomto plánu nejsou žádné endpointy");
+      } else {
+        toast.success(`Přiřazeno ${res.assigned} kabelů k nejbližšímu kmeni`);
+      }
+      qc.invalidateQueries({ queryKey: ["plan-branches", projectId, planId] });
+      qc.invalidateQueries({ queryKey: ["cables", projectId] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Chyba");
+    }
+  }
 
   const routeDetail = useQuery({
     queryKey: ["route", selectedRouteId],
@@ -497,9 +527,12 @@ function PlanEditorPage() {
           <h1 className="text-2xl font-semibold tracking-tight">
             {plan.data?.plan.name}
           </h1>
-          <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             {mpu != null ? (
-              <Badge variant="secondary" className="font-mono text-[10px]">
+              <Badge
+                variant={calibrationSuspicious ? "destructive" : "secondary"}
+                className="font-mono text-[10px]"
+              >
                 {mpu.toFixed(2)} m / norm.j.
               </Badge>
             ) : (
@@ -507,6 +540,14 @@ function PlanEditorPage() {
                 Chybí kalibrace
               </Badge>
             )}
+            {calibrationSuspicious && (
+              <span className="font-mono text-[10px] text-destructive">
+                Body A/B jsou příliš blízko sebe ({calNormDist.toFixed(4)}) — překalibrujte
+              </span>
+            )}
+            <Button size="sm" variant="outline" className="h-6 px-2 text-[10px]" onClick={autoAssign}>
+              Přiřadit kabely k nejbližšímu kmeni
+            </Button>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -644,8 +685,8 @@ function PlanEditorPage() {
                       points={pts.map((p) => `${p.x},${p.y}`).join(" ")}
                       fill="none"
                       stroke="hsl(var(--primary))"
-                      strokeOpacity={0.55}
-                      strokeWidth={0.008 / zoom}
+                      strokeOpacity={0.9}
+                      strokeWidth={0.014 / zoom}
                       strokeLinejoin="round"
                     />
                     <text
