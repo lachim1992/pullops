@@ -151,6 +151,18 @@ function PlanEditorPage() {
   const [selectedEndpointId, setSelectedEndpointId] = useState<string | null>(null);
   const [draftPoints, setDraftPoints] = useState<NormPoint[]>([]);
   const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
+  // Rack mode
+  const [pendingRackPos, setPendingRackPos] = useState<NormPoint | null>(null);
+  const [newRackCode, setNewRackCode] = useState("");
+  const [newRackName, setNewRackName] = useState("");
+  // Bundle mode
+  const [draftBundlePoints, setDraftBundlePoints] = useState<NormPoint[]>([]);
+  const [newBundleCode, setNewBundleCode] = useState("");
+  // Port mode
+  const [selectedPortId, setSelectedPortId] = useState<string | null>(null);
+  const [pendingPortPos, setPendingPortPos] = useState<NormPoint | null>(null);
+  const [newPortEpCode, setNewPortEpCode] = useState("");
+  const [newPortCableCode, setNewPortCableCode] = useState("");
   const svgRef = useRef<SVGSVGElement>(null);
 
   // Zoom & pan state
