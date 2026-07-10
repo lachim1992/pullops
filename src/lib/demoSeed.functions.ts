@@ -205,8 +205,11 @@ export const seedCeskeBudejoviceDemo = createServerFn({ method: "POST" })
 
     return {
       projectId: project_id,
+      floorPlanId: fp.id as string,
+      organizationId: organization_id,
       panels: PANELS.length,
       cables: labeled.length,
       endpoints: endpointByCode.size,
     };
   });
+

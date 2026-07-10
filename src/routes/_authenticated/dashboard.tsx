@@ -22,6 +22,10 @@ import { Badge } from "@/components/ui/badge";
 import { listMyOrganizations } from "@/lib/orgs.functions";
 import { createProject, listMyProjects } from "@/lib/projects.functions";
 import { seedCeskeBudejoviceDemo } from "@/lib/demoSeed.functions";
+import { registerDocument } from "@/lib/documents.functions";
+import { updateFloorPlan } from "@/lib/floorPlans.functions";
+import { supabase } from "@/integrations/supabase/client";
+
 
 
 const searchSchema = z.object({ org: z.string().uuid().optional() });
@@ -248,17 +252,64 @@ function NewProjectDialog({ organizationId }: { organizationId: string }) {
 
 function SeedDemoButton({ organizationId }: { organizationId: string }) {
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState<string | null>(null);
   const seed = useServerFn(seedCeskeBudejoviceDemo);
+  const registerFn = useServerFn(registerDocument);
+  const updatePlanFn = useServerFn(updateFloorPlan);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
   async function run() {
     if (!confirm("Vytvořit demo projekt McDonald's České Budějovice II?")) return;
     setLoading(true);
+    setProgress("Zakládám projekt…");
     try {
-      const { projectId, panels, cables, endpoints } = await seed({
+      const { projectId, floorPlanId, panels, cables, endpoints } = await seed({
         data: { organizationId },
       });
+
+      // Attach demo documents (PDFs served from /public/demo).
+      const DEMO_DOCS: Array<{
+        file: string;
+        title: string;
+        kind: "FLOOR_PLAN" | "SCHEMATIC" | "OTHER";
+        floorPlanBackground?: boolean;
+      }> = [
+        { file: "floorplan-nove.pdf", title: "Půdorys – nové konstrukce", kind: "FLOOR_PLAN", floorPlanBackground: true },
+        { file: "floorplan-bourane.pdf", title: "Půdorys – bourané konstrukce", kind: "FLOOR_PLAN" },
+        { file: "cb2-kvs-plan.pdf", title: "KVS plán", kind: "SCHEMATIC" },
+        { file: "cb-lan.pdf", title: "LAN schéma", kind: "SCHEMATIC" },
+        { file: "cb-patch-panely.pdf", title: "Patch panely (PDF)", kind: "SCHEMATIC" },
+        { file: "cb2-informace.pdf", title: "ČB2 – informace", kind: "OTHER" },
+      ];
+
+      setProgress("Nahrávám dokumenty…");
+      let backgroundDocId: string | null = null;
+      for (const d of DEMO_DOCS) {
+        const res = await fetch(`/demo/${d.file}`);
+        if (!res.ok) continue;
+        const blob = await res.blob();
+        const path = `${projectId}/${crypto.randomUUID()}-${d.file}`;
+        const up = await supabase.storage
+          .from("project-documents")
+          .upload(path, blob, { contentType: "application/pdf" });
+        if (up.error) continue;
+        const { id } = await registerFn({
+          data: {
+            projectId,
+            kind: d.kind,
+            title: d.title,
+            storagePath: path,
+            mimeType: "application/pdf",
+          },
+        });
+        if (d.floorPlanBackground) backgroundDocId = id;
+      }
+
+      if (backgroundDocId) {
+        await updatePlanFn({ data: { id: floorPlanId, documentId: backgroundDocId } });
+      }
+
       await queryClient.invalidateQueries({ queryKey: ["projects"] });
       toast.success(
         `Demo vytvořeno: ${panels} panelů, ${endpoints} endpointů, ${cables} kabelů`,
@@ -268,6 +319,7 @@ function SeedDemoButton({ organizationId }: { organizationId: string }) {
       toast.error(err instanceof Error ? err.message : "Chyba");
     } finally {
       setLoading(false);
+      setProgress(null);
     }
   }
 
@@ -278,8 +330,9 @@ function SeedDemoButton({ organizationId }: { organizationId: string }) {
       ) : (
         <Sparkles className="mr-1 h-4 w-4" />
       )}
-      Nahrát demo ČB2
+      {progress ?? "Nahrát demo ČB2"}
     </Button>
   );
 }
+
 

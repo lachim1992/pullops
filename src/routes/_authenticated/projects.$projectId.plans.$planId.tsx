@@ -17,7 +17,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { getFloorPlan, setCalibration } from "@/lib/floorPlans.functions";
+import { getFloorPlan, setCalibration, updateFloorPlan } from "@/lib/floorPlans.functions";
+import { listProjectDocuments } from "@/lib/documents.functions";
+
 import {
   createEndpoint,
   deleteEndpoint,
@@ -57,6 +59,7 @@ function PlanEditorPage() {
   });
   const getPlanFn = useServerFn(getFloorPlan);
   const setCalFn = useServerFn(setCalibration);
+  const updatePlanFn = useServerFn(updateFloorPlan);
   const listEpFn = useServerFn(listEndpoints);
   const createEpFn = useServerFn(createEndpoint);
   const deleteEpFn = useServerFn(deleteEndpoint);
@@ -66,7 +69,9 @@ function PlanEditorPage() {
   const updateRouteFn = useServerFn(updateRoute);
   const updateRoutePointsFn = useServerFn(updateRoutePoints);
   const deleteRouteFn = useServerFn(deleteRoute);
+  const listDocsFn = useServerFn(listProjectDocuments);
   const qc = useQueryClient();
+
 
   const plan = useQuery({
     queryKey: ["plan", planId],
@@ -80,6 +85,21 @@ function PlanEditorPage() {
     queryKey: ["routes", projectId, planId],
     queryFn: () => listRoutesFn({ data: { projectId, floorPlanId: planId } }),
   });
+  const docs = useQuery({
+    queryKey: ["docs", projectId],
+    queryFn: () => listDocsFn({ data: { projectId } }),
+  });
+
+  async function changeBackgroundDoc(documentId: string | null) {
+    try {
+      await updatePlanFn({ data: { id: planId, documentId } });
+      toast.success("Podklad plánu aktualizován");
+      qc.invalidateQueries({ queryKey: ["plan", planId] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Chyba");
+    }
+  }
+
 
   const [mode, setMode] = useState<Mode>("endpoint");
   const [calA, setCalA] = useState<NormPoint | null>(null);
@@ -302,16 +322,25 @@ function PlanEditorPage() {
       <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
         <div className="relative aspect-[4/3] w-full overflow-hidden rounded-sm border border-border bg-muted">
           {plan.data?.documentUrl ? (
-            <img
-              src={plan.data.documentUrl}
-              alt={plan.data.plan.name}
-              className="pointer-events-none absolute inset-0 h-full w-full select-none object-contain"
-            />
+            plan.data.document?.mime_type?.includes("pdf") ? (
+              <iframe
+                src={`${plan.data.documentUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                title={plan.data.plan.name}
+                className="pointer-events-none absolute inset-0 h-full w-full select-none border-0"
+              />
+            ) : (
+              <img
+                src={plan.data.documentUrl}
+                alt={plan.data.plan.name}
+                className="pointer-events-none absolute inset-0 h-full w-full select-none object-contain"
+              />
+            )
           ) : (
             <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
-              Bez podkladového obrázku — pracujte v prázdném prostoru
+              Bez podkladového obrázku — vyberte podklad vpravo
             </div>
           )}
+
           <svg
             ref={svgRef}
             viewBox="0 0 1 1"
@@ -415,6 +444,25 @@ function PlanEditorPage() {
         </div>
 
         <aside className="space-y-4">
+          <div className="rounded-sm border border-border p-3 text-sm">
+            <div className="mb-2 font-semibold">Podklad plánu</div>
+            <select
+              className="w-full rounded-sm border border-input bg-background px-2 py-1.5 text-xs"
+              value={plan.data?.plan.document_id ?? ""}
+              onChange={(e) => changeBackgroundDoc(e.target.value || null)}
+            >
+              <option value="">— žádný —</option>
+              {(docs.data ?? []).map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.title}
+                </option>
+              ))}
+            </select>
+            <div className="mt-1 text-[11px] text-muted-foreground">
+              PDF nebo obrázek nahraný v sekci Dokumenty.
+            </div>
+          </div>
+
           {mode === "calibrate" && (
             <div className="rounded-sm border border-border p-3 text-sm">
               <div className="mb-2 font-semibold">Kalibrace</div>
