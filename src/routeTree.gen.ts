@@ -17,8 +17,14 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
 import { Route as AuthenticatedProjectsProjectIdIndexRouteImport } from './routes/_authenticated/projects.$projectId.index'
 import { Route as AuthenticatedProjectsProjectIdSettingsRouteImport } from './routes/_authenticated/projects.$projectId.settings'
+import { Route as AuthenticatedProjectsProjectIdPlansRouteImport } from './routes/_authenticated/projects.$projectId.plans'
 import { Route as AuthenticatedProjectsProjectIdMembersRouteImport } from './routes/_authenticated/projects.$projectId.members'
+import { Route as AuthenticatedProjectsProjectIdEndpointsRouteImport } from './routes/_authenticated/projects.$projectId.endpoints'
+import { Route as AuthenticatedProjectsProjectIdDocumentsRouteImport } from './routes/_authenticated/projects.$projectId.documents'
+import { Route as AuthenticatedProjectsProjectIdCablesRouteImport } from './routes/_authenticated/projects.$projectId.cables'
+import { Route as AuthenticatedProjectsProjectIdCableTypesRouteImport } from './routes/_authenticated/projects.$projectId.cable-types'
 import { Route as AuthenticatedOrganizationsOrgIdSettingsRouteImport } from './routes/_authenticated/organizations.$orgId.settings'
+import { Route as AuthenticatedProjectsProjectIdPlansPlanIdRouteImport } from './routes/_authenticated/projects.$projectId.plans.$planId'
 
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
@@ -61,10 +67,40 @@ const AuthenticatedProjectsProjectIdSettingsRoute =
     path: '/projects/$projectId/settings',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedProjectsProjectIdPlansRoute =
+  AuthenticatedProjectsProjectIdPlansRouteImport.update({
+    id: '/projects/$projectId/plans',
+    path: '/projects/$projectId/plans',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedProjectsProjectIdMembersRoute =
   AuthenticatedProjectsProjectIdMembersRouteImport.update({
     id: '/projects/$projectId/members',
     path: '/projects/$projectId/members',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedProjectsProjectIdEndpointsRoute =
+  AuthenticatedProjectsProjectIdEndpointsRouteImport.update({
+    id: '/projects/$projectId/endpoints',
+    path: '/projects/$projectId/endpoints',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedProjectsProjectIdDocumentsRoute =
+  AuthenticatedProjectsProjectIdDocumentsRouteImport.update({
+    id: '/projects/$projectId/documents',
+    path: '/projects/$projectId/documents',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedProjectsProjectIdCablesRoute =
+  AuthenticatedProjectsProjectIdCablesRouteImport.update({
+    id: '/projects/$projectId/cables',
+    path: '/projects/$projectId/cables',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedProjectsProjectIdCableTypesRoute =
+  AuthenticatedProjectsProjectIdCableTypesRouteImport.update({
+    id: '/projects/$projectId/cable-types',
+    path: '/projects/$projectId/cable-types',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedOrganizationsOrgIdSettingsRoute =
@@ -72,6 +108,12 @@ const AuthenticatedOrganizationsOrgIdSettingsRoute =
     id: '/organizations/$orgId/settings',
     path: '/organizations/$orgId/settings',
     getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedProjectsProjectIdPlansPlanIdRoute =
+  AuthenticatedProjectsProjectIdPlansPlanIdRouteImport.update({
+    id: '/$planId',
+    path: '/$planId',
+    getParentRoute: () => AuthenticatedProjectsProjectIdPlansRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -81,9 +123,15 @@ export interface FileRoutesByFullPath {
   '/audit': typeof AuthenticatedAuditRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/organizations/$orgId/settings': typeof AuthenticatedOrganizationsOrgIdSettingsRoute
+  '/projects/$projectId/cable-types': typeof AuthenticatedProjectsProjectIdCableTypesRoute
+  '/projects/$projectId/cables': typeof AuthenticatedProjectsProjectIdCablesRoute
+  '/projects/$projectId/documents': typeof AuthenticatedProjectsProjectIdDocumentsRoute
+  '/projects/$projectId/endpoints': typeof AuthenticatedProjectsProjectIdEndpointsRoute
   '/projects/$projectId/members': typeof AuthenticatedProjectsProjectIdMembersRoute
+  '/projects/$projectId/plans': typeof AuthenticatedProjectsProjectIdPlansRouteWithChildren
   '/projects/$projectId/settings': typeof AuthenticatedProjectsProjectIdSettingsRoute
   '/projects/$projectId/': typeof AuthenticatedProjectsProjectIdIndexRoute
+  '/projects/$projectId/plans/$planId': typeof AuthenticatedProjectsProjectIdPlansPlanIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -92,9 +140,15 @@ export interface FileRoutesByTo {
   '/audit': typeof AuthenticatedAuditRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/organizations/$orgId/settings': typeof AuthenticatedOrganizationsOrgIdSettingsRoute
+  '/projects/$projectId/cable-types': typeof AuthenticatedProjectsProjectIdCableTypesRoute
+  '/projects/$projectId/cables': typeof AuthenticatedProjectsProjectIdCablesRoute
+  '/projects/$projectId/documents': typeof AuthenticatedProjectsProjectIdDocumentsRoute
+  '/projects/$projectId/endpoints': typeof AuthenticatedProjectsProjectIdEndpointsRoute
   '/projects/$projectId/members': typeof AuthenticatedProjectsProjectIdMembersRoute
+  '/projects/$projectId/plans': typeof AuthenticatedProjectsProjectIdPlansRouteWithChildren
   '/projects/$projectId/settings': typeof AuthenticatedProjectsProjectIdSettingsRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdIndexRoute
+  '/projects/$projectId/plans/$planId': typeof AuthenticatedProjectsProjectIdPlansPlanIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -105,9 +159,15 @@ export interface FileRoutesById {
   '/_authenticated/audit': typeof AuthenticatedAuditRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/organizations/$orgId/settings': typeof AuthenticatedOrganizationsOrgIdSettingsRoute
+  '/_authenticated/projects/$projectId/cable-types': typeof AuthenticatedProjectsProjectIdCableTypesRoute
+  '/_authenticated/projects/$projectId/cables': typeof AuthenticatedProjectsProjectIdCablesRoute
+  '/_authenticated/projects/$projectId/documents': typeof AuthenticatedProjectsProjectIdDocumentsRoute
+  '/_authenticated/projects/$projectId/endpoints': typeof AuthenticatedProjectsProjectIdEndpointsRoute
   '/_authenticated/projects/$projectId/members': typeof AuthenticatedProjectsProjectIdMembersRoute
+  '/_authenticated/projects/$projectId/plans': typeof AuthenticatedProjectsProjectIdPlansRouteWithChildren
   '/_authenticated/projects/$projectId/settings': typeof AuthenticatedProjectsProjectIdSettingsRoute
   '/_authenticated/projects/$projectId/': typeof AuthenticatedProjectsProjectIdIndexRoute
+  '/_authenticated/projects/$projectId/plans/$planId': typeof AuthenticatedProjectsProjectIdPlansPlanIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -118,9 +178,15 @@ export interface FileRouteTypes {
     | '/audit'
     | '/dashboard'
     | '/organizations/$orgId/settings'
+    | '/projects/$projectId/cable-types'
+    | '/projects/$projectId/cables'
+    | '/projects/$projectId/documents'
+    | '/projects/$projectId/endpoints'
     | '/projects/$projectId/members'
+    | '/projects/$projectId/plans'
     | '/projects/$projectId/settings'
     | '/projects/$projectId/'
+    | '/projects/$projectId/plans/$planId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -129,9 +195,15 @@ export interface FileRouteTypes {
     | '/audit'
     | '/dashboard'
     | '/organizations/$orgId/settings'
+    | '/projects/$projectId/cable-types'
+    | '/projects/$projectId/cables'
+    | '/projects/$projectId/documents'
+    | '/projects/$projectId/endpoints'
     | '/projects/$projectId/members'
+    | '/projects/$projectId/plans'
     | '/projects/$projectId/settings'
     | '/projects/$projectId'
+    | '/projects/$projectId/plans/$planId'
   id:
     | '__root__'
     | '/'
@@ -141,9 +213,15 @@ export interface FileRouteTypes {
     | '/_authenticated/audit'
     | '/_authenticated/dashboard'
     | '/_authenticated/organizations/$orgId/settings'
+    | '/_authenticated/projects/$projectId/cable-types'
+    | '/_authenticated/projects/$projectId/cables'
+    | '/_authenticated/projects/$projectId/documents'
+    | '/_authenticated/projects/$projectId/endpoints'
     | '/_authenticated/projects/$projectId/members'
+    | '/_authenticated/projects/$projectId/plans'
     | '/_authenticated/projects/$projectId/settings'
     | '/_authenticated/projects/$projectId/'
+    | '/_authenticated/projects/$projectId/plans/$planId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -211,11 +289,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectIdSettingsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/projects/$projectId/plans': {
+      id: '/_authenticated/projects/$projectId/plans'
+      path: '/projects/$projectId/plans'
+      fullPath: '/projects/$projectId/plans'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdPlansRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/projects/$projectId/members': {
       id: '/_authenticated/projects/$projectId/members'
       path: '/projects/$projectId/members'
       fullPath: '/projects/$projectId/members'
       preLoaderRoute: typeof AuthenticatedProjectsProjectIdMembersRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/projects/$projectId/endpoints': {
+      id: '/_authenticated/projects/$projectId/endpoints'
+      path: '/projects/$projectId/endpoints'
+      fullPath: '/projects/$projectId/endpoints'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdEndpointsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/projects/$projectId/documents': {
+      id: '/_authenticated/projects/$projectId/documents'
+      path: '/projects/$projectId/documents'
+      fullPath: '/projects/$projectId/documents'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdDocumentsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/projects/$projectId/cables': {
+      id: '/_authenticated/projects/$projectId/cables'
+      path: '/projects/$projectId/cables'
+      fullPath: '/projects/$projectId/cables'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdCablesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/projects/$projectId/cable-types': {
+      id: '/_authenticated/projects/$projectId/cable-types'
+      path: '/projects/$projectId/cable-types'
+      fullPath: '/projects/$projectId/cable-types'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdCableTypesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/organizations/$orgId/settings': {
@@ -225,14 +338,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOrganizationsOrgIdSettingsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/projects/$projectId/plans/$planId': {
+      id: '/_authenticated/projects/$projectId/plans/$planId'
+      path: '/$planId'
+      fullPath: '/projects/$projectId/plans/$planId'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdPlansPlanIdRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdPlansRoute
+    }
   }
 }
+
+interface AuthenticatedProjectsProjectIdPlansRouteChildren {
+  AuthenticatedProjectsProjectIdPlansPlanIdRoute: typeof AuthenticatedProjectsProjectIdPlansPlanIdRoute
+}
+
+const AuthenticatedProjectsProjectIdPlansRouteChildren: AuthenticatedProjectsProjectIdPlansRouteChildren =
+  {
+    AuthenticatedProjectsProjectIdPlansPlanIdRoute:
+      AuthenticatedProjectsProjectIdPlansPlanIdRoute,
+  }
+
+const AuthenticatedProjectsProjectIdPlansRouteWithChildren =
+  AuthenticatedProjectsProjectIdPlansRoute._addFileChildren(
+    AuthenticatedProjectsProjectIdPlansRouteChildren,
+  )
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAuditRoute: typeof AuthenticatedAuditRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedOrganizationsOrgIdSettingsRoute: typeof AuthenticatedOrganizationsOrgIdSettingsRoute
+  AuthenticatedProjectsProjectIdCableTypesRoute: typeof AuthenticatedProjectsProjectIdCableTypesRoute
+  AuthenticatedProjectsProjectIdCablesRoute: typeof AuthenticatedProjectsProjectIdCablesRoute
+  AuthenticatedProjectsProjectIdDocumentsRoute: typeof AuthenticatedProjectsProjectIdDocumentsRoute
+  AuthenticatedProjectsProjectIdEndpointsRoute: typeof AuthenticatedProjectsProjectIdEndpointsRoute
   AuthenticatedProjectsProjectIdMembersRoute: typeof AuthenticatedProjectsProjectIdMembersRoute
+  AuthenticatedProjectsProjectIdPlansRoute: typeof AuthenticatedProjectsProjectIdPlansRouteWithChildren
   AuthenticatedProjectsProjectIdSettingsRoute: typeof AuthenticatedProjectsProjectIdSettingsRoute
   AuthenticatedProjectsProjectIdIndexRoute: typeof AuthenticatedProjectsProjectIdIndexRoute
 }
@@ -242,8 +382,18 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedOrganizationsOrgIdSettingsRoute:
     AuthenticatedOrganizationsOrgIdSettingsRoute,
+  AuthenticatedProjectsProjectIdCableTypesRoute:
+    AuthenticatedProjectsProjectIdCableTypesRoute,
+  AuthenticatedProjectsProjectIdCablesRoute:
+    AuthenticatedProjectsProjectIdCablesRoute,
+  AuthenticatedProjectsProjectIdDocumentsRoute:
+    AuthenticatedProjectsProjectIdDocumentsRoute,
+  AuthenticatedProjectsProjectIdEndpointsRoute:
+    AuthenticatedProjectsProjectIdEndpointsRoute,
   AuthenticatedProjectsProjectIdMembersRoute:
     AuthenticatedProjectsProjectIdMembersRoute,
+  AuthenticatedProjectsProjectIdPlansRoute:
+    AuthenticatedProjectsProjectIdPlansRouteWithChildren,
   AuthenticatedProjectsProjectIdSettingsRoute:
     AuthenticatedProjectsProjectIdSettingsRoute,
   AuthenticatedProjectsProjectIdIndexRoute:

@@ -73,6 +73,41 @@ export function AppShell({
                 Přehled projektu
               </NavItem>
               <NavItem
+                to="/projects/$projectId/documents"
+                params={{ projectId }}
+                icon={ClipboardList}
+              >
+                Dokumenty
+              </NavItem>
+              <NavItem
+                to="/projects/$projectId/plans"
+                params={{ projectId }}
+                icon={RouteIcon}
+              >
+                Plány
+              </NavItem>
+              <NavItem
+                to="/projects/$projectId/endpoints"
+                params={{ projectId }}
+                icon={Wrench}
+              >
+                Endpointy
+              </NavItem>
+              <NavItem
+                to="/projects/$projectId/cable-types"
+                params={{ projectId }}
+                icon={Cable}
+              >
+                Typy kabelů
+              </NavItem>
+              <NavItem
+                to="/projects/$projectId/cables"
+                params={{ projectId }}
+                icon={Cable}
+              >
+                Kabelový registr
+              </NavItem>
+              <NavItem
                 to="/projects/$projectId/members"
                 params={{ projectId }}
                 icon={ClipboardList}
@@ -89,12 +124,13 @@ export function AppShell({
             </NavGroup>
           )}
 
-          <NavGroup label="Brzy · další checkpointy">
-            <NavStub icon={ClipboardList}>Dokumentace</NavStub>
-            <NavStub icon={RouteIcon}>Plány &amp; trasy</NavStub>
-            <NavStub icon={Cable}>Kabely</NavStub>
-            <NavStub icon={Wrench}>Tahací stanoviště</NavStub>
-          </NavGroup>
+          {!projectId && (
+            <NavGroup label="Projekt">
+              <div className="px-2 py-1 text-xs text-sidebar-foreground/50">
+                Vyberte projekt na Přehledu
+              </div>
+            </NavGroup>
+          )}
         </nav>
 
         <div className="border-t border-sidebar-border p-3 text-xs">
@@ -159,17 +195,3 @@ function NavItem({ to, params, icon: Icon, children }: NavItemProps) {
   );
 }
 
-function NavStub({
-  icon: Icon,
-  children,
-}: {
-  icon: typeof Cable;
-  children: ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sidebar-foreground/40">
-      <Icon className="h-4 w-4" />
-      {children}
-    </div>
-  );
-}
