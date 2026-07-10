@@ -115,10 +115,13 @@ export const updateCable = createServerFn({ method: "POST" })
     if (data.routeId !== undefined) patch.route_id = data.routeId;
     if (data.fromEndpointId !== undefined) patch.from_endpoint_id = data.fromEndpointId;
     if (data.toEndpointId !== undefined) patch.to_endpoint_id = data.toEndpointId;
+    if (data.fromPortId !== undefined) patch.from_port_id = data.fromPortId;
+    if (data.toPortId !== undefined) patch.to_port_id = data.toPortId;
     if (data.status !== undefined) patch.status = data.status;
     if (data.overrideLengthM !== undefined) patch.override_length_m = data.overrideLengthM;
     if (data.notes !== undefined) patch.notes = data.notes;
     const { error } = await supabase.from("cables").update(patch as never).eq("id", data.id);
+
     if (error) throw new Error(error.message);
     return { ok: true };
   });
