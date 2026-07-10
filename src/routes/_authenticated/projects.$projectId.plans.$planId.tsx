@@ -124,9 +124,20 @@ function PlanEditorPage() {
   >("WORKSTATION");
   const [pendingPos, setPendingPos] = useState<NormPoint | null>(null);
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
+  const [selectedEndpointId, setSelectedEndpointId] = useState<string | null>(null);
   const [draftPoints, setDraftPoints] = useState<NormPoint[]>([]);
   const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+
+  const endpointCables = useQuery({
+    queryKey: ["endpoint-cables", selectedEndpointId],
+    queryFn: () => listEpCablesFn({ data: { endpointId: selectedEndpointId! } }),
+    enabled: !!selectedEndpointId,
+  });
+  const cableCountsByEp = useMemo(() => {
+    // rough map from routes / endpointCables cannot cover all; we fetch per selected only.
+    return new Map<string, number>();
+  }, []);
 
   const cal = plan.data?.calibration;
   const calibration: Calibration | null = cal
