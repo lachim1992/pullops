@@ -397,24 +397,65 @@ function PlanEditorPage() {
                 strokeDasharray="0.01 0.005"
               />
             )}
-            {(endpoints.data ?? []).map((ep) => (
-              <g key={ep.id}>
-                <circle
-                  cx={Number(ep.norm_x)}
-                  cy={Number(ep.norm_y)}
-                  r={0.01}
-                  fill={
-                    mode === "route" &&
-                    (ep.id === currentRoute?.from_endpoint_id ||
-                      ep.id === currentRoute?.to_endpoint_id)
-                      ? "hsl(var(--accent))"
-                      : "hsl(var(--primary))"
-                  }
-                  stroke="white"
-                  strokeWidth={0.002}
-                />
-              </g>
-            ))}
+            {(endpoints.data ?? []).map((ep) => {
+              const isPatch = ep.endpoint_kind === "PATCH";
+              const isRouteEnd =
+                mode === "route" &&
+                (ep.id === currentRoute?.from_endpoint_id ||
+                  ep.id === currentRoute?.to_endpoint_id ||
+                  ep.id === currentRoute?.rack_endpoint_id);
+              const isSelected = ep.id === selectedEndpointId;
+              const fill = isRouteEnd
+                ? "hsl(var(--accent))"
+                : isSelected
+                  ? "hsl(var(--destructive))"
+                  : isPatch
+                    ? "hsl(var(--foreground))"
+                    : "hsl(var(--primary))";
+              const cx = Number(ep.norm_x);
+              const cy = Number(ep.norm_y);
+              return (
+                <g
+                  key={ep.id}
+                  style={{ cursor: "pointer" }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedEndpointId(ep.id);
+                  }}
+                >
+                  {isPatch ? (
+                    <rect
+                      x={cx - 0.012}
+                      y={cy - 0.012}
+                      width={0.024}
+                      height={0.024}
+                      fill={fill}
+                      stroke="white"
+                      strokeWidth={0.002}
+                    />
+                  ) : (
+                    <circle
+                      cx={cx}
+                      cy={cy}
+                      r={0.012}
+                      fill={fill}
+                      stroke="white"
+                      strokeWidth={0.002}
+                    />
+                  )}
+                  <text
+                    x={cx}
+                    y={cy - 0.018}
+                    textAnchor="middle"
+                    fontSize={0.014}
+                    fill="hsl(var(--foreground))"
+                    style={{ pointerEvents: "none", userSelect: "none" }}
+                  >
+                    {ep.code}
+                  </text>
+                </g>
+              );
+            })}
             {mode === "route" && draftPoints.length > 1 && (
               <polyline
                 points={draftPoints.map((p) => `${p.x},${p.y}`).join(" ")}
