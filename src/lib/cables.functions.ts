@@ -13,6 +13,8 @@ const CreateInput = z.object({
   routeId: z.string().uuid().nullable().optional(),
   fromEndpointId: z.string().uuid().nullable().optional(),
   toEndpointId: z.string().uuid().nullable().optional(),
+  fromPortId: z.string().uuid().nullable().optional(),
+  toPortId: z.string().uuid().nullable().optional(),
   notes: z.string().max(2000).optional(),
 });
 
@@ -23,10 +25,13 @@ const UpdateInput = z.object({
   routeId: z.string().uuid().nullable().optional(),
   fromEndpointId: z.string().uuid().nullable().optional(),
   toEndpointId: z.string().uuid().nullable().optional(),
+  fromPortId: z.string().uuid().nullable().optional(),
+  toPortId: z.string().uuid().nullable().optional(),
   status: CableStatus.optional(),
   overrideLengthM: z.number().min(0).nullable().optional(),
   notes: z.string().max(2000).nullable().optional(),
 });
+
 
 async function orgFor(supabase: any, projectId: string): Promise<string> {
   const { data, error } = await supabase
