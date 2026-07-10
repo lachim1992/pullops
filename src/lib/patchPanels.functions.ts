@@ -43,7 +43,7 @@ export const listPatchPanels = createServerFn({ method: "GET" })
     const { supabase } = context;
     const { data: rows, error } = await supabase
       .from("patch_panels")
-      .select("id, code, name, port_count, floor_plan_id, notes, updated_at")
+      .select("id, code, name, port_count, floor_plan_id, rack_id, notes, updated_at")
       .eq("project_id", data.projectId)
       .order("code");
     if (error) throw new Error(error.message);
@@ -68,7 +68,30 @@ export const getPatchPanel = createServerFn({ method: "GET" })
       .eq("panel_id", data.id)
       .order("port_number");
     if (err2) throw new Error(err2.message);
-    return { panel, ports: ports ?? [] };
+    const portIds = (ports ?? []).map((p) => p.id);
+    const cablesByPort: Record<
+      string,
+      { id: string; code: string; status: string; to_endpoint_id: string | null }
+    > = {};
+    if (portIds.length > 0) {
+      const { data: cables } = await supabase
+        .from("cables")
+        .select("id, code, status, from_port_id, to_endpoint_id")
+        .in("from_port_id", portIds);
+      for (const c of cables ?? []) {
+        if (c.from_port_id)
+          cablesByPort[c.from_port_id] = {
+            id: c.id,
+            code: c.code,
+            status: c.status,
+            to_endpoint_id: c.to_endpoint_id,
+          };
+      }
+    }
+    return {
+      panel,
+      ports: (ports ?? []).map((p) => ({ ...p, cable: cablesByPort[p.id] ?? null })),
+    };
   });
 
 export const createPatchPanel = createServerFn({ method: "POST" })
