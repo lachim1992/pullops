@@ -29,15 +29,16 @@ export const simulateSpools = createServerFn({ method: "GET" })
     // Load calibrations per plan
     const { data: cals } = await supabase
       .from("floor_plan_calibrations")
-      .select("floor_plan_id, a_x, a_y, b_x, b_y, real_distance_m");
+      .select("floor_plan_id, point_a_norm_x, point_a_norm_y, point_b_norm_x, point_b_norm_y, real_distance_m");
     const calByPlan = new Map<string, Calibration>();
     for (const c of cals ?? []) {
       calByPlan.set(c.floor_plan_id as string, {
-        a: { x: Number(c.a_x), y: Number(c.a_y) },
-        b: { x: Number(c.b_x), y: Number(c.b_y) },
+        a: { x: Number(c.point_a_norm_x), y: Number(c.point_a_norm_y) },
+        b: { x: Number(c.point_b_norm_x), y: Number(c.point_b_norm_y) },
         real_distance_m: Number(c.real_distance_m),
       });
     }
+
 
     const { data: endpoints } = await supabase
       .from("endpoints")
