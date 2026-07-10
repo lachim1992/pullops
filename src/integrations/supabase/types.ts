@@ -133,6 +133,7 @@ export type Database = {
           name: string | null
           organization_id: string
           project_id: string
+          rack_endpoint_id: string | null
           to_endpoint_id: string | null
           updated_at: string
         }
@@ -145,6 +146,7 @@ export type Database = {
           name?: string | null
           organization_id: string
           project_id: string
+          rack_endpoint_id?: string | null
           to_endpoint_id?: string | null
           updated_at?: string
         }
@@ -157,6 +159,7 @@ export type Database = {
           name?: string | null
           organization_id?: string
           project_id?: string
+          rack_endpoint_id?: string | null
           to_endpoint_id?: string | null
           updated_at?: string
         }
@@ -187,6 +190,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cable_routes_rack_endpoint_id_fkey"
+            columns: ["rack_endpoint_id"]
+            isOneToOne: false
+            referencedRelation: "endpoints"
             referencedColumns: ["id"]
           },
           {
@@ -362,6 +372,61 @@ export type Database = {
             columns: ["to_port_id"]
             isOneToOne: false
             referencedRelation: "patch_ports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      endpoint_cable_groups: {
+        Row: {
+          cable_id: string
+          created_at: string
+          endpoint_id: string
+          id: string
+          notes: string | null
+          project_id: string
+          sequence: number
+          updated_at: string
+        }
+        Insert: {
+          cable_id: string
+          created_at?: string
+          endpoint_id: string
+          id?: string
+          notes?: string | null
+          project_id: string
+          sequence?: number
+          updated_at?: string
+        }
+        Update: {
+          cable_id?: string
+          created_at?: string
+          endpoint_id?: string
+          id?: string
+          notes?: string | null
+          project_id?: string
+          sequence?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "endpoint_cable_groups_cable_id_fkey"
+            columns: ["cable_id"]
+            isOneToOne: true
+            referencedRelation: "cables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_cable_groups_endpoint_id_fkey"
+            columns: ["endpoint_id"]
+            isOneToOne: false
+            referencedRelation: "endpoints"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_cable_groups_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
