@@ -5,6 +5,40 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { nearestBundle, type NormPoint } from "@/lib/length";
 
 /**
+ * List cables belonging to a floor plan that have branch_points recorded,
+ * plus their to_endpoint coords and bundle id — for rendering branches on the plan.
+ */
+export const listPlanBranches = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ projectId: z.string().uuid(), floorPlanId: z.string().uuid() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: eps } = await supabase
+      .from("endpoints")
+      .select("id, norm_x, norm_y")
+      .eq("project_id", data.projectId)
+      .eq("floor_plan_id", data.floorPlanId);
+    const epIds = (eps ?? []).map((e) => e.id as string);
+    if (epIds.length === 0) return [];
+    const { data: cables, error } = await supabase
+      .from("cables")
+      .select("id, code, bundle_id, branch_points, to_endpoint_id")
+      .eq("project_id", data.projectId)
+      .not("bundle_id", "is", null)
+      .in("to_endpoint_id", epIds);
+    if (error) throw new Error(error.message);
+    return (cables ?? []).map((c) => ({
+      id: c.id as string,
+      code: c.code as string,
+      bundleId: c.bundle_id as string,
+      branchPoints: (c.branch_points as unknown as NormPoint[]) ?? [],
+      toEndpointId: c.to_endpoint_id as string | null,
+    }));
+  });
+
+/**
  * List patch ports that don't yet have a cable connected (i.e. free ports).
  * Grouped by rack → panel for the sidebar picker.
  */

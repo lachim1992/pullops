@@ -42,7 +42,7 @@ import {
 } from "@/lib/endpointGroups.functions";
 import { createRack, listRacks, deleteRack } from "@/lib/racks.functions";
 import { createBundle, listBundles, deleteBundle } from "@/lib/cableBundles.functions";
-import { createCableFromPort, listFreePorts } from "@/lib/cablesFromPort.functions";
+import { createCableFromPort, listFreePorts, listPlanBranches } from "@/lib/cablesFromPort.functions";
 import {
   computeCableLength,
   metersPerNormUnit,
@@ -94,6 +94,7 @@ function PlanEditorPage() {
   const deleteBundleFn = useServerFn(deleteBundle);
   const listFreePortsFn = useServerFn(listFreePorts);
   const createCableFromPortFn = useServerFn(createCableFromPort);
+  const listPlanBranchesFn = useServerFn(listPlanBranches);
   const qc = useQueryClient();
 
 
@@ -124,6 +125,10 @@ function PlanEditorPage() {
   const freePorts = useQuery({
     queryKey: ["free-ports", projectId],
     queryFn: () => listFreePortsFn({ data: { projectId } }),
+  });
+  const branches = useQuery({
+    queryKey: ["plan-branches", projectId, planId],
+    queryFn: () => listPlanBranchesFn({ data: { projectId, floorPlanId: planId } }),
   });
 
   async function changeBackgroundDoc(documentId: string | null) {
@@ -444,6 +449,7 @@ function PlanEditorPage() {
       qc.invalidateQueries({ queryKey: ["endpoints", projectId, planId] });
       qc.invalidateQueries({ queryKey: ["free-ports", projectId] });
       qc.invalidateQueries({ queryKey: ["cables", projectId] });
+      qc.invalidateQueries({ queryKey: ["plan-branches", projectId, planId] });
       toast.success("Endpoint a kabel vytvořeny, trasa přiřazena k nejbližšímu kmeni");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Chyba");
@@ -683,6 +689,29 @@ function PlanEditorPage() {
                   ))}
                 </>
               )}
+              {/* Branch lines: bundle anchor → cable endpoint */}
+              {(branches.data ?? []).map((br) => {
+                const pts = br.branchPoints ?? [];
+                if (pts.length < 2) return null;
+                return (
+                  <g key={br.id}>
+                    <polyline
+                      points={pts.map((p) => `${p.x},${p.y}`).join(" ")}
+                      fill="none"
+                      stroke="hsl(var(--accent))"
+                      strokeOpacity={0.75}
+                      strokeWidth={0.003 / zoom}
+                      strokeLinejoin="round"
+                    />
+                    <circle
+                      cx={pts[0].x}
+                      cy={pts[0].y}
+                      r={0.004 / zoom}
+                      fill="hsl(var(--accent))"
+                    />
+                  </g>
+                );
+              })}
               {/* Racks */}
               {(racks.data ?? []).map((r) => {
                 const cx = Number(r.x);
