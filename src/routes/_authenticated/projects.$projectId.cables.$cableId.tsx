@@ -18,7 +18,9 @@ import {
 import { listCableTypes } from "@/lib/cableTypes.functions";
 import { listEndpoints } from "@/lib/endpoints.functions";
 import { listRoutes } from "@/lib/cableRoutes.functions";
+import { listProjectPatchPorts } from "@/lib/patchPanels.functions";
 import { listEntityAuditEvents } from "@/lib/audit.functions";
+
 
 const STATUSES = ["PLANNED", "PULLED", "TERMINATED", "TESTED", "CANCELLED"] as const;
 type Status = (typeof STATUSES)[number];
@@ -42,8 +44,10 @@ function CableDetailPage() {
   const listTypesFn = useServerFn(listCableTypes);
   const listEpFn = useServerFn(listEndpoints);
   const listRoutesFn = useServerFn(listRoutes);
+  const listPortsFn = useServerFn(listProjectPatchPorts);
   const listAuditFn = useServerFn(listEntityAuditEvents);
   const qc = useQueryClient();
+
 
   const cable = useQuery({
     queryKey: ["cable", cableId],
@@ -61,10 +65,15 @@ function CableDetailPage() {
     queryKey: ["routes", projectId],
     queryFn: () => listRoutesFn({ data: { projectId } }),
   });
+  const ports = useQuery({
+    queryKey: ["patch-ports", projectId],
+    queryFn: () => listPortsFn({ data: { projectId } }),
+  });
   const audit = useQuery({
     queryKey: ["audit", cableId],
     queryFn: () => listAuditFn({ data: { entityId: cableId } }),
   });
+
 
   const [code, setCode] = useState("");
   const [status, setStatus] = useState<Status>("PLANNED");
@@ -72,6 +81,8 @@ function CableDetailPage() {
   const [routeId, setRouteId] = useState<string>("");
   const [fromId, setFromId] = useState<string>("");
   const [toId, setToId] = useState<string>("");
+  const [fromPortId, setFromPortId] = useState<string>("");
+  const [toPortId, setToPortId] = useState<string>("");
   const [overrideM, setOverrideM] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
   const [saving, setSaving] = useState(false);
@@ -85,6 +96,9 @@ function CableDetailPage() {
     setRouteId(c.route_id ?? "");
     setFromId(c.from_endpoint_id ?? "");
     setToId(c.to_endpoint_id ?? "");
+    setFromPortId((c as { from_port_id?: string | null }).from_port_id ?? "");
+    setToPortId((c as { to_port_id?: string | null }).to_port_id ?? "");
+
     setOverrideM(c.override_length_m != null ? String(c.override_length_m) : "");
     setNotes(c.notes ?? "");
   }, [cable.data]);
@@ -122,6 +136,9 @@ function CableDetailPage() {
           routeId: routeId || null,
           fromEndpointId: fromId || null,
           toEndpointId: toId || null,
+          fromPortId: fromPortId || null,
+          toPortId: toPortId || null,
+
           overrideLengthM: overrideNum,
           notes: notes.trim() ? notes.trim() : null,
         },
@@ -275,8 +292,41 @@ function CableDetailPage() {
                   ))}
                 </select>
               </div>
+              <div className="space-y-1.5">
+                <Label>Port od</Label>
+                <select
+                  className="w-full rounded-sm border border-input bg-background px-3 py-1.5 text-sm"
+                  value={fromPortId}
+                  onChange={(e) => setFromPortId(e.target.value)}
+                >
+                  <option value="">—</option>
+                  {(ports.data ?? []).map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.patch_panels.code}/{p.port_number}
+                      {p.label ? ` · ${p.label}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Port do</Label>
+                <select
+                  className="w-full rounded-sm border border-input bg-background px-3 py-1.5 text-sm"
+                  value={toPortId}
+                  onChange={(e) => setToPortId(e.target.value)}
+                >
+                  <option value="">—</option>
+                  {(ports.data ?? []).map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.patch_panels.code}/{p.port_number}
+                      {p.label ? ` · ${p.label}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
+
 
           <div className="rounded-sm border border-border p-4">
             <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-muted-foreground">

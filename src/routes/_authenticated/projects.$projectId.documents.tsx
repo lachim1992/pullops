@@ -85,13 +85,28 @@ function DocumentsPage() {
   }
 
   async function openDoc(id: string) {
+    // Open blank tab synchronously so popup blockers (incl. preview iframe) allow it.
+    const tab = window.open("", "_blank", "noopener,noreferrer");
     try {
       const { url } = await signFn({ data: { id } });
-      window.open(url, "_blank", "noopener");
+      if (tab) {
+        tab.location.href = url;
+      } else {
+        // Fallback: trigger a hidden anchor click
+        const a = document.createElement("a");
+        a.href = url;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
     } catch (err) {
+      if (tab) tab.close();
       toast.error(err instanceof Error ? err.message : "Chyba");
     }
   }
+
 
   async function removeDoc(id: string) {
     if (!confirm("Smazat dokument?")) return;

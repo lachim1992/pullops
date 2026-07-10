@@ -257,6 +257,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           from_endpoint_id: string | null
+          from_port_id: string | null
           id: string
           notes: string | null
           organization_id: string
@@ -265,6 +266,7 @@ export type Database = {
           route_id: string | null
           status: Database["public"]["Enums"]["cable_status"]
           to_endpoint_id: string | null
+          to_port_id: string | null
           updated_at: string
         }
         Insert: {
@@ -274,6 +276,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           from_endpoint_id?: string | null
+          from_port_id?: string | null
           id?: string
           notes?: string | null
           organization_id: string
@@ -282,6 +285,7 @@ export type Database = {
           route_id?: string | null
           status?: Database["public"]["Enums"]["cable_status"]
           to_endpoint_id?: string | null
+          to_port_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -291,6 +295,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           from_endpoint_id?: string | null
+          from_port_id?: string | null
           id?: string
           notes?: string | null
           organization_id?: string
@@ -299,6 +304,7 @@ export type Database = {
           route_id?: string | null
           status?: Database["public"]["Enums"]["cable_status"]
           to_endpoint_id?: string | null
+          to_port_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -314,6 +320,13 @@ export type Database = {
             columns: ["from_endpoint_id"]
             isOneToOne: false
             referencedRelation: "endpoints"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cables_from_port_id_fkey"
+            columns: ["from_port_id"]
+            isOneToOne: false
+            referencedRelation: "patch_ports"
             referencedColumns: ["id"]
           },
           {
@@ -342,6 +355,13 @@ export type Database = {
             columns: ["to_endpoint_id"]
             isOneToOne: false
             referencedRelation: "endpoints"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cables_to_port_id_fkey"
+            columns: ["to_port_id"]
+            isOneToOne: false
+            referencedRelation: "patch_ports"
             referencedColumns: ["id"]
           },
         ]
@@ -580,6 +600,115 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      patch_panels: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          floor_plan_id: string | null
+          id: string
+          name: string | null
+          notes: string | null
+          organization_id: string
+          port_count: number
+          project_id: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          floor_plan_id?: string | null
+          id?: string
+          name?: string | null
+          notes?: string | null
+          organization_id: string
+          port_count?: number
+          project_id: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          floor_plan_id?: string | null
+          id?: string
+          name?: string | null
+          notes?: string | null
+          organization_id?: string
+          port_count?: number
+          project_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patch_panels_floor_plan_id_fkey"
+            columns: ["floor_plan_id"]
+            isOneToOne: false
+            referencedRelation: "floor_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patch_panels_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patch_panels_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patch_ports: {
+        Row: {
+          created_at: string
+          id: string
+          label: string | null
+          panel_id: string
+          port_number: number
+          project_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label?: string | null
+          panel_id: string
+          port_number: number
+          project_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string | null
+          panel_id?: string
+          port_number?: number
+          project_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patch_ports_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "patch_panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patch_ports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
