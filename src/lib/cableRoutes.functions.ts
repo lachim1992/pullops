@@ -9,6 +9,7 @@ const CreateInput = z.object({
   name: z.string().max(200).optional(),
   fromEndpointId: z.string().uuid().nullable().optional(),
   toEndpointId: z.string().uuid().nullable().optional(),
+  rackEndpointId: z.string().uuid().nullable().optional(),
   manualLengthM: z.number().min(0).nullable().optional(),
 });
 
