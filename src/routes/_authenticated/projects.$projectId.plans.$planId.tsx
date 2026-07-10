@@ -95,6 +95,9 @@ function PlanEditorPage() {
   const listRacksFn = useServerFn(listRacks);
   const createRackFn = useServerFn(createRack);
   const deleteRackFn = useServerFn(deleteRack);
+  const updateRackFn = useServerFn(updateRack);
+  const updateEndpointFn = useServerFn(updateEndpoint);
+  const updateBundleFn = useServerFn(updateBundle);
   const listBundlesFn = useServerFn(listBundles);
   const createBundleFn = useServerFn(createBundle);
   const deleteBundleFn = useServerFn(deleteBundle);
