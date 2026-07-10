@@ -17,7 +17,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { getFloorPlan, setCalibration } from "@/lib/floorPlans.functions";
+import { getFloorPlan, setCalibration, updateFloorPlan } from "@/lib/floorPlans.functions";
+import { listProjectDocuments } from "@/lib/documents.functions";
+
 import {
   createEndpoint,
   deleteEndpoint,
@@ -57,6 +59,7 @@ function PlanEditorPage() {
   });
   const getPlanFn = useServerFn(getFloorPlan);
   const setCalFn = useServerFn(setCalibration);
+  const updatePlanFn = useServerFn(updateFloorPlan);
   const listEpFn = useServerFn(listEndpoints);
   const createEpFn = useServerFn(createEndpoint);
   const deleteEpFn = useServerFn(deleteEndpoint);
@@ -66,7 +69,9 @@ function PlanEditorPage() {
   const updateRouteFn = useServerFn(updateRoute);
   const updateRoutePointsFn = useServerFn(updateRoutePoints);
   const deleteRouteFn = useServerFn(deleteRoute);
+  const listDocsFn = useServerFn(listProjectDocuments);
   const qc = useQueryClient();
+
 
   const plan = useQuery({
     queryKey: ["plan", planId],
