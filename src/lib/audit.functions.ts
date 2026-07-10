@@ -22,3 +22,24 @@ export const listAuditEvents = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return rows ?? [];
   });
+
+const EntityInput = z.object({
+  entityId: z.string().uuid(),
+  limit: z.number().int().min(1).max(100).default(30),
+});
+
+export const listEntityAuditEvents = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => EntityInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: rows, error } = await supabase
+      .from("audit_events")
+      .select("id, entity_type, action, user_id, created_at")
+      .eq("entity_id", data.entityId)
+      .order("created_at", { ascending: false })
+      .limit(data.limit);
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
