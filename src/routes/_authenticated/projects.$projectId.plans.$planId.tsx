@@ -612,11 +612,11 @@ function PlanEditorPage() {
           <Button variant={mode === "endpoint" ? "default" : "outline"} size="sm" onClick={() => setMode("endpoint")}>Endpointy</Button>
           <Button variant={mode === "rack" ? "default" : "outline"} size="sm" onClick={() => setMode("rack")}>Racky</Button>
           <Button variant={mode === "bundle" ? "default" : "outline"} size="sm" onClick={() => setMode("bundle")}>Kmeny</Button>
-          <Button variant={mode === "port" ? "default" : "outline"} size="sm" onClick={() => setMode("port")}>Trasa z portu</Button>
-          <Button variant={mode === "route" ? "default" : "outline"} size="sm" onClick={() => setMode("route")}>Trasy (staré)</Button>
+          <Button variant={mode === "port" ? "default" : "outline"} size="sm" onClick={() => setMode("port")}>Trasy</Button>
           <Button variant={mode === "calibrate" ? "default" : "outline"} size="sm" onClick={() => setMode("calibrate")}>Kalibrace</Button>
         </div>
       </header>
+
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div
