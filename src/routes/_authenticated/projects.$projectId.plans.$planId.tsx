@@ -527,9 +527,12 @@ function PlanEditorPage() {
           <h1 className="text-2xl font-semibold tracking-tight">
             {plan.data?.plan.name}
           </h1>
-          <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             {mpu != null ? (
-              <Badge variant="secondary" className="font-mono text-[10px]">
+              <Badge
+                variant={calibrationSuspicious ? "destructive" : "secondary"}
+                className="font-mono text-[10px]"
+              >
                 {mpu.toFixed(2)} m / norm.j.
               </Badge>
             ) : (
@@ -537,6 +540,14 @@ function PlanEditorPage() {
                 Chybí kalibrace
               </Badge>
             )}
+            {calibrationSuspicious && (
+              <span className="font-mono text-[10px] text-destructive">
+                Body A/B jsou příliš blízko sebe ({calNormDist.toFixed(4)}) — překalibrujte
+              </span>
+            )}
+            <Button size="sm" variant="outline" className="h-6 px-2 text-[10px]" onClick={autoAssign}>
+              Přiřadit kabely k nejbližšímu kmeni
+            </Button>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
