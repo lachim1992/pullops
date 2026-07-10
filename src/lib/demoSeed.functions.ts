@@ -140,7 +140,6 @@ export const seedCeskeBudejoviceDemo = createServerFn({ method: "POST" })
 
     await supabase.from("floor_plan_calibrations").insert({
       project_id,
-      organization_id,
       floor_plan_id: fp.id,
       point_a_norm_x: 0.1,
       point_a_norm_y: 0.1,
