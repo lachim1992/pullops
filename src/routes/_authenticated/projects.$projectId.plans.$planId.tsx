@@ -24,6 +24,7 @@ import {
   createEndpoint,
   deleteEndpoint,
   listEndpoints,
+  updateEndpoint,
 } from "@/lib/endpoints.functions";
 import {
   createRoute,
@@ -40,8 +41,8 @@ import {
   listUnassignedCables,
   removeCableFromEndpoint,
 } from "@/lib/endpointGroups.functions";
-import { createRack, listRacks, deleteRack } from "@/lib/racks.functions";
-import { createBundle, listBundles, deleteBundle } from "@/lib/cableBundles.functions";
+import { createRack, listRacks, deleteRack, updateRack } from "@/lib/racks.functions";
+import { createBundle, listBundles, deleteBundle, updateBundle } from "@/lib/cableBundles.functions";
 import {
   autoAssignBundlesForPlan,
   createCableFromPort,
