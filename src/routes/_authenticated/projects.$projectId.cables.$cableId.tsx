@@ -65,10 +65,15 @@ function CableDetailPage() {
     queryKey: ["routes", projectId],
     queryFn: () => listRoutesFn({ data: { projectId } }),
   });
+  const ports = useQuery({
+    queryKey: ["patch-ports", projectId],
+    queryFn: () => listPortsFn({ data: { projectId } }),
+  });
   const audit = useQuery({
     queryKey: ["audit", cableId],
     queryFn: () => listAuditFn({ data: { entityId: cableId } }),
   });
+
 
   const [code, setCode] = useState("");
   const [status, setStatus] = useState<Status>("PLANNED");
