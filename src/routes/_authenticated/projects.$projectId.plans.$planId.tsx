@@ -113,6 +113,18 @@ function PlanEditorPage() {
     queryKey: ["docs", projectId],
     queryFn: () => listDocsFn({ data: { projectId } }),
   });
+  const racks = useQuery({
+    queryKey: ["racks", projectId, planId],
+    queryFn: () => listRacksFn({ data: { projectId, floorPlanId: planId } }),
+  });
+  const bundles = useQuery({
+    queryKey: ["bundles", projectId, planId],
+    queryFn: () => listBundlesFn({ data: { projectId, floorPlanId: planId } }),
+  });
+  const freePorts = useQuery({
+    queryKey: ["free-ports", projectId],
+    queryFn: () => listFreePortsFn({ data: { projectId } }),
+  });
 
   async function changeBackgroundDoc(documentId: string | null) {
     try {
