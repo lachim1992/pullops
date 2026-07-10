@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { z } from "zod";
-import { FolderKanban, Loader2, Plus, Settings } from "lucide-react";
+import { FolderKanban, Loader2, Plus, Settings, Sparkles } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { listMyOrganizations } from "@/lib/orgs.functions";
 import { createProject, listMyProjects } from "@/lib/projects.functions";
+import { seedCeskeBudejoviceDemo } from "@/lib/demoSeed.functions";
+
 
 const searchSchema = z.object({ org: z.string().uuid().optional() });
 
@@ -99,8 +101,12 @@ function DashboardPage() {
             )}
           </div>
         </div>
-        {activeOrgId && <NewProjectDialog organizationId={activeOrgId} />}
+        <div className="flex gap-2">
+          {activeOrgId && <SeedDemoButton organizationId={activeOrgId} />}
+          {activeOrgId && <NewProjectDialog organizationId={activeOrgId} />}
+        </div>
       </header>
+
 
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-muted-foreground">
