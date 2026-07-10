@@ -92,11 +92,14 @@ export const createCable = createServerFn({ method: "POST" })
         route_id: data.routeId ?? null,
         from_endpoint_id: data.fromEndpointId ?? null,
         to_endpoint_id: data.toEndpointId ?? null,
+        from_port_id: data.fromPortId ?? null,
+        to_port_id: data.toPortId ?? null,
         notes: data.notes ?? null,
         created_by: userId,
       })
       .select("id")
       .single();
+
     if (error) throw new Error(error.message);
     return { id: row.id as string };
   });
