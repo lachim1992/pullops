@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { z } from "zod";
-import { FolderKanban, Loader2, Plus, Settings } from "lucide-react";
+import { FolderKanban, Loader2, Plus, Settings, Sparkles } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { listMyOrganizations } from "@/lib/orgs.functions";
 import { createProject, listMyProjects } from "@/lib/projects.functions";
+import { seedCeskeBudejoviceDemo } from "@/lib/demoSeed.functions";
+
 
 const searchSchema = z.object({ org: z.string().uuid().optional() });
 
@@ -99,8 +101,12 @@ function DashboardPage() {
             )}
           </div>
         </div>
-        {activeOrgId && <NewProjectDialog organizationId={activeOrgId} />}
+        <div className="flex gap-2">
+          {activeOrgId && <SeedDemoButton organizationId={activeOrgId} />}
+          {activeOrgId && <NewProjectDialog organizationId={activeOrgId} />}
+        </div>
       </header>
+
 
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-muted-foreground">
@@ -239,3 +245,41 @@ function NewProjectDialog({ organizationId }: { organizationId: string }) {
     </Dialog>
   );
 }
+
+function SeedDemoButton({ organizationId }: { organizationId: string }) {
+  const [loading, setLoading] = useState(false);
+  const seed = useServerFn(seedCeskeBudejoviceDemo);
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
+  async function run() {
+    if (!confirm("Vytvořit demo projekt McDonald's České Budějovice II?")) return;
+    setLoading(true);
+    try {
+      const { projectId, panels, cables, endpoints } = await seed({
+        data: { organizationId },
+      });
+      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+      toast.success(
+        `Demo vytvořeno: ${panels} panelů, ${endpoints} endpointů, ${cables} kabelů`,
+      );
+      navigate({ to: "/projects/$projectId", params: { projectId } });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Chyba");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Button variant="outline" onClick={run} disabled={loading}>
+      {loading ? (
+        <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+      ) : (
+        <Sparkles className="mr-1 h-4 w-4" />
+      )}
+      Nahrát demo ČB2
+    </Button>
+  );
+}
+
