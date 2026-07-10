@@ -42,7 +42,12 @@ import {
 } from "@/lib/endpointGroups.functions";
 import { createRack, listRacks, deleteRack } from "@/lib/racks.functions";
 import { createBundle, listBundles, deleteBundle } from "@/lib/cableBundles.functions";
-import { createCableFromPort, listFreePorts, listPlanBranches } from "@/lib/cablesFromPort.functions";
+import {
+  autoAssignBundlesForPlan,
+  createCableFromPort,
+  listFreePorts,
+  listPlanBranches,
+} from "@/lib/cablesFromPort.functions";
 import {
   computeCableLength,
   metersPerNormUnit,
