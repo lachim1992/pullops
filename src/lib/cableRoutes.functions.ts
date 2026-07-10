@@ -96,8 +96,9 @@ export const createRoute = createServerFn({ method: "POST" })
         organization_id,
         floor_plan_id: data.floorPlanId,
         name: data.name ?? null,
-        from_endpoint_id: data.fromEndpointId ?? null,
+        from_endpoint_id: data.fromEndpointId ?? data.rackEndpointId ?? null,
         to_endpoint_id: data.toEndpointId ?? null,
+        rack_endpoint_id: data.rackEndpointId ?? null,
         manual_length_m: data.manualLengthM ?? null,
       })
       .select("id")
