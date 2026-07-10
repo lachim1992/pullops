@@ -1,0 +1,1 @@
+ALTER TABLE public.audit_events ALTER COLUMN entity_id DROP NOT NULL;

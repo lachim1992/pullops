@@ -20,7 +20,7 @@ export type Database = {
           after_json: Json | null
           before_json: Json | null
           created_at: string
-          entity_id: string
+          entity_id: string | null
           entity_type: string
           id: string
           organization_id: string | null
@@ -32,7 +32,7 @@ export type Database = {
           after_json?: Json | null
           before_json?: Json | null
           created_at?: string
-          entity_id: string
+          entity_id?: string | null
           entity_type: string
           id?: string
           organization_id?: string | null
@@ -44,7 +44,7 @@ export type Database = {
           after_json?: Json | null
           before_json?: Json | null
           created_at?: string
-          entity_id?: string
+          entity_id?: string | null
           entity_type?: string
           id?: string
           organization_id?: string | null
