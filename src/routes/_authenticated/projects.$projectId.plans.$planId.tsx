@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -323,11 +323,7 @@ function PlanEditorPage() {
         <div className="relative aspect-[4/3] w-full overflow-hidden rounded-sm border border-border bg-muted">
           {plan.data?.documentUrl ? (
             plan.data.document?.mime_type?.includes("pdf") ? (
-              <iframe
-                src={`${plan.data.documentUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
-                title={plan.data.plan.name}
-                className="pointer-events-none absolute inset-0 h-full w-full select-none border-0"
-              />
+              <PdfPlanBackground url={plan.data.documentUrl} title={plan.data.plan.name} />
             ) : (
               <img
                 src={plan.data.documentUrl}
@@ -676,6 +672,71 @@ function PlanEditorPage() {
         </aside>
       </div>
     </AppShell>
+  );
+}
+
+function PdfPlanBackground({ url, title }: { url: string; title: string }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+
+  useEffect(() => {
+    let cancelled = false;
+    let renderTask: { cancel: () => void } | null = null;
+
+    async function renderPdf() {
+      setStatus("loading");
+      try {
+        const pdfjs = await import("pdfjs-dist");
+        pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+          "pdfjs-dist/build/pdf.worker.mjs",
+          import.meta.url,
+        ).toString();
+
+        const pdf = await pdfjs.getDocument({ url }).promise;
+        const page = await pdf.getPage(1);
+        const canvas = canvasRef.current;
+        if (!canvas || cancelled) return;
+
+        const viewport = page.getViewport({ scale: 2 });
+        canvas.width = Math.floor(viewport.width);
+        canvas.height = Math.floor(viewport.height);
+        const context = canvas.getContext("2d");
+        if (!context) throw new Error("Canvas není dostupný");
+
+        renderTask = page.render({ canvasContext: context, viewport });
+        await renderTask.promise;
+        if (!cancelled) setStatus("ready");
+      } catch (err) {
+        if (!cancelled) {
+          console.error("PDF podklad se nepodařilo vykreslit", err);
+          setStatus("error");
+        }
+      }
+    }
+
+    renderPdf();
+    return () => {
+      cancelled = true;
+      renderTask?.cancel();
+    };
+  }, [url]);
+
+  return (
+    <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-muted select-none">
+      <canvas
+        ref={canvasRef}
+        aria-label={title}
+        className={`h-full w-full transition-opacity ${status === "ready" ? "opacity-100" : "opacity-0"}`}
+      />
+      {status === "loading" && (
+        <div className="absolute text-xs font-mono text-muted-foreground">Načítám PDF podklad…</div>
+      )}
+      {status === "error" && (
+        <div className="absolute max-w-xs text-center text-xs text-destructive">
+          PDF podklad se nepodařilo zobrazit.
+        </div>
+      )}
+    </div>
   );
 }
 
