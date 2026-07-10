@@ -125,7 +125,6 @@ export const seedCeskeBudejoviceDemo = createServerFn({ method: "POST" })
         .from("racks")
         .insert({
           project_id,
-          organization_id,
           floor_plan_id: fp.id,
           code: r.code,
           name: r.name,
