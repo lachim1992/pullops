@@ -316,6 +316,7 @@ function PlanEditorPage() {
 
   function handleSvgClick(evt: React.MouseEvent<SVGSVGElement>) {
     if (draggingIdx != null) return;
+    if (dragTarget != null) return;
     const pos = toNorm(evt);
     if (!pos) return;
     if (mode === "calibrate") {
@@ -347,11 +348,57 @@ function PlanEditorPage() {
   }
 
   function handleSvgMove(evt: React.MouseEvent<SVGSVGElement>) {
+    if (dragTarget != null) {
+      const pos = toNorm(evt);
+      if (!pos) return;
+      dragMovedRef.current = true;
+      setDragPos(pos);
+      return;
+    }
     if (draggingIdx == null) return;
     const pos = toNorm(evt);
     if (!pos) return;
     setDraftPoints((pts) => pts.map((p, i) => (i === draggingIdx ? pos : p)));
   }
+
+  async function commitDrag() {
+    const target = dragTarget;
+    const pos = dragPos;
+    setDragTarget(null);
+    setDragPos(null);
+    if (!target || !pos || !dragMovedRef.current) {
+      dragMovedRef.current = false;
+      return;
+    }
+    dragMovedRef.current = false;
+    try {
+      if (target.kind === "endpoint") {
+        await updateEndpointFn({ data: { id: target.id, x: pos.x, y: pos.y } });
+        qc.invalidateQueries({ queryKey: ["endpoints", projectId, planId] });
+      } else if (target.kind === "rack") {
+        await updateRackFn({ data: { id: target.id, x: pos.x, y: pos.y } });
+        qc.invalidateQueries({ queryKey: ["racks", projectId, planId] });
+      } else if (target.kind === "bundle") {
+        const b = (bundles.data ?? []).find((x) => x.id === target.id);
+        if (!b) return;
+        const pts = ((b.points as unknown as NormPoint[]) ?? []).map((p, i) =>
+          i === target.idx ? pos : p,
+        );
+        await updateBundleFn({ data: { id: target.id, points: pts } });
+        qc.invalidateQueries({ queryKey: ["bundles", projectId, planId] });
+      }
+      // recompute branch trasy pro tento plán
+      await autoAssignBundlesFn({
+        data: { projectId, floorPlanId: planId, overwrite: true },
+      });
+      qc.invalidateQueries({ queryKey: ["plan-branches", projectId, planId] });
+      qc.invalidateQueries({ queryKey: ["cables", projectId] });
+      toast.success("Přesunuto");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Chyba");
+    }
+  }
+
 
   async function saveCalibration() {
     if (!calA || !calB) return toast.error("Klikněte dva body A a B");
