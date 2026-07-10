@@ -195,17 +195,3 @@ function NavItem({ to, params, icon: Icon, children }: NavItemProps) {
   );
 }
 
-function NavStub({
-  icon: Icon,
-  children,
-}: {
-  icon: typeof Cable;
-  children: ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sidebar-foreground/40">
-      <Icon className="h-4 w-4" />
-      {children}
-    </div>
-  );
-}
