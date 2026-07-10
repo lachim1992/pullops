@@ -81,6 +81,8 @@ function CableDetailPage() {
   const [routeId, setRouteId] = useState<string>("");
   const [fromId, setFromId] = useState<string>("");
   const [toId, setToId] = useState<string>("");
+  const [fromPortId, setFromPortId] = useState<string>("");
+  const [toPortId, setToPortId] = useState<string>("");
   const [overrideM, setOverrideM] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
   const [saving, setSaving] = useState(false);
@@ -94,6 +96,9 @@ function CableDetailPage() {
     setRouteId(c.route_id ?? "");
     setFromId(c.from_endpoint_id ?? "");
     setToId(c.to_endpoint_id ?? "");
+    setFromPortId((c as { from_port_id?: string | null }).from_port_id ?? "");
+    setToPortId((c as { to_port_id?: string | null }).to_port_id ?? "");
+
     setOverrideM(c.override_length_m != null ? String(c.override_length_m) : "");
     setNotes(c.notes ?? "");
   }, [cable.data]);
