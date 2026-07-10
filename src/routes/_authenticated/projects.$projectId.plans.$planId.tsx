@@ -126,6 +126,10 @@ function PlanEditorPage() {
     queryKey: ["free-ports", projectId],
     queryFn: () => listFreePortsFn({ data: { projectId } }),
   });
+  const branches = useQuery({
+    queryKey: ["plan-branches", projectId, planId],
+    queryFn: () => listPlanBranchesFn({ data: { projectId, floorPlanId: planId } }),
+  });
 
   async function changeBackgroundDoc(documentId: string | null) {
     try {
