@@ -882,6 +882,140 @@ function PlanEditorPage() {
             </div>
           )}
 
+          {mode === "rack" && (
+            <div className="rounded-sm border border-border p-3 text-sm">
+              <div className="mb-2 font-semibold">Rack</div>
+              {!pendingRackPos ? (
+                <div className="text-xs text-muted-foreground">
+                  Klikněte do plánu pro umístění racku.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="space-y-1.5">
+                    <Label>Kód</Label>
+                    <Input
+                      value={newRackCode}
+                      onChange={(e) => setNewRackCode(e.target.value)}
+                      placeholder="RACK-A"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Název</Label>
+                    <Input
+                      value={newRackName}
+                      onChange={(e) => setNewRackName(e.target.value)}
+                      placeholder="Serverovna 1.NP"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" className="flex-1" onClick={saveRack}>Uložit</Button>
+                    <Button size="sm" variant="outline" onClick={() => setPendingRackPos(null)}>Zrušit</Button>
+                  </div>
+                </div>
+              )}
+              <div className="mt-3 max-h-48 divide-y divide-border overflow-y-auto rounded-sm border border-border">
+                {(racks.data ?? []).map((r) => (
+                  <div key={r.id} className="flex items-center gap-2 p-2">
+                    <div className="flex-1">
+                      <div className="font-mono text-xs">{r.code}</div>
+                      <div className="text-[10px] text-muted-foreground">{r.name ?? "—"}</div>
+                    </div>
+                    <Button size="sm" variant="ghost" onClick={() => removeRack(r.id)}>✕</Button>
+                  </div>
+                ))}
+                {(racks.data?.length ?? 0) === 0 && (
+                  <div className="p-3 text-center text-xs text-muted-foreground">Zatím žádný rack.</div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {mode === "bundle" && (
+            <div className="rounded-sm border border-border p-3 text-sm">
+              <div className="mb-2 font-semibold">Kmen (svazek)</div>
+              <div className="mb-2 text-xs text-muted-foreground">
+                Klik = přidat bod. Alespoň 2 body. Dvojklik na bod = smazat.
+              </div>
+              <div className="mb-2 font-mono text-xs">
+                Bodů: {draftBundlePoints.length} · Norm. délka: {polylineNormLength(draftBundlePoints).toFixed(4)}
+              </div>
+              <div className="space-y-1.5">
+                <Label>Kód kmenu</Label>
+                <Input
+                  value={newBundleCode}
+                  onChange={(e) => setNewBundleCode(e.target.value)}
+                  placeholder="BND-01"
+                />
+              </div>
+              <div className="mt-2 flex gap-2">
+                <Button size="sm" className="flex-1" onClick={saveBundle}>Uložit kmen</Button>
+                <Button size="sm" variant="outline" onClick={() => setDraftBundlePoints([])}>Vymazat</Button>
+              </div>
+              <div className="mt-3 max-h-48 divide-y divide-border overflow-y-auto rounded-sm border border-border">
+                {(bundles.data ?? []).map((b) => (
+                  <div key={b.id} className="flex items-center gap-2 p-2">
+                    <div className="flex-1 font-mono text-xs">{b.code}</div>
+                    <Button size="sm" variant="ghost" onClick={() => removeBundle(b.id)}>✕</Button>
+                  </div>
+                ))}
+                {(bundles.data?.length ?? 0) === 0 && (
+                  <div className="p-3 text-center text-xs text-muted-foreground">Zatím žádný kmen.</div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {mode === "port" && (
+            <div className="rounded-sm border border-border p-3 text-sm">
+              <div className="mb-2 font-semibold">Trasa z portu</div>
+              <div className="mb-2 text-xs text-muted-foreground">
+                1) Vyber volný port · 2) Klikni na plán · 3) Zadej kód endpointu a kabelu
+              </div>
+              <div className="space-y-1.5">
+                <Label>Volný port</Label>
+                <select
+                  className="w-full rounded-sm border border-input bg-background px-2 py-1 font-mono text-xs"
+                  value={selectedPortId ?? ""}
+                  onChange={(e) => setSelectedPortId(e.target.value || null)}
+                >
+                  <option value="">— vyber —</option>
+                  {(freePorts.data?.freePorts ?? []).map((p) => {
+                    const panel = (freePorts.data?.panels ?? []).find((pp) => pp.id === p.panel_id);
+                    return (
+                      <option key={p.id} value={p.id}>
+                        {panel?.code ?? "?"} · port #{p.port_number}
+                        {p.label ? ` (${p.label})` : ""}
+                      </option>
+                    );
+                  })}
+                </select>
+                <div className="text-[10px] text-muted-foreground">
+                  {(freePorts.data?.freePorts.length ?? 0)} volných portů
+                </div>
+              </div>
+              {pendingPortPos && selectedPortId && (
+                <div className="mt-3 space-y-2 border-t border-border pt-3">
+                  <div className="space-y-1.5">
+                    <Label>Kód endpointu</Label>
+                    <Input value={newPortEpCode} onChange={(e) => setNewPortEpCode(e.target.value)} placeholder="např. 201" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Kód kabelu</Label>
+                    <Input value={newPortCableCode} onChange={(e) => setNewPortCableCode(e.target.value)} placeholder="např. C-201" />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" className="flex-1" onClick={savePortCable}>Vytvořit</Button>
+                    <Button size="sm" variant="outline" onClick={() => setPendingPortPos(null)}>Zrušit</Button>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">
+                    Kabel se auto-přiřadí k nejbližšímu kmenu (pokud existuje).
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+
           <div className="rounded-sm border border-border">
             <div className="border-b border-border p-3 text-sm font-semibold">
               Endpointy na plánu ({endpoints.data?.length ?? 0})
