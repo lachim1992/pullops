@@ -19,7 +19,7 @@ export const listBundles = createServerFn({ method: "GET" })
     const { supabase } = context;
     let q = supabase
       .from("cable_bundles")
-      .select("id, code, floor_plan_id, rack_id, points, notes, updated_at")
+      .select("id, code, floor_plan_id, rack_id, points, notes, is_primary, updated_at")
       .eq("project_id", data.projectId)
       .order("code");
     if (data.floorPlanId) q = q.eq("floor_plan_id", data.floorPlanId);
@@ -27,6 +27,7 @@ export const listBundles = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return rows ?? [];
   });
+
 
 export const createBundle = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -98,3 +99,35 @@ export const deleteBundle = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const setPrimaryBundle = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ bundleId: z.string().uuid(), isPrimary: z.boolean() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    if (data.isPrimary) {
+      const { data: b, error: berr } = await supabase
+        .from("cable_bundles")
+        .select("floor_plan_id")
+        .eq("id", data.bundleId)
+        .maybeSingle();
+      if (berr) throw new Error(berr.message);
+      if (!b) throw new Error("bundle not found");
+      // unset other primary bundles on the same plan first
+      const { error: e1 } = await supabase
+        .from("cable_bundles")
+        .update({ is_primary: false } as never)
+        .eq("floor_plan_id", b.floor_plan_id as string)
+        .neq("id", data.bundleId);
+      if (e1) throw new Error(e1.message);
+    }
+    const { error } = await supabase
+      .from("cable_bundles")
+      .update({ is_primary: data.isPrimary } as never)
+      .eq("id", data.bundleId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+

@@ -114,6 +114,14 @@ export function AppShell({
               >
                 Kabelový registr
               </NavItem>
+              <NavItem
+                to="/projects/$projectId/work"
+                params={{ projectId }}
+                icon={Wrench}
+              >
+                Režim tahání
+              </NavItem>
+
 
               <NavItem
                 to="/projects/$projectId/members"
