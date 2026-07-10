@@ -100,7 +100,7 @@ function AuditPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="font-mono text-xs text-muted-foreground">
-                    {ev.entity_id.slice(0, 8)}
+                    {ev.entity_id?.slice(0, 8) ?? "—"}
                   </TableCell>
                 </TableRow>
               ))}
