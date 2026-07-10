@@ -346,6 +346,101 @@ function PlanEditorPage() {
     qc.invalidateQueries({ queryKey: ["endpoints", projectId, planId] });
   }
 
+  async function saveRack() {
+    if (!pendingRackPos) return;
+    if (!newRackCode.trim()) return toast.error("Zadejte kód racku");
+    try {
+      await createRackFn({
+        data: {
+          projectId,
+          floorPlanId: planId,
+          code: newRackCode.trim(),
+          name: newRackName.trim() || undefined,
+          x: pendingRackPos.x,
+          y: pendingRackPos.y,
+        },
+      });
+      setPendingRackPos(null);
+      setNewRackCode("");
+      setNewRackName("");
+      qc.invalidateQueries({ queryKey: ["racks", projectId, planId] });
+      toast.success("Rack přidán");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Chyba");
+    }
+  }
+  async function removeRack(id: string) {
+    if (!confirm("Smazat rack? Panely ztratí vazbu.")) return;
+    try {
+      await deleteRackFn({ data: { id } });
+      qc.invalidateQueries({ queryKey: ["racks", projectId, planId] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Chyba");
+    }
+  }
+  async function saveBundle() {
+    if (draftBundlePoints.length < 2) return toast.error("Alespoň 2 body");
+    if (!newBundleCode.trim()) return toast.error("Zadejte kód kmenu");
+    try {
+      await createBundleFn({
+        data: {
+          projectId,
+          floorPlanId: planId,
+          code: newBundleCode.trim(),
+          points: draftBundlePoints,
+        },
+      });
+      setDraftBundlePoints([]);
+      setNewBundleCode("");
+      qc.invalidateQueries({ queryKey: ["bundles", projectId, planId] });
+      toast.success("Kmen uložen");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Chyba");
+    }
+  }
+  async function removeBundle(id: string) {
+    if (!confirm("Smazat kmen?")) return;
+    try {
+      await deleteBundleFn({ data: { id } });
+      qc.invalidateQueries({ queryKey: ["bundles", projectId, planId] });
+      qc.invalidateQueries({ queryKey: ["cables", projectId] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Chyba");
+    }
+  }
+  async function savePortCable() {
+    if (!pendingPortPos || !selectedPortId) return;
+    if (!newPortEpCode.trim() || !newPortCableCode.trim())
+      return toast.error("Vyplňte kód endpointu i kabelu");
+    try {
+      await createCableFromPortFn({
+        data: {
+          projectId,
+          floorPlanId: planId,
+          portId: selectedPortId,
+          cableCode: newPortCableCode.trim(),
+          endpoint: {
+            code: newPortEpCode.trim(),
+            kind: "WORKSTATION",
+            x: pendingPortPos.x,
+            y: pendingPortPos.y,
+          },
+        },
+      });
+      setPendingPortPos(null);
+      setSelectedPortId(null);
+      setNewPortEpCode("");
+      setNewPortCableCode("");
+      qc.invalidateQueries({ queryKey: ["endpoints", projectId, planId] });
+      qc.invalidateQueries({ queryKey: ["free-ports", projectId] });
+      qc.invalidateQueries({ queryKey: ["cables", projectId] });
+      toast.success("Endpoint a kabel vytvořeny, trasa přiřazena k nejbližšímu kmeni");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Chyba");
+    }
+  }
+
+
   async function saveRoutePoints() {
     if (!selectedRouteId) return;
     try {
