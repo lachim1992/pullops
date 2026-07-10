@@ -203,13 +203,96 @@ export const seedCeskeBudejoviceDemo = createServerFn({ method: "POST" })
       if (cErr) throw new Error(`cable ${lp.label}: ${cErr.message}`);
     }
 
+    // 8) rack points on plan (PATCH endpoints)
+    const rackPoints: Array<{ code: string; x: number; y: number }> = [
+      { code: "RACK-A", x: 0.08, y: 0.92 },
+      { code: "RACK-B", x: 0.5, y: 0.92 },
+    ];
+    const rackIds: Record<string, string> = {};
+    for (const rp of rackPoints) {
+      const { data: ep, error } = await supabase
+        .from("endpoints")
+        .insert({
+          project_id,
+          organization_id,
+          floor_plan_id: fp.id,
+          code: rp.code,
+          label: rp.code,
+          endpoint_kind: "PATCH",
+          norm_x: rp.x,
+          norm_y: rp.y,
+        })
+        .select("id")
+        .single();
+      if (error) throw new Error(`rack ${rp.code}: ${error.message}`);
+      rackIds[rp.code] = ep.id as string;
+    }
+
+    // 9) group cables under their to_endpoint (operational units)
+    const { data: cablesRows } = await supabase
+      .from("cables")
+      .select("id, to_endpoint_id")
+      .eq("project_id", project_id);
+    const groupRows =
+      (cablesRows ?? [])
+        .filter((c) => c.to_endpoint_id)
+        .map((c, i) => ({
+          project_id,
+          endpoint_id: c.to_endpoint_id as string,
+          cable_id: c.id as string,
+          sequence: i,
+        }));
+    if (groupRows.length > 0) {
+      const { error: gErr } = await supabase.from("endpoint_cable_groups").insert(groupRows);
+      if (gErr) throw new Error(`endpoint_cable_groups: ${gErr.message}`);
+    }
+
+    // 10) sample route Rack-A → first WORKSTATION endpoint
+    const firstWorkstation =
+      (cablesRows ?? []).find((c) => c.to_endpoint_id)?.to_endpoint_id ?? null;
+    if (firstWorkstation) {
+      const { data: routeRow, error: rErr } = await supabase
+        .from("cable_routes")
+        .insert({
+          project_id,
+          organization_id,
+          floor_plan_id: fp.id,
+          name: `RACK-A → demo`,
+          rack_endpoint_id: rackIds["RACK-A"],
+          from_endpoint_id: rackIds["RACK-A"],
+          to_endpoint_id: firstWorkstation,
+        })
+        .select("id")
+        .single();
+      if (rErr) throw new Error(`route: ${rErr.message}`);
+      const routeId = routeRow.id as string;
+      const pts = [
+        { x: 0.08, y: 0.92 },
+        { x: 0.08, y: 0.5 },
+        { x: 0.3, y: 0.5 },
+        { x: 0.3, y: 0.2 },
+      ];
+      await supabase.from("cable_route_points").insert(
+        pts.map((p, i) => ({
+          route_id: routeId,
+          project_id,
+          floor_plan_id: fp.id,
+          sequence: i,
+          norm_x: p.x,
+          norm_y: p.y,
+        })),
+      );
+    }
+
     return {
       projectId: project_id,
       floorPlanId: fp.id as string,
       organizationId: organization_id,
       panels: PANELS.length,
       cables: labeled.length,
-      endpoints: endpointByCode.size,
+      endpoints: endpointByCode.size + rackPoints.length,
+      groups: groupRows.length,
     };
   });
+
 
