@@ -681,7 +681,11 @@ function PdfPlanBackground({ url, title }: { url: string; title: string }) {
 
   useEffect(() => {
     let cancelled = false;
-    let renderTask: { cancel: () => void } | null = null;
+    let renderTask: Awaited<ReturnType<Awaited<ReturnType<typeof import("pdfjs-dist")>["getDocument"]>["promise"]["getPage"]>> extends infer T
+      ? T extends { render: (...args: never[]) => infer R }
+        ? R
+        : { cancel: () => void }
+      : { cancel: () => void } | null = null;
 
     async function renderPdf() {
       setStatus("loading");
@@ -703,7 +707,7 @@ function PdfPlanBackground({ url, title }: { url: string; title: string }) {
         const context = canvas.getContext("2d");
         if (!context) throw new Error("Canvas není dostupný");
 
-        renderTask = page.render({ canvasContext: context, viewport });
+        renderTask = page.render({ canvas, canvasContext: context, viewport });
         await renderTask.promise;
         if (!cancelled) setStatus("ready");
       } catch (err) {
