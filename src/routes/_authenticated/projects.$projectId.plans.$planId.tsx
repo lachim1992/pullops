@@ -100,6 +100,7 @@ function PlanEditorPage() {
   const listFreePortsFn = useServerFn(listFreePorts);
   const createCableFromPortFn = useServerFn(createCableFromPort);
   const listPlanBranchesFn = useServerFn(listPlanBranches);
+  const autoAssignBundlesFn = useServerFn(autoAssignBundlesForPlan);
   const qc = useQueryClient();
 
 
