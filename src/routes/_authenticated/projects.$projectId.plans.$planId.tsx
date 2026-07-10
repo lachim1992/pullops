@@ -240,6 +240,30 @@ function PlanEditorPage() {
       }
     : null;
   const mpu = useMemo(() => metersPerNormUnit(calibration), [calibration]);
+  const calNormDist = useMemo(
+    () => (calibration ? normDistance(calibration.a, calibration.b) : 0),
+    [calibration],
+  );
+  const calibrationSuspicious = calibration != null && calNormDist < 0.05;
+
+  async function autoAssign() {
+    try {
+      const res = await autoAssignBundlesFn({
+        data: { projectId, floorPlanId: planId },
+      });
+      if (res.reason === "no_bundles") {
+        toast.error("Není žádný kmen — nakreslete kmen v režimu 'Kmeny'");
+      } else if (res.reason === "no_endpoints") {
+        toast.error("Na tomto plánu nejsou žádné endpointy");
+      } else {
+        toast.success(`Přiřazeno ${res.assigned} kabelů k nejbližšímu kmeni`);
+      }
+      qc.invalidateQueries({ queryKey: ["plan-branches", projectId, planId] });
+      qc.invalidateQueries({ queryKey: ["cables", projectId] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Chyba");
+    }
+  }
 
   const routeDetail = useQuery({
     queryKey: ["route", selectedRouteId],
