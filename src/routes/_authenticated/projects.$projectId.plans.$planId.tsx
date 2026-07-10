@@ -387,166 +387,226 @@ function PlanEditorPage() {
         </div>
       </header>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-sm border border-border bg-muted">
-          {plan.data?.documentUrl ? (
-            plan.data.document?.mime_type?.includes("pdf") ? (
-              <PdfPlanBackground url={plan.data.documentUrl} title={plan.data.plan.name} />
-            ) : (
-              <img
-                src={plan.data.documentUrl}
-                alt={plan.data.plan.name}
-                className="pointer-events-none absolute inset-0 h-full w-full select-none object-contain"
-              />
-            )
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
-              Bez podkladového obrázku — vyberte podklad vpravo
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <div
+          ref={viewportRef}
+          className="relative h-[calc(100vh-220px)] min-h-[560px] w-full overflow-hidden rounded-sm border border-border bg-muted"
+          onWheel={handleWheel}
+          onMouseDown={handleViewportMouseDown}
+          onMouseMove={handleViewportMouseMove}
+          onMouseUp={endPan}
+          onMouseLeave={endPan}
+          onContextMenu={(e) => e.preventDefault()}
+        >
+          {/* Zoom controls */}
+          <div className="absolute right-2 top-2 z-10 flex flex-col gap-1 rounded-sm border border-border bg-background/95 p-1 shadow-sm">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 w-7 p-0 font-mono"
+              onClick={() => {
+                const r = viewportRef.current?.getBoundingClientRect();
+                if (r) zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1.25);
+              }}
+              title="Přiblížit"
+            >
+              +
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 w-7 p-0 font-mono"
+              onClick={() => {
+                const r = viewportRef.current?.getBoundingClientRect();
+                if (r) zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1 / 1.25);
+              }}
+              title="Oddálit"
+            >
+              −
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 w-7 p-0 font-mono text-[10px]"
+              onClick={resetView}
+              title="Resetovat pohled"
+            >
+              1:1
+            </Button>
+            <div className="mt-1 text-center font-mono text-[10px] text-muted-foreground">
+              {Math.round(zoom * 100)}%
             </div>
-          )}
+          </div>
+          <div className="absolute left-2 top-2 z-10 rounded-sm bg-background/80 px-2 py-1 font-mono text-[10px] text-muted-foreground">
+            Kolečko = zoom · Alt/prostřední tlač. = posun
+          </div>
 
-          <svg
-            ref={svgRef}
-            viewBox="0 0 1 1"
-            preserveAspectRatio="none"
-            className="absolute inset-0 h-full w-full cursor-crosshair"
-            onClick={handleSvgClick}
-            onMouseMove={handleSvgMove}
-            onMouseUp={() => setDraggingIdx(null)}
-            onMouseLeave={() => setDraggingIdx(null)}
+          <div
+            className="absolute left-0 top-0 h-full w-full origin-top-left"
+            style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
           >
-            {calibration && (
-              <>
+            {plan.data?.documentUrl ? (
+              plan.data.document?.mime_type?.includes("pdf") ? (
+                <PdfPlanBackground url={plan.data.documentUrl} title={plan.data.plan.name} />
+              ) : (
+                <img
+                  src={plan.data.documentUrl}
+                  alt={plan.data.plan.name}
+                  className="pointer-events-none absolute inset-0 h-full w-full select-none object-contain"
+                />
+              )
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
+                Bez podkladového obrázku — vyberte podklad vpravo
+              </div>
+            )}
+
+            <svg
+              ref={svgRef}
+              viewBox="0 0 1 1"
+              preserveAspectRatio="none"
+              className="absolute inset-0 h-full w-full cursor-crosshair"
+              onClick={handleSvgClick}
+              onMouseMove={handleSvgMove}
+              onMouseUp={() => setDraggingIdx(null)}
+              onMouseLeave={() => setDraggingIdx(null)}
+            >
+              {calibration && (
+                <>
+                  <line
+                    x1={calibration.a.x}
+                    y1={calibration.a.y}
+                    x2={calibration.b.x}
+                    y2={calibration.b.y}
+                    stroke="hsl(var(--accent))"
+                    strokeWidth={0.003}
+                  />
+                  <circle cx={calibration.a.x} cy={calibration.a.y} r={0.008} fill="hsl(var(--accent))" />
+                  <circle cx={calibration.b.x} cy={calibration.b.y} r={0.008} fill="hsl(var(--accent))" />
+                </>
+              )}
+              {mode === "calibrate" && calA && (
+                <circle cx={calA.x} cy={calA.y} r={0.01} fill="hsl(var(--primary))" />
+              )}
+              {mode === "calibrate" && calB && (
+                <circle cx={calB.x} cy={calB.y} r={0.01} fill="hsl(var(--primary))" />
+              )}
+              {mode === "calibrate" && calA && calB && (
                 <line
-                  x1={calibration.a.x}
-                  y1={calibration.a.y}
-                  x2={calibration.b.x}
-                  y2={calibration.b.y}
-                  stroke="hsl(var(--accent))"
+                  x1={calA.x}
+                  y1={calA.y}
+                  x2={calB.x}
+                  y2={calB.y}
+                  stroke="hsl(var(--primary))"
                   strokeWidth={0.003}
+                  strokeDasharray="0.01 0.005"
                 />
-                <circle cx={calibration.a.x} cy={calibration.a.y} r={0.008} fill="hsl(var(--accent))" />
-                <circle cx={calibration.b.x} cy={calibration.b.y} r={0.008} fill="hsl(var(--accent))" />
-              </>
-            )}
-            {mode === "calibrate" && calA && (
-              <circle cx={calA.x} cy={calA.y} r={0.01} fill="hsl(var(--primary))" />
-            )}
-            {mode === "calibrate" && calB && (
-              <circle cx={calB.x} cy={calB.y} r={0.01} fill="hsl(var(--primary))" />
-            )}
-            {mode === "calibrate" && calA && calB && (
-              <line
-                x1={calA.x}
-                y1={calA.y}
-                x2={calB.x}
-                y2={calB.y}
-                stroke="hsl(var(--primary))"
-                strokeWidth={0.003}
-                strokeDasharray="0.01 0.005"
-              />
-            )}
-            {(endpoints.data ?? []).map((ep) => {
-              const isPatch = ep.endpoint_kind === "PATCH";
-              const isRouteEnd =
-                mode === "route" &&
-                (ep.id === currentRoute?.from_endpoint_id ||
-                  ep.id === currentRoute?.to_endpoint_id ||
-                  ep.id === currentRoute?.rack_endpoint_id);
-              const isSelected = ep.id === selectedEndpointId;
-              const fill = isRouteEnd
-                ? "hsl(var(--accent))"
-                : isSelected
-                  ? "hsl(var(--destructive))"
-                  : isPatch
-                    ? "hsl(var(--foreground))"
-                    : "hsl(var(--primary))";
-              const cx = Number(ep.norm_x);
-              const cy = Number(ep.norm_y);
-              return (
-                <g
-                  key={ep.id}
-                  style={{ cursor: "pointer" }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedEndpointId(ep.id);
-                  }}
-                >
-                  {isPatch ? (
-                    <rect
-                      x={cx - 0.012}
-                      y={cy - 0.012}
-                      width={0.024}
-                      height={0.024}
-                      fill={fill}
-                      stroke="white"
-                      strokeWidth={0.002}
-                    />
-                  ) : (
-                    <circle
-                      cx={cx}
-                      cy={cy}
-                      r={0.012}
-                      fill={fill}
-                      stroke="white"
-                      strokeWidth={0.002}
-                    />
-                  )}
-                  <text
-                    x={cx}
-                    y={cy - 0.018}
-                    textAnchor="middle"
-                    fontSize={0.014}
-                    fill="hsl(var(--foreground))"
-                    style={{ pointerEvents: "none", userSelect: "none" }}
+              )}
+              {(endpoints.data ?? []).map((ep) => {
+                const isPatch = ep.endpoint_kind === "PATCH";
+                const isRouteEnd =
+                  mode === "route" &&
+                  (ep.id === currentRoute?.from_endpoint_id ||
+                    ep.id === currentRoute?.to_endpoint_id ||
+                    ep.id === currentRoute?.rack_endpoint_id);
+                const isSelected = ep.id === selectedEndpointId;
+                const fill = isRouteEnd
+                  ? "hsl(var(--accent))"
+                  : isSelected
+                    ? "hsl(var(--destructive))"
+                    : isPatch
+                      ? "hsl(var(--foreground))"
+                      : "hsl(var(--primary))";
+                const cx = Number(ep.norm_x);
+                const cy = Number(ep.norm_y);
+                const r = 0.012 / zoom;
+                const sw = 0.002 / zoom;
+                return (
+                  <g
+                    key={ep.id}
+                    style={{ cursor: "pointer" }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedEndpointId(ep.id);
+                    }}
                   >
-                    {ep.code}
-                  </text>
-                </g>
-              );
-            })}
-            {mode === "route" && draftPoints.length > 1 && (
-              <polyline
-                points={draftPoints.map((p) => `${p.x},${p.y}`).join(" ")}
-                fill="none"
-                stroke="hsl(var(--destructive))"
-                strokeWidth={0.004}
-                strokeLinejoin="round"
-              />
-            )}
-            {mode === "route" &&
-              draftPoints.map((p, i) => (
-                <circle
-                  key={i}
-                  cx={p.x}
-                  cy={p.y}
-                  r={0.012}
-                  fill="hsl(var(--destructive))"
-                  stroke="white"
-                  strokeWidth={0.002}
-                  style={{ cursor: "grab" }}
-                  onMouseDown={(e) => {
-                    e.stopPropagation();
-                    setDraggingIdx(i);
-                  }}
-                  onDoubleClick={(e) => {
-                    e.stopPropagation();
-                    setDraftPoints((pts) => pts.filter((_, j) => j !== i));
-                  }}
+                    {isPatch ? (
+                      <rect
+                        x={cx - r}
+                        y={cy - r}
+                        width={r * 2}
+                        height={r * 2}
+                        fill={fill}
+                        stroke="white"
+                        strokeWidth={sw}
+                      />
+                    ) : (
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r={r}
+                        fill={fill}
+                        stroke="white"
+                        strokeWidth={sw}
+                      />
+                    )}
+                    <text
+                      x={cx}
+                      y={cy - r - 0.006 / zoom}
+                      textAnchor="middle"
+                      fontSize={0.014 / zoom}
+                      fill="hsl(var(--foreground))"
+                      style={{ pointerEvents: "none", userSelect: "none" }}
+                    >
+                      {ep.code}
+                    </text>
+                  </g>
+                );
+              })}
+              {mode === "route" && draftPoints.length > 1 && (
+                <polyline
+                  points={draftPoints.map((p) => `${p.x},${p.y}`).join(" ")}
+                  fill="none"
+                  stroke="hsl(var(--destructive))"
+                  strokeWidth={0.004 / zoom}
+                  strokeLinejoin="round"
                 />
-              ))}
-            {pendingPos && mode === "endpoint" && (
-              <circle
-                cx={pendingPos.x}
-                cy={pendingPos.y}
-                r={0.012}
-                fill="none"
-                stroke="hsl(var(--destructive))"
-                strokeWidth={0.003}
-              />
-            )}
-          </svg>
+              )}
+              {mode === "route" &&
+                draftPoints.map((p, i) => (
+                  <circle
+                    key={i}
+                    cx={p.x}
+                    cy={p.y}
+                    r={0.012 / zoom}
+                    fill="hsl(var(--destructive))"
+                    stroke="white"
+                    strokeWidth={0.002 / zoom}
+                    style={{ cursor: "grab" }}
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                      setDraggingIdx(i);
+                    }}
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      setDraftPoints((pts) => pts.filter((_, j) => j !== i));
+                    }}
+                  />
+                ))}
+              {pendingPos && mode === "endpoint" && (
+                <circle
+                  cx={pendingPos.x}
+                  cy={pendingPos.y}
+                  r={0.012 / zoom}
+                  fill="none"
+                  stroke="hsl(var(--destructive))"
+                  strokeWidth={0.003 / zoom}
+                />
+              )}
+            </svg>
+          </div>
         </div>
+
 
         <aside className="space-y-4">
           <div className="rounded-sm border border-border p-3 text-sm">
