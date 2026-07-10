@@ -25,6 +25,9 @@ import { Route as AuthenticatedProjectsProjectIdDocumentsRouteImport } from './r
 import { Route as AuthenticatedProjectsProjectIdCablesRouteImport } from './routes/_authenticated/projects.$projectId.cables'
 import { Route as AuthenticatedProjectsProjectIdCableTypesRouteImport } from './routes/_authenticated/projects.$projectId.cable-types'
 import { Route as AuthenticatedOrganizationsOrgIdSettingsRouteImport } from './routes/_authenticated/organizations.$orgId.settings'
+import { Route as AuthenticatedProjectsProjectIdPlansIndexRouteImport } from './routes/_authenticated/projects.$projectId.plans.index'
+import { Route as AuthenticatedProjectsProjectIdPatchPanelsIndexRouteImport } from './routes/_authenticated/projects.$projectId.patch-panels.index'
+import { Route as AuthenticatedProjectsProjectIdCablesIndexRouteImport } from './routes/_authenticated/projects.$projectId.cables.index'
 import { Route as AuthenticatedProjectsProjectIdPlansPlanIdRouteImport } from './routes/_authenticated/projects.$projectId.plans.$planId'
 import { Route as AuthenticatedProjectsProjectIdPatchPanelsPanelIdRouteImport } from './routes/_authenticated/projects.$projectId.patch-panels.$panelId'
 import { Route as AuthenticatedProjectsProjectIdCablesCableIdRouteImport } from './routes/_authenticated/projects.$projectId.cables.$cableId'
@@ -118,6 +121,24 @@ const AuthenticatedOrganizationsOrgIdSettingsRoute =
     path: '/organizations/$orgId/settings',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedProjectsProjectIdPlansIndexRoute =
+  AuthenticatedProjectsProjectIdPlansIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedProjectsProjectIdPlansRoute,
+  } as any)
+const AuthenticatedProjectsProjectIdPatchPanelsIndexRoute =
+  AuthenticatedProjectsProjectIdPatchPanelsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedProjectsProjectIdPatchPanelsRoute,
+  } as any)
+const AuthenticatedProjectsProjectIdCablesIndexRoute =
+  AuthenticatedProjectsProjectIdCablesIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedProjectsProjectIdCablesRoute,
+  } as any)
 const AuthenticatedProjectsProjectIdPlansPlanIdRoute =
   AuthenticatedProjectsProjectIdPlansPlanIdRouteImport.update({
     id: '/$planId',
@@ -156,6 +177,9 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId/cables/$cableId': typeof AuthenticatedProjectsProjectIdCablesCableIdRoute
   '/projects/$projectId/patch-panels/$panelId': typeof AuthenticatedProjectsProjectIdPatchPanelsPanelIdRoute
   '/projects/$projectId/plans/$planId': typeof AuthenticatedProjectsProjectIdPlansPlanIdRoute
+  '/projects/$projectId/cables/': typeof AuthenticatedProjectsProjectIdCablesIndexRoute
+  '/projects/$projectId/patch-panels/': typeof AuthenticatedProjectsProjectIdPatchPanelsIndexRoute
+  '/projects/$projectId/plans/': typeof AuthenticatedProjectsProjectIdPlansIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -165,17 +189,17 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/organizations/$orgId/settings': typeof AuthenticatedOrganizationsOrgIdSettingsRoute
   '/projects/$projectId/cable-types': typeof AuthenticatedProjectsProjectIdCableTypesRoute
-  '/projects/$projectId/cables': typeof AuthenticatedProjectsProjectIdCablesRouteWithChildren
   '/projects/$projectId/documents': typeof AuthenticatedProjectsProjectIdDocumentsRoute
   '/projects/$projectId/endpoints': typeof AuthenticatedProjectsProjectIdEndpointsRoute
   '/projects/$projectId/members': typeof AuthenticatedProjectsProjectIdMembersRoute
-  '/projects/$projectId/patch-panels': typeof AuthenticatedProjectsProjectIdPatchPanelsRouteWithChildren
-  '/projects/$projectId/plans': typeof AuthenticatedProjectsProjectIdPlansRouteWithChildren
   '/projects/$projectId/settings': typeof AuthenticatedProjectsProjectIdSettingsRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdIndexRoute
   '/projects/$projectId/cables/$cableId': typeof AuthenticatedProjectsProjectIdCablesCableIdRoute
   '/projects/$projectId/patch-panels/$panelId': typeof AuthenticatedProjectsProjectIdPatchPanelsPanelIdRoute
   '/projects/$projectId/plans/$planId': typeof AuthenticatedProjectsProjectIdPlansPlanIdRoute
+  '/projects/$projectId/cables': typeof AuthenticatedProjectsProjectIdCablesIndexRoute
+  '/projects/$projectId/patch-panels': typeof AuthenticatedProjectsProjectIdPatchPanelsIndexRoute
+  '/projects/$projectId/plans': typeof AuthenticatedProjectsProjectIdPlansIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -198,6 +222,9 @@ export interface FileRoutesById {
   '/_authenticated/projects/$projectId/cables/$cableId': typeof AuthenticatedProjectsProjectIdCablesCableIdRoute
   '/_authenticated/projects/$projectId/patch-panels/$panelId': typeof AuthenticatedProjectsProjectIdPatchPanelsPanelIdRoute
   '/_authenticated/projects/$projectId/plans/$planId': typeof AuthenticatedProjectsProjectIdPlansPlanIdRoute
+  '/_authenticated/projects/$projectId/cables/': typeof AuthenticatedProjectsProjectIdCablesIndexRoute
+  '/_authenticated/projects/$projectId/patch-panels/': typeof AuthenticatedProjectsProjectIdPatchPanelsIndexRoute
+  '/_authenticated/projects/$projectId/plans/': typeof AuthenticatedProjectsProjectIdPlansIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -220,6 +247,9 @@ export interface FileRouteTypes {
     | '/projects/$projectId/cables/$cableId'
     | '/projects/$projectId/patch-panels/$panelId'
     | '/projects/$projectId/plans/$planId'
+    | '/projects/$projectId/cables/'
+    | '/projects/$projectId/patch-panels/'
+    | '/projects/$projectId/plans/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -229,17 +259,17 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/organizations/$orgId/settings'
     | '/projects/$projectId/cable-types'
-    | '/projects/$projectId/cables'
     | '/projects/$projectId/documents'
     | '/projects/$projectId/endpoints'
     | '/projects/$projectId/members'
-    | '/projects/$projectId/patch-panels'
-    | '/projects/$projectId/plans'
     | '/projects/$projectId/settings'
     | '/projects/$projectId'
     | '/projects/$projectId/cables/$cableId'
     | '/projects/$projectId/patch-panels/$panelId'
     | '/projects/$projectId/plans/$planId'
+    | '/projects/$projectId/cables'
+    | '/projects/$projectId/patch-panels'
+    | '/projects/$projectId/plans'
   id:
     | '__root__'
     | '/'
@@ -261,6 +291,9 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/$projectId/cables/$cableId'
     | '/_authenticated/projects/$projectId/patch-panels/$panelId'
     | '/_authenticated/projects/$projectId/plans/$planId'
+    | '/_authenticated/projects/$projectId/cables/'
+    | '/_authenticated/projects/$projectId/patch-panels/'
+    | '/_authenticated/projects/$projectId/plans/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -384,6 +417,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOrganizationsOrgIdSettingsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/projects/$projectId/plans/': {
+      id: '/_authenticated/projects/$projectId/plans/'
+      path: '/'
+      fullPath: '/projects/$projectId/plans/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdPlansIndexRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdPlansRoute
+    }
+    '/_authenticated/projects/$projectId/patch-panels/': {
+      id: '/_authenticated/projects/$projectId/patch-panels/'
+      path: '/'
+      fullPath: '/projects/$projectId/patch-panels/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdPatchPanelsIndexRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdPatchPanelsRoute
+    }
+    '/_authenticated/projects/$projectId/cables/': {
+      id: '/_authenticated/projects/$projectId/cables/'
+      path: '/'
+      fullPath: '/projects/$projectId/cables/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdCablesIndexRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdCablesRoute
+    }
     '/_authenticated/projects/$projectId/plans/$planId': {
       id: '/_authenticated/projects/$projectId/plans/$planId'
       path: '/$planId'
@@ -410,12 +464,15 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedProjectsProjectIdCablesRouteChildren {
   AuthenticatedProjectsProjectIdCablesCableIdRoute: typeof AuthenticatedProjectsProjectIdCablesCableIdRoute
+  AuthenticatedProjectsProjectIdCablesIndexRoute: typeof AuthenticatedProjectsProjectIdCablesIndexRoute
 }
 
 const AuthenticatedProjectsProjectIdCablesRouteChildren: AuthenticatedProjectsProjectIdCablesRouteChildren =
   {
     AuthenticatedProjectsProjectIdCablesCableIdRoute:
       AuthenticatedProjectsProjectIdCablesCableIdRoute,
+    AuthenticatedProjectsProjectIdCablesIndexRoute:
+      AuthenticatedProjectsProjectIdCablesIndexRoute,
   }
 
 const AuthenticatedProjectsProjectIdCablesRouteWithChildren =
@@ -425,12 +482,15 @@ const AuthenticatedProjectsProjectIdCablesRouteWithChildren =
 
 interface AuthenticatedProjectsProjectIdPatchPanelsRouteChildren {
   AuthenticatedProjectsProjectIdPatchPanelsPanelIdRoute: typeof AuthenticatedProjectsProjectIdPatchPanelsPanelIdRoute
+  AuthenticatedProjectsProjectIdPatchPanelsIndexRoute: typeof AuthenticatedProjectsProjectIdPatchPanelsIndexRoute
 }
 
 const AuthenticatedProjectsProjectIdPatchPanelsRouteChildren: AuthenticatedProjectsProjectIdPatchPanelsRouteChildren =
   {
     AuthenticatedProjectsProjectIdPatchPanelsPanelIdRoute:
       AuthenticatedProjectsProjectIdPatchPanelsPanelIdRoute,
+    AuthenticatedProjectsProjectIdPatchPanelsIndexRoute:
+      AuthenticatedProjectsProjectIdPatchPanelsIndexRoute,
   }
 
 const AuthenticatedProjectsProjectIdPatchPanelsRouteWithChildren =
@@ -440,12 +500,15 @@ const AuthenticatedProjectsProjectIdPatchPanelsRouteWithChildren =
 
 interface AuthenticatedProjectsProjectIdPlansRouteChildren {
   AuthenticatedProjectsProjectIdPlansPlanIdRoute: typeof AuthenticatedProjectsProjectIdPlansPlanIdRoute
+  AuthenticatedProjectsProjectIdPlansIndexRoute: typeof AuthenticatedProjectsProjectIdPlansIndexRoute
 }
 
 const AuthenticatedProjectsProjectIdPlansRouteChildren: AuthenticatedProjectsProjectIdPlansRouteChildren =
   {
     AuthenticatedProjectsProjectIdPlansPlanIdRoute:
       AuthenticatedProjectsProjectIdPlansPlanIdRoute,
+    AuthenticatedProjectsProjectIdPlansIndexRoute:
+      AuthenticatedProjectsProjectIdPlansIndexRoute,
   }
 
 const AuthenticatedProjectsProjectIdPlansRouteWithChildren =
