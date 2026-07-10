@@ -686,6 +686,16 @@ function PdfPlanBackground({ url, title }: { url: string; title: string }) {
     async function renderPdf() {
       setStatus("loading");
       try {
+        const mapPrototype = Map.prototype as Map<unknown, unknown> & {
+          getOrInsertComputed?: (key: unknown, callback: (key: unknown) => unknown) => unknown;
+        };
+        if (!mapPrototype.getOrInsertComputed) {
+          mapPrototype.getOrInsertComputed = function getOrInsertComputed(key, callback) {
+            if (!this.has(key)) this.set(key, callback(key));
+            return this.get(key);
+          };
+        }
+
         const pdfjs = await import("pdfjs-dist");
         pdfjs.GlobalWorkerOptions.workerSrc = new URL(
           "pdfjs-dist/build/pdf.worker.mjs",
@@ -727,7 +737,7 @@ function PdfPlanBackground({ url, title }: { url: string; title: string }) {
       <canvas
         ref={canvasRef}
         aria-label={title}
-        className={`h-full w-full transition-opacity ${status === "ready" ? "opacity-100" : "opacity-0"}`}
+        className={`h-full w-full object-contain transition-opacity ${status === "ready" ? "opacity-100" : "opacity-0"}`}
       />
       {status === "loading" && (
         <div className="absolute text-xs font-mono text-muted-foreground">Načítám PDF podklad…</div>
