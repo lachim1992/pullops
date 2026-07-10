@@ -628,6 +628,113 @@ function PlanEditorPage() {
                   strokeDasharray="0.01 0.005"
                 />
               )}
+              {/* Bundles (kmeny) */}
+              {(bundles.data ?? []).map((b) => {
+                const pts = (b.points as unknown as NormPoint[]) ?? [];
+                if (pts.length < 2) return null;
+                return (
+                  <g key={b.id}>
+                    <polyline
+                      points={pts.map((p) => `${p.x},${p.y}`).join(" ")}
+                      fill="none"
+                      stroke="hsl(var(--primary))"
+                      strokeOpacity={0.55}
+                      strokeWidth={0.008 / zoom}
+                      strokeLinejoin="round"
+                    />
+                    <text
+                      x={pts[0].x}
+                      y={pts[0].y - 0.006 / zoom}
+                      fontSize={0.014 / zoom}
+                      fill="hsl(var(--primary))"
+                      style={{ pointerEvents: "none", userSelect: "none" }}
+                    >
+                      {b.code}
+                    </text>
+                  </g>
+                );
+              })}
+              {/* Draft bundle in progress */}
+              {mode === "bundle" && draftBundlePoints.length > 0 && (
+                <>
+                  {draftBundlePoints.length > 1 && (
+                    <polyline
+                      points={draftBundlePoints.map((p) => `${p.x},${p.y}`).join(" ")}
+                      fill="none"
+                      stroke="hsl(var(--accent))"
+                      strokeWidth={0.006 / zoom}
+                      strokeDasharray="0.01 0.005"
+                    />
+                  )}
+                  {draftBundlePoints.map((p, i) => (
+                    <circle
+                      key={i}
+                      cx={p.x}
+                      cy={p.y}
+                      r={0.01 / zoom}
+                      fill="hsl(var(--accent))"
+                      stroke="white"
+                      strokeWidth={0.002 / zoom}
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        setDraftBundlePoints((pts) => pts.filter((_, j) => j !== i));
+                      }}
+                    />
+                  ))}
+                </>
+              )}
+              {/* Racks */}
+              {(racks.data ?? []).map((r) => {
+                const cx = Number(r.x);
+                const cy = Number(r.y);
+                const s = 0.018 / zoom;
+                return (
+                  <g key={r.id}>
+                    <rect
+                      x={cx - s}
+                      y={cy - s}
+                      width={s * 2}
+                      height={s * 2}
+                      fill="hsl(var(--foreground))"
+                      stroke="hsl(var(--background))"
+                      strokeWidth={0.002 / zoom}
+                    />
+                    <text
+                      x={cx}
+                      y={cy + s + 0.012 / zoom}
+                      textAnchor="middle"
+                      fontSize={0.014 / zoom}
+                      fill="hsl(var(--foreground))"
+                      style={{ pointerEvents: "none", userSelect: "none" }}
+                    >
+                      {r.code}
+                    </text>
+                  </g>
+                );
+              })}
+              {pendingRackPos && mode === "rack" && (
+                <rect
+                  x={pendingRackPos.x - 0.018 / zoom}
+                  y={pendingRackPos.y - 0.018 / zoom}
+                  width={0.036 / zoom}
+                  height={0.036 / zoom}
+                  fill="none"
+                  stroke="hsl(var(--destructive))"
+                  strokeWidth={0.003 / zoom}
+                  strokeDasharray="0.01 0.005"
+                />
+              )}
+              {pendingPortPos && mode === "port" && (
+                <circle
+                  cx={pendingPortPos.x}
+                  cy={pendingPortPos.y}
+                  r={0.014 / zoom}
+                  fill="none"
+                  stroke="hsl(var(--destructive))"
+                  strokeWidth={0.003 / zoom}
+                  strokeDasharray="0.01 0.005"
+                />
+              )}
               {(endpoints.data ?? []).map((ep) => {
                 const isPatch = ep.endpoint_kind === "PATCH";
                 const isRouteEnd =
