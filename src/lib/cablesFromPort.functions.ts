@@ -46,9 +46,40 @@ export const autoAssignBundlesForPlan = createServerFn({ method: "POST" })
     }
     if (epMap.size === 0) return { assigned: 0, skipped: 0, reason: "no_endpoints" as const };
 
+    // port -> rack position map (for prepending rack as trace origin)
+    const { data: panels } = await supabase
+      .from("patch_panels")
+      .select("id, rack_id")
+      .eq("project_id", data.projectId);
+    const panelToRack = new Map<string, string>();
+    for (const p of panels ?? []) {
+      if (p.rack_id) panelToRack.set(p.id as string, p.rack_id as string);
+    }
+    const panelIds = (panels ?? []).map((p) => p.id as string);
+    const portToRack = new Map<string, string>();
+    if (panelIds.length > 0) {
+      const { data: ports } = await supabase
+        .from("patch_ports")
+        .select("id, panel_id")
+        .in("panel_id", panelIds);
+      for (const p of ports ?? []) {
+        const r = panelToRack.get(p.panel_id as string);
+        if (r) portToRack.set(p.id as string, r);
+      }
+    }
+    const { data: racks } = await supabase
+      .from("racks")
+      .select("id, x, y")
+      .eq("project_id", data.projectId)
+      .eq("floor_plan_id", data.floorPlanId);
+    const rackPos = new Map<string, NormPoint>();
+    for (const r of racks ?? []) {
+      rackPos.set(r.id as string, { x: Number(r.x), y: Number(r.y) });
+    }
+
     let query = supabase
       .from("cables")
-      .select("id, bundle_id, to_endpoint_id")
+      .select("id, bundle_id, to_endpoint_id, from_port_id")
       .eq("project_id", data.projectId)
       .in("to_endpoint_id", Array.from(epMap.keys()));
     if (!data.overwrite) query = query.is("bundle_id", null);
@@ -59,22 +90,25 @@ export const autoAssignBundlesForPlan = createServerFn({ method: "POST" })
     let skipped = 0;
     for (const c of cables ?? []) {
       const epId = c.to_endpoint_id as string | null;
-      if (!epId) {
-        skipped++;
-        continue;
-      }
+      if (!epId) { skipped++; continue; }
       const pos = epMap.get(epId);
-      if (!pos) {
-        skipped++;
-        continue;
-      }
+      if (!pos) { skipped++; continue; }
       const nb = nearestBundle(pos, bundleList);
-      if (!nb) {
-        skipped++;
-        continue;
+      if (!nb) { skipped++; continue; }
+      const bundlePts = bundleList.find((b) => b.id === nb.id)!.points;
+      const anchorEp = closestPointOnPolyline(pos, bundlePts);
+      const branch: NormPoint[] = [];
+      // rack origin (if cable comes from a port on a rack on this plan)
+      const portId = c.from_port_id as string | null;
+      const rackId = portId ? portToRack.get(portId) : undefined;
+      const rp = rackId ? rackPos.get(rackId) : undefined;
+      if (rp) {
+        branch.push(rp);
+        const anchorRack = closestPointOnPolyline(rp, bundlePts);
+        if (anchorRack) branch.push(anchorRack.point);
       }
-      const anchor = closestPointOnPolyline(pos, bundleList.find((b) => b.id === nb.id)!.points);
-      const branch = anchor ? [anchor.point, pos] : [nb.anchor, pos];
+      if (anchorEp) branch.push(anchorEp.point);
+      branch.push(pos);
       const { error: uerr } = await supabase
         .from("cables")
         .update({ bundle_id: nb.id, branch_points: branch } as never)
@@ -84,6 +118,7 @@ export const autoAssignBundlesForPlan = createServerFn({ method: "POST" })
     }
     return { assigned, skipped, reason: "ok" as const };
   });
+
 
 /**
  * List cables belonging to a floor plan that have branch_points recorded,
@@ -245,10 +280,50 @@ export const createCableFromPort = createServerFn({ method: "POST" })
       id: b.id as string,
       points: (b.points as unknown as NormPoint[]) ?? [],
     }));
-    const nearest = nearestBundle(
-      { x: data.endpoint.x, y: data.endpoint.y },
-      bundleList,
-    );
+    const epPos: NormPoint = { x: data.endpoint.x, y: data.endpoint.y };
+    const nearest = nearestBundle(epPos, bundleList);
+
+    // Resolve rack position for the port (start of the trace)
+    const { data: portRow } = await supabase
+      .from("patch_ports")
+      .select("panel_id")
+      .eq("id", data.portId)
+      .maybeSingle();
+    let rackPoint: NormPoint | null = null;
+    if (portRow?.panel_id) {
+      const { data: panelRow } = await supabase
+        .from("patch_panels")
+        .select("rack_id")
+        .eq("id", portRow.panel_id as string)
+        .maybeSingle();
+      if (panelRow?.rack_id) {
+        const { data: rackRow } = await supabase
+          .from("racks")
+          .select("x, y, floor_plan_id")
+          .eq("id", panelRow.rack_id as string)
+          .maybeSingle();
+        if (rackRow && rackRow.floor_plan_id === data.floorPlanId) {
+          rackPoint = { x: Number(rackRow.x), y: Number(rackRow.y) };
+        }
+      }
+    }
+
+    let branch: NormPoint[] | null = null;
+    if (nearest) {
+      const bundlePts = bundleList.find((b) => b.id === nearest.id)!.points;
+      const anchorEp = closestPointOnPolyline(epPos, bundlePts);
+      const arr: NormPoint[] = [];
+      if (rackPoint) {
+        arr.push(rackPoint);
+        const anchorRack = closestPointOnPolyline(rackPoint, bundlePts);
+        if (anchorRack) arr.push(anchorRack.point);
+      }
+      if (anchorEp) arr.push(anchorEp.point);
+      arr.push(epPos);
+      branch = arr;
+    } else if (rackPoint) {
+      branch = [rackPoint, epPos];
+    }
 
     // Create cable
     const { data: cabRow, error: cerr } = await supabase
@@ -261,9 +336,7 @@ export const createCableFromPort = createServerFn({ method: "POST" })
         from_port_id: data.portId,
         to_endpoint_id: endpointId,
         bundle_id: nearest?.id ?? null,
-        branch_points: nearest
-          ? [nearest.anchor, { x: data.endpoint.x, y: data.endpoint.y }]
-          : null,
+        branch_points: branch,
         created_by: userId,
       } as never)
       .select("id")
@@ -276,3 +349,4 @@ export const createCableFromPort = createServerFn({ method: "POST" })
       bundleId: nearest?.id ?? null,
     };
   });
+

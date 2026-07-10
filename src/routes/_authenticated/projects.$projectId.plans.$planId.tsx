@@ -24,6 +24,7 @@ import {
   createEndpoint,
   deleteEndpoint,
   listEndpoints,
+  updateEndpoint,
 } from "@/lib/endpoints.functions";
 import {
   createRoute,
@@ -40,8 +41,8 @@ import {
   listUnassignedCables,
   removeCableFromEndpoint,
 } from "@/lib/endpointGroups.functions";
-import { createRack, listRacks, deleteRack } from "@/lib/racks.functions";
-import { createBundle, listBundles, deleteBundle } from "@/lib/cableBundles.functions";
+import { createRack, listRacks, deleteRack, updateRack } from "@/lib/racks.functions";
+import { createBundle, listBundles, deleteBundle, updateBundle } from "@/lib/cableBundles.functions";
 import {
   autoAssignBundlesForPlan,
   createCableFromPort,
@@ -94,6 +95,9 @@ function PlanEditorPage() {
   const listRacksFn = useServerFn(listRacks);
   const createRackFn = useServerFn(createRack);
   const deleteRackFn = useServerFn(deleteRack);
+  const updateRackFn = useServerFn(updateRack);
+  const updateEndpointFn = useServerFn(updateEndpoint);
+  const updateBundleFn = useServerFn(updateBundle);
   const listBundlesFn = useServerFn(listBundles);
   const createBundleFn = useServerFn(createBundle);
   const deleteBundleFn = useServerFn(deleteBundle);
@@ -162,6 +166,13 @@ function PlanEditorPage() {
   const [selectedEndpointId, setSelectedEndpointId] = useState<string | null>(null);
   const [draftPoints, setDraftPoints] = useState<NormPoint[]>([]);
   const [draggingIdx, setDraggingIdx] = useState<number | null>(null);
+  type DragTarget =
+    | { kind: "endpoint"; id: string }
+    | { kind: "rack"; id: string }
+    | { kind: "bundle"; id: string; idx: number };
+  const [dragTarget, setDragTarget] = useState<DragTarget | null>(null);
+  const [dragPos, setDragPos] = useState<NormPoint | null>(null);
+  const dragMovedRef = useRef(false);
   // Rack mode
   const [pendingRackPos, setPendingRackPos] = useState<NormPoint | null>(null);
   const [newRackCode, setNewRackCode] = useState("");
@@ -305,6 +316,7 @@ function PlanEditorPage() {
 
   function handleSvgClick(evt: React.MouseEvent<SVGSVGElement>) {
     if (draggingIdx != null) return;
+    if (dragTarget != null) return;
     const pos = toNorm(evt);
     if (!pos) return;
     if (mode === "calibrate") {
@@ -336,11 +348,57 @@ function PlanEditorPage() {
   }
 
   function handleSvgMove(evt: React.MouseEvent<SVGSVGElement>) {
+    if (dragTarget != null) {
+      const pos = toNorm(evt);
+      if (!pos) return;
+      dragMovedRef.current = true;
+      setDragPos(pos);
+      return;
+    }
     if (draggingIdx == null) return;
     const pos = toNorm(evt);
     if (!pos) return;
     setDraftPoints((pts) => pts.map((p, i) => (i === draggingIdx ? pos : p)));
   }
+
+  async function commitDrag() {
+    const target = dragTarget;
+    const pos = dragPos;
+    setDragTarget(null);
+    setDragPos(null);
+    if (!target || !pos || !dragMovedRef.current) {
+      dragMovedRef.current = false;
+      return;
+    }
+    dragMovedRef.current = false;
+    try {
+      if (target.kind === "endpoint") {
+        await updateEndpointFn({ data: { id: target.id, x: pos.x, y: pos.y } });
+        qc.invalidateQueries({ queryKey: ["endpoints", projectId, planId] });
+      } else if (target.kind === "rack") {
+        await updateRackFn({ data: { id: target.id, x: pos.x, y: pos.y } });
+        qc.invalidateQueries({ queryKey: ["racks", projectId, planId] });
+      } else if (target.kind === "bundle") {
+        const b = (bundles.data ?? []).find((x) => x.id === target.id);
+        if (!b) return;
+        const pts = ((b.points as unknown as NormPoint[]) ?? []).map((p, i) =>
+          i === target.idx ? pos : p,
+        );
+        await updateBundleFn({ data: { id: target.id, points: pts } });
+        qc.invalidateQueries({ queryKey: ["bundles", projectId, planId] });
+      }
+      // recompute branch trasy pro tento plán
+      await autoAssignBundlesFn({
+        data: { projectId, floorPlanId: planId, overwrite: true },
+      });
+      qc.invalidateQueries({ queryKey: ["plan-branches", projectId, planId] });
+      qc.invalidateQueries({ queryKey: ["cables", projectId] });
+      toast.success("Přesunuto");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Chyba");
+    }
+  }
+
 
   async function saveCalibration() {
     if (!calA || !calB) return toast.error("Klikněte dva body A a B");
@@ -641,8 +699,8 @@ function PlanEditorPage() {
               className="absolute inset-0 h-full w-full cursor-crosshair"
               onClick={handleSvgClick}
               onMouseMove={handleSvgMove}
-              onMouseUp={() => setDraggingIdx(null)}
-              onMouseLeave={() => setDraggingIdx(null)}
+              onMouseUp={() => { setDraggingIdx(null); void commitDrag(); }}
+              onMouseLeave={() => { setDraggingIdx(null); void commitDrag(); }}
             >
               {calibration && (
                 <>
@@ -677,8 +735,13 @@ function PlanEditorPage() {
               )}
               {/* Bundles (kmeny) */}
               {(bundles.data ?? []).map((b) => {
-                const pts = (b.points as unknown as NormPoint[]) ?? [];
-                if (pts.length < 2) return null;
+                const rawPts = (b.points as unknown as NormPoint[]) ?? [];
+                if (rawPts.length < 2) return null;
+                const pts = rawPts.map((p, i) =>
+                  dragTarget && dragTarget.kind === "bundle" && dragTarget.id === b.id && dragTarget.idx === i && dragPos
+                    ? dragPos
+                    : p,
+                );
                 return (
                   <g key={b.id}>
                     <polyline
@@ -689,9 +752,27 @@ function PlanEditorPage() {
                       strokeWidth={0.014 / zoom}
                       strokeLinejoin="round"
                     />
+                    {pts.map((p, i) => (
+                      <circle
+                        key={i}
+                        cx={p.x}
+                        cy={p.y}
+                        r={0.008 / zoom}
+                        fill="hsl(var(--primary))"
+                        stroke="white"
+                        strokeWidth={0.002 / zoom}
+                        style={{ cursor: "grab" }}
+                        onMouseDown={(e) => {
+                          e.stopPropagation();
+                          dragMovedRef.current = false;
+                          setDragTarget({ kind: "bundle", id: b.id, idx: i });
+                          setDragPos(p);
+                        }}
+                      />
+                    ))}
                     <text
                       x={pts[0].x}
-                      y={pts[0].y - 0.006 / zoom}
+                      y={pts[0].y - 0.012 / zoom}
                       fontSize={0.014 / zoom}
                       fill="hsl(var(--primary))"
                       style={{ pointerEvents: "none", userSelect: "none" }}
@@ -755,8 +836,9 @@ function PlanEditorPage() {
               })}
               {/* Racks */}
               {(racks.data ?? []).map((r) => {
-                const cx = Number(r.x);
-                const cy = Number(r.y);
+                const isDragging = dragTarget?.kind === "rack" && dragTarget.id === r.id && dragPos;
+                const cx = isDragging ? dragPos!.x : Number(r.x);
+                const cy = isDragging ? dragPos!.y : Number(r.y);
                 const s = 0.018 / zoom;
                 return (
                   <g key={r.id}>
@@ -768,6 +850,13 @@ function PlanEditorPage() {
                       fill="hsl(var(--foreground))"
                       stroke="hsl(var(--background))"
                       strokeWidth={0.002 / zoom}
+                      style={{ cursor: "grab" }}
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                        dragMovedRef.current = false;
+                        setDragTarget({ kind: "rack", id: r.id });
+                        setDragPos({ x: cx, y: cy });
+                      }}
                     />
                     <text
                       x={cx}
@@ -820,18 +909,27 @@ function PlanEditorPage() {
                     : isPatch
                       ? "hsl(var(--foreground))"
                       : "hsl(var(--primary))";
-                const cx = Number(ep.norm_x);
-                const cy = Number(ep.norm_y);
+                const isDragging = dragTarget?.kind === "endpoint" && dragTarget.id === ep.id && dragPos;
+                const cx = isDragging ? dragPos!.x : Number(ep.norm_x);
+                const cy = isDragging ? dragPos!.y : Number(ep.norm_y);
                 const r = 0.012 / zoom;
                 const sw = 0.002 / zoom;
+                const onHandleDown = (e: React.MouseEvent) => {
+                  e.stopPropagation();
+                  dragMovedRef.current = false;
+                  setDragTarget({ kind: "endpoint", id: ep.id });
+                  setDragPos({ x: cx, y: cy });
+                };
                 return (
                   <g
                     key={ep.id}
-                    style={{ cursor: "pointer" }}
+                    style={{ cursor: "grab" }}
                     onClick={(e) => {
                       e.stopPropagation();
+                      if (dragMovedRef.current) return;
                       setSelectedEndpointId(ep.id);
                     }}
+                    onMouseDown={onHandleDown}
                   >
                     {isPatch ? (
                       <rect
