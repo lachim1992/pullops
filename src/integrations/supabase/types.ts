@@ -68,6 +68,67 @@ export type Database = {
           },
         ]
       }
+      cable_bundles: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          floor_plan_id: string
+          id: string
+          notes: string | null
+          points: Json
+          project_id: string
+          rack_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          floor_plan_id: string
+          id?: string
+          notes?: string | null
+          points?: Json
+          project_id: string
+          rack_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          floor_plan_id?: string
+          id?: string
+          notes?: string | null
+          points?: Json
+          project_id?: string
+          rack_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cable_bundles_floor_plan_id_fkey"
+            columns: ["floor_plan_id"]
+            isOneToOne: false
+            referencedRelation: "floor_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cable_bundles_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cable_bundles_rack_id_fkey"
+            columns: ["rack_id"]
+            isOneToOne: false
+            referencedRelation: "racks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cable_route_points: {
         Row: {
           created_at: string
@@ -261,6 +322,8 @@ export type Database = {
       }
       cables: {
         Row: {
+          branch_points: Json | null
+          bundle_id: string | null
           cable_type_id: string | null
           code: string
           computed_length_m: number | null
@@ -280,6 +343,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          branch_points?: Json | null
+          bundle_id?: string | null
           cable_type_id?: string | null
           code: string
           computed_length_m?: number | null
@@ -299,6 +364,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          branch_points?: Json | null
+          bundle_id?: string | null
           cable_type_id?: string | null
           code?: string
           computed_length_m?: number | null
@@ -318,6 +385,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "cables_bundle_id_fkey"
+            columns: ["bundle_id"]
+            isOneToOne: false
+            referencedRelation: "cable_bundles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "cables_cable_type_id_fkey"
             columns: ["cable_type_id"]
@@ -678,6 +752,7 @@ export type Database = {
           organization_id: string
           port_count: number
           project_id: string
+          rack_id: string | null
           updated_at: string
         }
         Insert: {
@@ -691,6 +766,7 @@ export type Database = {
           organization_id: string
           port_count?: number
           project_id: string
+          rack_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -704,6 +780,7 @@ export type Database = {
           organization_id?: string
           port_count?: number
           project_id?: string
+          rack_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -726,6 +803,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patch_panels_rack_id_fkey"
+            columns: ["rack_id"]
+            isOneToOne: false
+            referencedRelation: "racks"
             referencedColumns: ["id"]
           },
         ]
@@ -966,6 +1050,63 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      racks: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          floor_plan_id: string
+          id: string
+          name: string | null
+          notes: string | null
+          project_id: string
+          updated_at: string
+          x: number
+          y: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          floor_plan_id: string
+          id?: string
+          name?: string | null
+          notes?: string | null
+          project_id: string
+          updated_at?: string
+          x?: number
+          y?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          floor_plan_id?: string
+          id?: string
+          name?: string | null
+          notes?: string | null
+          project_id?: string
+          updated_at?: string
+          x?: number
+          y?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "racks_floor_plan_id_fkey"
+            columns: ["floor_plan_id"]
+            isOneToOne: false
+            referencedRelation: "floor_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "racks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]

@@ -137,20 +137,40 @@ function PatchPanelDetailPage() {
         Porty ({panel.data.ports.length})
       </h2>
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {panel.data.ports.map((p) => (
-          <div key={p.id} className="flex items-center gap-2 rounded-sm border border-border p-2">
-            <span className="w-10 shrink-0 font-mono text-xs text-muted-foreground">
-              #{p.port_number}
-            </span>
-            <Input
-              value={labels[p.id] ?? ""}
-              onChange={(e) => setLabels((prev) => ({ ...prev, [p.id]: e.target.value }))}
-              placeholder="popis / label"
-              className="h-8"
-            />
-            <Button size="sm" variant="outline" onClick={() => savePort(p.id)}>
-              OK
-            </Button>
+        {panel.data.ports.map((p: any) => (
+          <div key={p.id} className="rounded-sm border border-border p-2">
+            <div className="flex items-center gap-2">
+              <span className="w-10 shrink-0 font-mono text-xs text-muted-foreground">
+                #{p.port_number}
+              </span>
+              <Input
+                value={labels[p.id] ?? ""}
+                onChange={(e) => setLabels((prev) => ({ ...prev, [p.id]: e.target.value }))}
+                placeholder="popis / label"
+                className="h-8"
+              />
+              <Button size="sm" variant="outline" onClick={() => savePort(p.id)}>
+                OK
+              </Button>
+            </div>
+            <div className="mt-1.5 flex items-center gap-2 pl-12 text-xs">
+              {p.cable ? (
+                <Link
+                  to="/projects/$projectId/cables/$cableId"
+                  params={{ projectId, cableId: p.cable.id }}
+                  className="font-mono text-primary hover:underline"
+                >
+                  {p.cable.code}
+                </Link>
+              ) : (
+                <span className="text-muted-foreground italic">volný port</span>
+              )}
+              {p.cable && (
+                <span className="font-mono text-[10px] text-muted-foreground">
+                  {p.cable.status}
+                </span>
+              )}
+            </div>
           </div>
         ))}
       </div>
