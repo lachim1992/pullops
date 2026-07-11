@@ -5,7 +5,11 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const CreateInput = z.object({
   projectId: z.string().uuid(),
-  code: z.string().min(1).max(40).regex(/^[A-Z0-9_]+$/, "Kód: velká písmena, číslice, podtržítko"),
+  code: z
+    .string()
+    .min(1)
+    .max(40)
+    .regex(/^[A-Z0-9_]+$/, "Kód: velká písmena, číslice, podtržítko"),
   label: z.string().min(1).max(80),
   defaultReserveM: z.number().min(0).max(50),
   color: z.string().max(64).optional(),
@@ -84,7 +88,10 @@ export const updateEndpointKind = createServerFn({ method: "POST" })
     if (data.color !== undefined) patch.color = data.color;
     if (data.icon !== undefined) patch.icon = data.icon;
     if (data.sortOrder !== undefined) patch.sort_order = data.sortOrder;
-    const { error } = await supabase.from("endpoint_kinds").update(patch as never).eq("id", data.id);
+    const { error } = await supabase
+      .from("endpoint_kinds")
+      .update(patch as never)
+      .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

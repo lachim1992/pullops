@@ -10,7 +10,6 @@ const SegmentSchema = z.object({
   extra_pct: z.number().min(0).max(200).default(0),
 });
 
-
 export const listBundles = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
@@ -33,7 +32,6 @@ export const listBundles = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return rows ?? [];
   });
-
 
 export const createBundle = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -140,4 +138,3 @@ export const setPrimaryBundle = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
-

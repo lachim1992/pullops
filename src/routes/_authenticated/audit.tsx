@@ -40,8 +40,7 @@ function AuditPage() {
   const activeOrg = orgId || orgs.data?.[0]?.id;
   const events = useQuery({
     queryKey: ["audit", activeOrg],
-    queryFn: () =>
-      listEvents({ data: { organizationId: activeOrg!, limit: 100 } }),
+    queryFn: () => listEvents({ data: { organizationId: activeOrg!, limit: 100 } }),
     enabled: !!activeOrg,
   });
 

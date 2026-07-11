@@ -75,9 +75,7 @@ export const updateOrganization = createServerFn({ method: "POST" })
 
 export const listOrgMembers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) =>
-    z.object({ organizationId: z.string().uuid() }).parse(data),
-  )
+  .inputValidator((data: unknown) => z.object({ organizationId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { data: rows, error } = await supabase

@@ -16,9 +16,7 @@ async function endpointCtx(supabase: any, endpointId: string) {
 
 export const listEndpointComments = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    z.object({ endpointId: z.string().uuid() }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ endpointId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { data: rows, error } = await supabase

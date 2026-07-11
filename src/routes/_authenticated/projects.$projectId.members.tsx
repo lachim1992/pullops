@@ -70,8 +70,7 @@ function MembersPage() {
 
   const orgMembers = useQuery({
     queryKey: ["org-members", project.data?.organization_id],
-    queryFn: () =>
-      listOrgMembersFn({ data: { organizationId: project.data!.organization_id } }),
+    queryFn: () => listOrgMembersFn({ data: { organizationId: project.data!.organization_id } }),
     enabled: !!project.data?.organization_id,
   });
 
@@ -124,8 +123,7 @@ function MembersPage() {
   }
 
   const memberUserIds = new Set((members.data ?? []).map((m) => m.user_id));
-  const availableOrgMembers =
-    orgMembers.data?.filter((o) => !memberUserIds.has(o.user_id)) ?? [];
+  const availableOrgMembers = orgMembers.data?.filter((o) => !memberUserIds.has(o.user_id)) ?? [];
 
   return (
     <AppShell projectId={projectId}>
@@ -224,11 +222,7 @@ function MembersPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemove(m.user_id)}
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => handleRemove(m.user_id)}>
                         <UserMinus className="h-4 w-4" />
                       </Button>
                     </TableCell>

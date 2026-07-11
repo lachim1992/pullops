@@ -42,4 +42,3 @@ export const listEntityAuditEvents = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return rows ?? [];
   });
-

@@ -88,8 +88,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:title", content: "PullOps — plánování strukturované kabeláže" },
       {
         property: "og:description",
-        content:
-          "Kompletní životní cyklus kabelu: dokumentace, trasy, cívky, tah, testování.",
+        content: "Kompletní životní cyklus kabelu: dokumentace, trasy, cívky, tah, testování.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

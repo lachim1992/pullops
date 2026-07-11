@@ -68,7 +68,9 @@ export const getFloorPlan = createServerFn({ method: "GET" })
     const [{ data: cal }, { data: doc }] = await Promise.all([
       supabase
         .from("floor_plan_calibrations")
-        .select("point_a_norm_x, point_a_norm_y, point_b_norm_x, point_b_norm_y, real_distance_m, calibrated_at")
+        .select(
+          "point_a_norm_x, point_a_norm_y, point_b_norm_x, point_b_norm_y, real_distance_m, calibrated_at",
+        )
         .eq("floor_plan_id", data.id)
         .maybeSingle(),
       row.document_id
@@ -123,7 +125,10 @@ export const updateFloorPlan = createServerFn({ method: "POST" })
     if (data.name !== undefined) patch.name = data.name;
     if (data.level !== undefined) patch.level = data.level;
     if (data.displayOrder !== undefined) patch.display_order = data.displayOrder;
-    const { error } = await supabase.from("floor_plans").update(patch as never).eq("id", data.id);
+    const { error } = await supabase
+      .from("floor_plans")
+      .update(patch as never)
+      .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

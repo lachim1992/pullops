@@ -10,24 +10,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import {
-  getCable,
-  recomputeCableLength,
-  updateCable,
-} from "@/lib/cables.functions";
+import { getCable, recomputeCableLength, updateCable } from "@/lib/cables.functions";
 import { listCableTypes } from "@/lib/cableTypes.functions";
 import { listEndpoints } from "@/lib/endpoints.functions";
 import { listRoutes } from "@/lib/cableRoutes.functions";
 import { listProjectPatchPorts } from "@/lib/patchPanels.functions";
 import { listEntityAuditEvents } from "@/lib/audit.functions";
 
-
 const STATUSES = ["PLANNED", "PULLED", "TERMINATED", "TESTED", "CANCELLED"] as const;
 type Status = (typeof STATUSES)[number];
 
-export const Route = createFileRoute(
-  "/_authenticated/projects/$projectId/cables/$cableId",
-)({
+export const Route = createFileRoute("/_authenticated/projects/$projectId/cables/$cableId")({
   head: () => ({
     meta: [{ title: "Detail kabelu · PullOps" }, { name: "robots", content: "noindex" }],
   }),
@@ -47,7 +40,6 @@ function CableDetailPage() {
   const listPortsFn = useServerFn(listProjectPatchPorts);
   const listAuditFn = useServerFn(listEntityAuditEvents);
   const qc = useQueryClient();
-
 
   const cable = useQuery({
     queryKey: ["cable", cableId],
@@ -73,7 +65,6 @@ function CableDetailPage() {
     queryKey: ["audit", cableId],
     queryFn: () => listAuditFn({ data: { entityId: cableId } }),
   });
-
 
   const [code, setCode] = useState("");
   const [status, setStatus] = useState<Status>("PLANNED");
@@ -114,8 +105,10 @@ function CableDetailPage() {
   const effective = useMemo(() => {
     const c = cable.data;
     if (!c) return null;
-    if (c.override_length_m != null) return { value: Number(c.override_length_m), source: "override" };
-    if (c.computed_length_m != null) return { value: Number(c.computed_length_m), source: "computed" };
+    if (c.override_length_m != null)
+      return { value: Number(c.override_length_m), source: "override" };
+    if (c.computed_length_m != null)
+      return { value: Number(c.computed_length_m), source: "computed" };
     return null;
   }, [cable.data]);
 
@@ -195,9 +188,7 @@ function CableDetailPage() {
               <ArrowLeft className="mr-1 h-4 w-4" /> Zpět
             </Link>
           </Button>
-          <h1 className="text-2xl font-semibold tracking-tight font-mono">
-            {c.code}
-          </h1>
+          <h1 className="text-2xl font-semibold tracking-tight font-mono">{c.code}</h1>
           <Badge variant="secondary" className="font-mono text-[10px]">
             {c.status}
           </Badge>
@@ -327,7 +318,6 @@ function CableDetailPage() {
             </div>
           </div>
 
-
           <div className="rounded-sm border border-border p-4">
             <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-muted-foreground">
               Poznámky
@@ -356,12 +346,11 @@ function CableDetailPage() {
             <div className="space-y-2 font-mono text-sm">
               <Row
                 label="computed"
-                value={c.computed_length_m != null ? `${Number(c.computed_length_m).toFixed(2)} m` : "—"}
+                value={
+                  c.computed_length_m != null ? `${Number(c.computed_length_m).toFixed(2)} m` : "—"
+                }
               />
-              <Row
-                label="rezerva typu"
-                value={reserve > 0 ? `2 × ${reserve.toFixed(1)} m` : "—"}
-              />
+              <Row label="rezerva typu" value={reserve > 0 ? `2 × ${reserve.toFixed(1)} m` : "—"} />
               <div className="space-y-1.5">
                 <Label className="text-xs">Override (m)</Label>
                 <Input

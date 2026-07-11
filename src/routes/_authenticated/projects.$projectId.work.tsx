@@ -8,10 +8,7 @@ import { Badge } from "@/components/ui/badge";
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/work")({
   head: () => ({
-    meta: [
-      { title: "Režim tahání · PullOps" },
-      { name: "robots", content: "noindex" },
-    ],
+    meta: [{ title: "Režim tahání · PullOps" }, { name: "robots", content: "noindex" }],
   }),
   component: WorkModePage,
 });
@@ -29,17 +26,13 @@ function WorkModePage() {
   return (
     <AppShell projectId={projectId}>
       <div className="mb-6">
-        <h1 className="font-mono text-2xl font-bold uppercase tracking-tight">
-          Režim tahání
-        </h1>
+        <h1 className="font-mono text-2xl font-bold uppercase tracking-tight">Režim tahání</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Souhrn projektu, simulace spulek a odhad času tahání kabelů.
         </p>
       </div>
 
-      {sim.isLoading && (
-        <div className="text-sm text-muted-foreground">Načítám…</div>
-      )}
+      {sim.isLoading && <div className="text-sm text-muted-foreground">Načítám…</div>}
       {sim.data && (
         <div className="space-y-6">
           <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -49,14 +42,8 @@ function WorkModePage() {
               value={String(sim.data.missing)}
               tone={sim.data.missing > 0 ? "warn" : undefined}
             />
-            <StatCard
-              label="Celková délka"
-              value={`${sim.data.totalMeters.toFixed(1)} m`}
-            />
-            <StatCard
-              label="Spulka (výchozí)"
-              value={`${sim.data.spoolLengthM} m`}
-            />
+            <StatCard label="Celková délka" value={`${sim.data.totalMeters.toFixed(1)} m`} />
+            <StatCard label="Spulka (výchozí)" value={`${sim.data.spoolLengthM} m`} />
           </section>
 
           <section>
@@ -76,9 +63,7 @@ function WorkModePage() {
                   {sim.data.hoursByType.map((r) => (
                     <tr key={r.typeCode} className="border-t border-border">
                       <td className="px-3 py-2 font-mono">{r.typeCode}</td>
-                      <td className="px-3 py-2 text-right font-mono">
-                        {r.meters.toFixed(1)}
-                      </td>
+                      <td className="px-3 py-2 text-right font-mono">{r.meters.toFixed(1)}</td>
                       <td className="px-3 py-2 text-right font-mono text-muted-foreground">
                         {r.hours == null ? "— (nastavit m/hod)" : r.hours.toFixed(1)}
                       </td>
@@ -139,15 +124,7 @@ function WorkModePage() {
   );
 }
 
-function StatCard({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string;
-  tone?: "warn";
-}) {
+function StatCard({ label, value, tone }: { label: string; value: string; tone?: "warn" }) {
   return (
     <div className="rounded-sm border border-border bg-card p-3">
       <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -155,8 +132,7 @@ function StatCard({
       </div>
       <div
         className={
-          "mt-1 font-mono text-lg font-semibold " +
-          (tone === "warn" ? "text-destructive" : "")
+          "mt-1 font-mono text-lg font-semibold " + (tone === "warn" ? "text-destructive" : "")
         }
       >
         {value}

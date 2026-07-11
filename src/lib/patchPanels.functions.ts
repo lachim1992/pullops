@@ -128,7 +128,10 @@ export const updatePatchPanel = createServerFn({ method: "POST" })
     if (data.name !== undefined) patch.name = data.name;
     if (data.floorPlanId !== undefined) patch.floor_plan_id = data.floorPlanId;
     if (data.notes !== undefined) patch.notes = data.notes;
-    const { error } = await supabase.from("patch_panels").update(patch as never).eq("id", data.id);
+    const { error } = await supabase
+      .from("patch_panels")
+      .update(patch as never)
+      .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -150,7 +153,10 @@ export const updatePatchPort = createServerFn({ method: "POST" })
     const { supabase } = context;
     const patch: Record<string, unknown> = {};
     if (data.label !== undefined) patch.label = data.label;
-    const { error } = await supabase.from("patch_ports").update(patch as never).eq("id", data.id);
+    const { error } = await supabase
+      .from("patch_ports")
+      .update(patch as never)
+      .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

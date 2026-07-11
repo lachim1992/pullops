@@ -3,13 +3,7 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const ProjectStatus = z.enum([
-  "planning",
-  "active",
-  "on_hold",
-  "completed",
-  "archived",
-]);
+const ProjectStatus = z.enum(["planning", "active", "on_hold", "completed", "archived"]);
 
 const CreateProjectInput = z.object({
   organizationId: z.string().uuid(),
@@ -99,7 +93,10 @@ export const createProject = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => CreateProjectInput.parse(data))
   .handler(async ({ data, context }) => {
     const supabase = context.supabase as unknown as {
-      rpc: (name: string, params: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
+      rpc: (
+        name: string,
+        params: Record<string, unknown>,
+      ) => Promise<{ data: unknown; error: { message: string } | null }>;
     };
     const { data: id, error } = await supabase.rpc("create_project_tx", {
       p_organization_id: data.organizationId,
@@ -119,7 +116,10 @@ export const updateProject = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => UpdateProjectInput.parse(data))
   .handler(async ({ data, context }) => {
     const supabase = context.supabase as unknown as {
-      rpc: (name: string, params: Record<string, unknown>) => Promise<{ error: { message: string } | null }>;
+      rpc: (
+        name: string,
+        params: Record<string, unknown>,
+      ) => Promise<{ error: { message: string } | null }>;
     };
     const { error } = await supabase.rpc("update_project_tx", {
       p_project_id: data.id,
@@ -141,9 +141,7 @@ export const updateProject = createServerFn({ method: "POST" })
 
 export const listProjectMembers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) =>
-    z.object({ projectId: z.string().uuid() }).parse(data),
-  )
+  .inputValidator((data: unknown) => z.object({ projectId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { data: rows, error } = await supabase

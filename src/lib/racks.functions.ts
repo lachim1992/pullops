@@ -83,7 +83,10 @@ export const updateRack = createServerFn({ method: "POST" })
     if (data.x !== undefined) patch.x = data.x;
     if (data.y !== undefined) patch.y = data.y;
     if (data.notes !== undefined) patch.notes = data.notes;
-    const { error } = await supabase.from("racks").update(patch as never).eq("id", data.id);
+    const { error } = await supabase
+      .from("racks")
+      .update(patch as never)
+      .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

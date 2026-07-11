@@ -32,7 +32,6 @@ const UpdateInput = z.object({
   notes: z.string().max(2000).nullable().optional(),
 });
 
-
 async function orgFor(supabase: any, projectId: string): Promise<string> {
   const { data, error } = await supabase
     .from("projects")
@@ -46,9 +45,7 @@ async function orgFor(supabase: any, projectId: string): Promise<string> {
 
 export const listCables = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    z.object({ projectId: z.string().uuid() }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ projectId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { data: rows, error } = await supabase
@@ -120,7 +117,10 @@ export const updateCable = createServerFn({ method: "POST" })
     if (data.status !== undefined) patch.status = data.status;
     if (data.overrideLengthM !== undefined) patch.override_length_m = data.overrideLengthM;
     if (data.notes !== undefined) patch.notes = data.notes;
-    const { error } = await supabase.from("cables").update(patch as never).eq("id", data.id);
+    const { error } = await supabase
+      .from("cables")
+      .update(patch as never)
+      .eq("id", data.id);
 
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -219,10 +219,7 @@ async function recomputeOne(supabase: any, cable: any): Promise<number | null> {
     overrideCableLengthM: cable.override_length_m,
   });
 
-  await supabase
-    .from("cables")
-    .update({ computed_length_m: result.meters })
-    .eq("id", cable.id);
+  await supabase.from("cables").update({ computed_length_m: result.meters }).eq("id", cable.id);
   return result.meters;
 }
 

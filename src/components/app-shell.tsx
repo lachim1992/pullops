@@ -19,13 +19,7 @@ import { getMyProfile } from "@/lib/orgs.functions";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-export function AppShell({
-  children,
-  projectId,
-}: {
-  children: ReactNode;
-  projectId?: string;
-}) {
+export function AppShell({ children, projectId }: { children: ReactNode; projectId?: string }) {
   const navigate = useNavigate();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -65,11 +59,7 @@ export function AppShell({
 
           {projectId && (
             <NavGroup label="Projekt">
-              <NavItem
-                to="/projects/$projectId"
-                params={{ projectId }}
-                icon={FolderKanban}
-              >
+              <NavItem to="/projects/$projectId" params={{ projectId }} icon={FolderKanban}>
                 Přehled projektu
               </NavItem>
               <NavItem
@@ -79,25 +69,13 @@ export function AppShell({
               >
                 Dokumenty
               </NavItem>
-              <NavItem
-                to="/projects/$projectId/plans"
-                params={{ projectId }}
-                icon={RouteIcon}
-              >
+              <NavItem to="/projects/$projectId/plans" params={{ projectId }} icon={RouteIcon}>
                 Plány
               </NavItem>
-              <NavItem
-                to="/projects/$projectId/endpoints"
-                params={{ projectId }}
-                icon={Wrench}
-              >
+              <NavItem to="/projects/$projectId/endpoints" params={{ projectId }} icon={Wrench}>
                 Endpointy
               </NavItem>
-              <NavItem
-                to="/projects/$projectId/cable-types"
-                params={{ projectId }}
-                icon={Cable}
-              >
+              <NavItem to="/projects/$projectId/cable-types" params={{ projectId }} icon={Cable}>
                 Typy kabelů
               </NavItem>
               <NavItem
@@ -107,28 +85,15 @@ export function AppShell({
               >
                 Typy endpointů
               </NavItem>
-              <NavItem
-                to="/projects/$projectId/patch-panels"
-                params={{ projectId }}
-                icon={Wrench}
-              >
+              <NavItem to="/projects/$projectId/patch-panels" params={{ projectId }} icon={Wrench}>
                 Patch panely
               </NavItem>
-              <NavItem
-                to="/projects/$projectId/cables"
-                params={{ projectId }}
-                icon={Cable}
-              >
+              <NavItem to="/projects/$projectId/cables" params={{ projectId }} icon={Cable}>
                 Kabelový registr
               </NavItem>
-              <NavItem
-                to="/projects/$projectId/work"
-                params={{ projectId }}
-                icon={Wrench}
-              >
+              <NavItem to="/projects/$projectId/work" params={{ projectId }} icon={Wrench}>
                 Režim tahání
               </NavItem>
-
 
               <NavItem
                 to="/projects/$projectId/members"
@@ -137,11 +102,7 @@ export function AppShell({
               >
                 Členové
               </NavItem>
-              <NavItem
-                to="/projects/$projectId/settings"
-                params={{ projectId }}
-                icon={Settings}
-              >
+              <NavItem to="/projects/$projectId/settings" params={{ projectId }} icon={Settings}>
                 Nastavení
               </NavItem>
             </NavGroup>
@@ -207,8 +168,7 @@ function NavItem({ to, params, icon: Icon, children }: NavItemProps) {
         "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
       )}
       activeProps={{
-        className:
-          "bg-sidebar-accent text-sidebar-accent-foreground font-medium",
+        className: "bg-sidebar-accent text-sidebar-accent-foreground font-medium",
       }}
       activeOptions={{ exact: to === "/dashboard" }}
     >
@@ -217,4 +177,3 @@ function NavItem({ to, params, icon: Icon, children }: NavItemProps) {
     </Link>
   );
 }
-

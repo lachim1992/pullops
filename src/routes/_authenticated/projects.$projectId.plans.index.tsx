@@ -25,11 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { listProjectDocuments } from "@/lib/documents.functions";
-import {
-  createFloorPlan,
-  deleteFloorPlan,
-  listFloorPlans,
-} from "@/lib/floorPlans.functions";
+import { createFloorPlan, deleteFloorPlan, listFloorPlans } from "@/lib/floorPlans.functions";
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/plans/")({
   component: PlansPage,
@@ -80,9 +76,7 @@ function PlansPage() {
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
-              <div className="mt-3 font-mono text-xs text-muted-foreground">
-                Úroveň {p.level}
-              </div>
+              <div className="mt-3 font-mono text-xs text-muted-foreground">Úroveň {p.level}</div>
               <div className="mt-1 font-semibold">{p.name}</div>
               <Button asChild variant="outline" size="sm" className="mt-3">
                 <Link to="/projects/$projectId/plans/$planId" params={{ projectId, planId: p.id }}>

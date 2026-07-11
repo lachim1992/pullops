@@ -17,15 +17,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  createCableType,
-  deleteCableType,
-  listCableTypes,
-} from "@/lib/cableTypes.functions";
+import { createCableType, deleteCableType, listCableTypes } from "@/lib/cableTypes.functions";
 
-export const Route = createFileRoute(
-  "/_authenticated/projects/$projectId/cable-types",
-)({
+export const Route = createFileRoute("/_authenticated/projects/$projectId/cable-types")({
   head: () => ({
     meta: [{ title: "Typy kabelů · PullOps" }, { name: "robots", content: "noindex" }],
   }),
@@ -149,7 +143,12 @@ function NewTypeDialog({ projectId }: { projectId: string }) {
         <form onSubmit={submit} className="space-y-3">
           <div className="space-y-1.5">
             <Label>Kód</Label>
-            <Input value={code} onChange={(e) => setCode(e.target.value)} required placeholder="Cat6A UTP" />
+            <Input
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              required
+              placeholder="Cat6A UTP"
+            />
           </div>
           <div className="space-y-1.5">
             <Label>Popis</Label>

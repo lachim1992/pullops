@@ -140,9 +140,7 @@ function SettingsPage() {
               type="number"
               step="0.1"
               value={String(form.default_rack_reserve_m ?? "")}
-              onChange={(e) =>
-                setForm({ ...form, default_rack_reserve_m: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, default_rack_reserve_m: e.target.value })}
             />
           </Field>
           <Field label="Rezerva u endpointu [m]">
@@ -150,9 +148,7 @@ function SettingsPage() {
               type="number"
               step="0.1"
               value={String(form.default_endpoint_reserve_m ?? "")}
-              onChange={(e) =>
-                setForm({ ...form, default_endpoint_reserve_m: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, default_endpoint_reserve_m: e.target.value })}
             />
           </Field>
           <Field label="Vertikální rezerva [m]">
@@ -160,9 +156,7 @@ function SettingsPage() {
               type="number"
               step="0.1"
               value={String(form.default_vertical_allowance_m ?? "")}
-              onChange={(e) =>
-                setForm({ ...form, default_vertical_allowance_m: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, default_vertical_allowance_m: e.target.value })}
             />
           </Field>
           <Field label="Handling factor">
@@ -170,36 +164,28 @@ function SettingsPage() {
               type="number"
               step="0.01"
               value={String(form.default_handling_factor ?? "")}
-              onChange={(e) =>
-                setForm({ ...form, default_handling_factor: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, default_handling_factor: e.target.value })}
             />
           </Field>
         </div>
 
         <div className="flex items-center justify-between rounded-sm border border-border p-3">
           <div>
-            <div className="text-sm font-medium">
-              Použít složené panel/port ID
-            </div>
+            <div className="text-sm font-medium">Použít složené panel/port ID</div>
             <div className="text-xs text-muted-foreground">
               První číslice human ID = panel, poslední dvě = port.
             </div>
           </div>
           <Switch
             checked={!!form.use_compound_panel_port_ids}
-            onCheckedChange={(v) =>
-              setForm({ ...form, use_compound_panel_port_ids: v })
-            }
+            onCheckedChange={(v) => setForm({ ...form, use_compound_panel_port_ids: v })}
           />
         </div>
 
         <div className="flex items-center justify-between rounded-sm border border-border p-3">
           <div>
             <div className="text-sm font-medium">Demo projekt</div>
-            <div className="text-xs text-muted-foreground">
-              Označí tento projekt jako ukázkový.
-            </div>
+            <div className="text-xs text-muted-foreground">Označí tento projekt jako ukázkový.</div>
           </div>
           <Switch
             checked={!!form.is_demo}

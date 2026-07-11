@@ -5,9 +5,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 export const listEndpointCables = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    z.object({ endpointId: z.string().uuid() }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ endpointId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { data: rows, error } = await supabase
@@ -23,9 +21,7 @@ export const listEndpointCables = createServerFn({ method: "GET" })
 
 export const listUnassignedCables = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    z.object({ projectId: z.string().uuid() }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ projectId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { data: assigned, error: aerr } = await supabase

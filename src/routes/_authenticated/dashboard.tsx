@@ -26,8 +26,6 @@ import { registerDocument } from "@/lib/documents.functions";
 import { updateFloorPlan } from "@/lib/floorPlans.functions";
 import { supabase } from "@/integrations/supabase/client";
 
-
-
 const searchSchema = z.object({ org: z.string().uuid().optional() });
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -45,8 +43,7 @@ function DashboardPage() {
   const listProjects = useServerFn(listMyProjects);
 
   const orgs = useQuery({ queryKey: ["orgs"], queryFn: () => listOrgs() });
-  const activeOrgId =
-    search.org ?? orgs.data?.[0]?.id ?? undefined;
+  const activeOrgId = search.org ?? orgs.data?.[0]?.id ?? undefined;
 
   const projects = useQuery({
     queryKey: ["projects", activeOrgId],
@@ -94,10 +91,7 @@ function DashboardPage() {
             </select>
             {activeOrgId && (
               <Button variant="ghost" size="sm" asChild>
-                <Link
-                  to="/organizations/$orgId/settings"
-                  params={{ orgId: activeOrgId }}
-                >
+                <Link to="/organizations/$orgId/settings" params={{ orgId: activeOrgId }}>
                   <Settings className="mr-1 h-4 w-4" />
                   Nastavení
                 </Link>
@@ -110,7 +104,6 @@ function DashboardPage() {
           {activeOrgId && <NewProjectDialog organizationId={activeOrgId} />}
         </div>
       </header>
-
 
       <section>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-muted-foreground">
@@ -147,9 +140,7 @@ function DashboardPage() {
                     </Badge>
                   </div>
                 </div>
-                <div className="mt-3 font-mono text-xs text-muted-foreground">
-                  {p.code}
-                </div>
+                <div className="mt-3 font-mono text-xs text-muted-foreground">{p.code}</div>
                 <div className="mt-1 font-semibold">{p.name}</div>
               </Link>
             ))}
@@ -275,8 +266,17 @@ function SeedDemoButton({ organizationId }: { organizationId: string }) {
         kind: "FLOOR_PLAN" | "SCHEMATIC" | "OTHER";
         floorPlanBackground?: boolean;
       }> = [
-        { file: "floorplan-nove.pdf", title: "Půdorys – nové konstrukce", kind: "FLOOR_PLAN", floorPlanBackground: true },
-        { file: "floorplan-bourane.pdf", title: "Půdorys – bourané konstrukce", kind: "FLOOR_PLAN" },
+        {
+          file: "floorplan-nove.pdf",
+          title: "Půdorys – nové konstrukce",
+          kind: "FLOOR_PLAN",
+          floorPlanBackground: true,
+        },
+        {
+          file: "floorplan-bourane.pdf",
+          title: "Půdorys – bourané konstrukce",
+          kind: "FLOOR_PLAN",
+        },
         { file: "cb2-kvs-plan.pdf", title: "KVS plán", kind: "SCHEMATIC" },
         { file: "cb-lan.pdf", title: "LAN schéma", kind: "SCHEMATIC" },
         { file: "cb-patch-panely.pdf", title: "Patch panely (PDF)", kind: "SCHEMATIC" },
@@ -311,9 +311,7 @@ function SeedDemoButton({ organizationId }: { organizationId: string }) {
       }
 
       await queryClient.invalidateQueries({ queryKey: ["projects"] });
-      toast.success(
-        `Demo vytvořeno: ${panels} panelů, ${endpoints} endpointů, ${cables} kabelů`,
-      );
+      toast.success(`Demo vytvořeno: ${panels} panelů, ${endpoints} endpointů, ${cables} kabelů`);
       navigate({ to: "/projects/$projectId", params: { projectId } });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Chyba");
@@ -334,5 +332,3 @@ function SeedDemoButton({ organizationId }: { organizationId: string }) {
     </Button>
   );
 }
-
-

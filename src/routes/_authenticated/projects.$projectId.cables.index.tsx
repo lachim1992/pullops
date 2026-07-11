@@ -274,7 +274,12 @@ function NewCableDialog({ projectId }: { projectId: string }) {
         <form onSubmit={submit} className="space-y-3">
           <div className="space-y-1.5">
             <Label>Kód</Label>
-            <Input value={code} onChange={(e) => setCode(e.target.value)} required placeholder="201" />
+            <Input
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              required
+              placeholder="201"
+            />
           </div>
           <div className="space-y-1.5">
             <Label>Typ</Label>

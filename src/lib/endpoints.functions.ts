@@ -56,7 +56,6 @@ const UpdateInput = z.object({
   referencePoints: z.array(ReferencePoint).max(20).optional(),
 });
 
-
 async function orgFor(supabase: any, projectId: string): Promise<string> {
   const { data, error } = await supabase
     .from("projects")
@@ -141,7 +140,10 @@ export const updateEndpoint = createServerFn({ method: "POST" })
     if (data.floor !== undefined) patch.floor = data.floor;
     if (data.customAttrs !== undefined) patch.custom_attrs = data.customAttrs;
     if (data.referencePoints !== undefined) patch.reference_points = data.referencePoints;
-    const { error } = await supabase.from("endpoints").update(patch as never).eq("id", data.id);
+    const { error } = await supabase
+      .from("endpoints")
+      .update(patch as never)
+      .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -153,7 +155,9 @@ export const getEndpoint = createServerFn({ method: "GET" })
     const { supabase } = context;
     const { data: row, error } = await supabase
       .from("endpoints")
-      .select("id, project_id, floor_plan_id, code, label, endpoint_kind, norm_x, norm_y, notes, description, customer_code, room, floor, custom_attrs, reference_points, updated_at")
+      .select(
+        "id, project_id, floor_plan_id, code, label, endpoint_kind, norm_x, norm_y, notes, description, customer_code, room, floor, custom_attrs, reference_points, updated_at",
+      )
       .eq("id", data.id)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -170,7 +174,6 @@ export const deleteEndpoint = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
-
 
 const BulkImportInput = z.object({
   projectId: z.string().uuid(),
@@ -205,9 +208,7 @@ export const bulkImportEndpoints = createServerFn({ method: "POST" })
       norm_x: r.x,
       norm_y: r.y,
     }));
-    const { error, count } = await supabase
-      .from("endpoints")
-      .insert(payload, { count: "exact" });
+    const { error, count } = await supabase.from("endpoints").insert(payload, { count: "exact" });
     if (error) throw new Error(error.message);
     return { inserted: count ?? payload.length };
   });

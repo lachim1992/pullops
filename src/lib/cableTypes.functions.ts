@@ -76,7 +76,10 @@ export const updateCableType = createServerFn({ method: "POST" })
     if (data.description !== undefined) patch.description = data.description;
     if (data.defaultReserveM !== undefined) patch.default_reserve_m = data.defaultReserveM;
     if (data.colorHint !== undefined) patch.color_hint = data.colorHint;
-    const { error } = await supabase.from("cable_types").update(patch as never).eq("id", data.id);
+    const { error } = await supabase
+      .from("cable_types")
+      .update(patch as never)
+      .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

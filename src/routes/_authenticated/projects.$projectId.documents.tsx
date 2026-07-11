@@ -107,7 +107,6 @@ function DocumentsPage() {
     }
   }
 
-
   async function removeDoc(id: string) {
     if (!confirm("Smazat dokument?")) return;
     await deleteFn({ data: { id } });
