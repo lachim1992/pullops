@@ -364,7 +364,16 @@ function PlanEditorPage() {
     } else if (mode === "rack") {
       setPendingRackPos(pos);
     } else if (mode === "bundle") {
-      setDraftBundlePoints((pts) => [...pts, pos]);
+      setDraftBundlePoints((pts) => {
+        const next = [...pts, pos];
+        if (next.length >= 2) {
+          setDraftBundleSegments((segs) => {
+            if (segs.length >= next.length - 1) return segs;
+            return [...segs, defaultSegment()];
+          });
+        }
+        return next;
+      });
     } else if (mode === "port") {
       if (!selectedPortId) {
         toast.error("Nejprve vyberte volný port ze seznamu");
