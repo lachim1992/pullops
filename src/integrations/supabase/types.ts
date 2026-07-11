@@ -462,6 +462,196 @@ export type Database = {
           },
         ]
       }
+      dispenser_slots: {
+        Row: {
+          created_at: string
+          current_spool_id: string | null
+          id: string
+          notes: string | null
+          organization_id: string
+          project_id: string
+          slot_index: number
+          status: Database["public"]["Enums"]["dispenser_slot_status"]
+          unit_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_spool_id?: string | null
+          id?: string
+          notes?: string | null
+          organization_id: string
+          project_id: string
+          slot_index: number
+          status?: Database["public"]["Enums"]["dispenser_slot_status"]
+          unit_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_spool_id?: string | null
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          project_id?: string
+          slot_index?: number
+          status?: Database["public"]["Enums"]["dispenser_slot_status"]
+          unit_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dispenser_slots_current_spool_id_fkey"
+            columns: ["current_spool_id"]
+            isOneToOne: false
+            referencedRelation: "spools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dispenser_slots_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dispenser_slots_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dispenser_slots_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "dispenser_units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dispenser_templates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          layout: Json
+          name: string
+          notes: string | null
+          organization_id: string
+          project_id: string
+          slot_count: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          layout?: Json
+          name: string
+          notes?: string | null
+          organization_id: string
+          project_id: string
+          slot_count: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          layout?: Json
+          name?: string
+          notes?: string | null
+          organization_id?: string
+          project_id?: string
+          slot_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dispenser_templates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dispenser_templates_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dispenser_units: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          label: string | null
+          layout_id: string
+          organization_id: string
+          position_index: number
+          project_id: string
+          template_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label?: string | null
+          layout_id: string
+          organization_id: string
+          position_index?: number
+          project_id: string
+          template_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label?: string | null
+          layout_id?: string
+          organization_id?: string
+          position_index?: number
+          project_id?: string
+          template_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dispenser_units_layout_id_fkey"
+            columns: ["layout_id"]
+            isOneToOne: false
+            referencedRelation: "pull_station_layouts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dispenser_units_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dispenser_units_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dispenser_units_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "dispenser_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       endpoint_cable_groups: {
         Row: {
           cable_id: string
@@ -1275,6 +1465,128 @@ export type Database = {
           },
         ]
       }
+      pull_assignments: {
+        Row: {
+          actual_meters: number | null
+          assigned_at: string | null
+          cable_id: string
+          created_at: string
+          created_by: string | null
+          day_plan_id: string | null
+          dispenser_slot_id: string | null
+          id: string
+          notes: string | null
+          optimizer_reasons: Json | null
+          optimizer_score: number | null
+          organization_id: string
+          planned_after_assignment_id: string | null
+          planned_meters: number | null
+          project_id: string
+          pulled_at: string | null
+          pulled_by: string | null
+          sequence_number: number | null
+          spool_id: string | null
+          status: Database["public"]["Enums"]["pull_assignment_status"]
+          updated_at: string
+        }
+        Insert: {
+          actual_meters?: number | null
+          assigned_at?: string | null
+          cable_id: string
+          created_at?: string
+          created_by?: string | null
+          day_plan_id?: string | null
+          dispenser_slot_id?: string | null
+          id?: string
+          notes?: string | null
+          optimizer_reasons?: Json | null
+          optimizer_score?: number | null
+          organization_id: string
+          planned_after_assignment_id?: string | null
+          planned_meters?: number | null
+          project_id: string
+          pulled_at?: string | null
+          pulled_by?: string | null
+          sequence_number?: number | null
+          spool_id?: string | null
+          status?: Database["public"]["Enums"]["pull_assignment_status"]
+          updated_at?: string
+        }
+        Update: {
+          actual_meters?: number | null
+          assigned_at?: string | null
+          cable_id?: string
+          created_at?: string
+          created_by?: string | null
+          day_plan_id?: string | null
+          dispenser_slot_id?: string | null
+          id?: string
+          notes?: string | null
+          optimizer_reasons?: Json | null
+          optimizer_score?: number | null
+          organization_id?: string
+          planned_after_assignment_id?: string | null
+          planned_meters?: number | null
+          project_id?: string
+          pulled_at?: string | null
+          pulled_by?: string | null
+          sequence_number?: number | null
+          spool_id?: string | null
+          status?: Database["public"]["Enums"]["pull_assignment_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pull_assignments_cable_id_fkey"
+            columns: ["cable_id"]
+            isOneToOne: false
+            referencedRelation: "cables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pull_assignments_day_plan_id_fkey"
+            columns: ["day_plan_id"]
+            isOneToOne: false
+            referencedRelation: "pull_day_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pull_assignments_dispenser_slot_id_fkey"
+            columns: ["dispenser_slot_id"]
+            isOneToOne: false
+            referencedRelation: "dispenser_slots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pull_assignments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pull_assignments_planned_after_assignment_id_fkey"
+            columns: ["planned_after_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "pull_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pull_assignments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pull_assignments_spool_id_fkey"
+            columns: ["spool_id"]
+            isOneToOne: false
+            referencedRelation: "spools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pull_day_plan_cables: {
         Row: {
           cable_id: string
@@ -1380,6 +1692,64 @@ export type Database = {
           },
           {
             foreignKeyName: "pull_day_plans_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pull_station_layouts: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          floor_plan_id: string | null
+          id: string
+          name: string
+          notes: string | null
+          organization_id: string
+          project_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          floor_plan_id?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          organization_id: string
+          project_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          floor_plan_id?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          organization_id?: string
+          project_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pull_station_layouts_floor_plan_id_fkey"
+            columns: ["floor_plan_id"]
+            isOneToOne: false
+            referencedRelation: "floor_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pull_station_layouts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pull_station_layouts_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -1507,6 +1877,136 @@ export type Database = {
           },
           {
             foreignKeyName: "racks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scan_codes: {
+        Row: {
+          code: string
+          code_kind: Database["public"]["Enums"]["scan_code_kind"]
+          created_at: string
+          created_by: string | null
+          entity_id: string
+          entity_type: Database["public"]["Enums"]["scan_entity_type"]
+          id: string
+          notes: string | null
+          organization_id: string
+          project_id: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          code_kind?: Database["public"]["Enums"]["scan_code_kind"]
+          created_at?: string
+          created_by?: string | null
+          entity_id: string
+          entity_type: Database["public"]["Enums"]["scan_entity_type"]
+          id?: string
+          notes?: string | null
+          organization_id: string
+          project_id: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          code_kind?: Database["public"]["Enums"]["scan_code_kind"]
+          created_at?: string
+          created_by?: string | null
+          entity_id?: string
+          entity_type?: Database["public"]["Enums"]["scan_entity_type"]
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          project_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scan_codes_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scan_codes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      spools: {
+        Row: {
+          batch_no: string | null
+          cable_type_id: string | null
+          created_at: string
+          created_by: string | null
+          current_length_m: number
+          id: string
+          initial_length_m: number
+          manufacturer: string | null
+          notes: string | null
+          organization_id: string
+          project_id: string
+          serial_no: string
+          status: Database["public"]["Enums"]["spool_status"]
+          updated_at: string
+        }
+        Insert: {
+          batch_no?: string | null
+          cable_type_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_length_m: number
+          id?: string
+          initial_length_m: number
+          manufacturer?: string | null
+          notes?: string | null
+          organization_id: string
+          project_id: string
+          serial_no: string
+          status?: Database["public"]["Enums"]["spool_status"]
+          updated_at?: string
+        }
+        Update: {
+          batch_no?: string | null
+          cable_type_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_length_m?: number
+          id?: string
+          initial_length_m?: number
+          manufacturer?: string | null
+          notes?: string | null
+          organization_id?: string
+          project_id?: string
+          serial_no?: string
+          status?: Database["public"]["Enums"]["spool_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spools_cable_type_id_fkey"
+            columns: ["cable_type_id"]
+            isOneToOne: false
+            referencedRelation: "cable_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "spools_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "spools_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -1672,6 +2172,7 @@ export type Database = {
         | "test_technician"
         | "viewer"
       cable_status: "PLANNED" | "PULLED" | "TERMINATED" | "TESTED" | "CANCELLED"
+      dispenser_slot_status: "EMPTY" | "LOADED" | "OUT_OF_SERVICE"
       document_kind: "FLOOR_PLAN" | "SCHEMATIC" | "OTHER"
       endpoint_kind:
         | "WORKSTATION"
@@ -1693,6 +2194,14 @@ export type Database = {
         | "on_hold"
         | "completed"
         | "archived"
+      pull_assignment_status: "PLANNED" | "ACTIVE" | "PULLED" | "CANCELLED"
+      scan_code_kind: "QR" | "BARCODE" | "MANUAL"
+      scan_entity_type:
+        | "SPOOL"
+        | "ENDPOINT"
+        | "DISPENSER_UNIT"
+        | "DISPENSER_SLOT"
+      spool_status: "WAREHOUSE" | "ON_STATION" | "EMPTY" | "ARCHIVED"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1830,6 +2339,7 @@ export const Constants = {
         "viewer",
       ],
       cable_status: ["PLANNED", "PULLED", "TERMINATED", "TESTED", "CANCELLED"],
+      dispenser_slot_status: ["EMPTY", "LOADED", "OUT_OF_SERVICE"],
       document_kind: ["FLOOR_PLAN", "SCHEMATIC", "OTHER"],
       endpoint_kind: [
         "WORKSTATION",
@@ -1853,6 +2363,15 @@ export const Constants = {
         "completed",
         "archived",
       ],
+      pull_assignment_status: ["PLANNED", "ACTIVE", "PULLED", "CANCELLED"],
+      scan_code_kind: ["QR", "BARCODE", "MANUAL"],
+      scan_entity_type: [
+        "SPOOL",
+        "ENDPOINT",
+        "DISPENSER_UNIT",
+        "DISPENSER_SLOT",
+      ],
+      spool_status: ["WAREHOUSE", "ON_STATION", "EMPTY", "ARCHIVED"],
     },
   },
 } as const
