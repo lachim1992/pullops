@@ -2389,16 +2389,58 @@ function DayPlanEditor(props: {
     if (!byPlan.has(a.day_plan_id)) byPlan.set(a.day_plan_id, []);
     byPlan.get(a.day_plan_id)!.push(row);
   }
+  const optimizeFn = useServerFn(runOptimizer);
+  const [optimizing, setOptimizing] = useState(false);
+
+  async function runOptimize(mode: "preview" | "apply") {
+    try {
+      setOptimizing(true);
+      const res = await optimizeFn({ data: { projectId: props.projectId, mode } });
+      const s = res.summary;
+      const msg =
+        mode === "preview"
+          ? `Náhled: přiřazeno ${s.assigned}/${s.totalCables}, spulek ${s.spoolsUsed}, odpad ${s.wastedMeters.toFixed(1)} m${
+              s.skipped > 0 ? `, přeskočeno ${s.skipped}` : ""
+            }`
+          : `Uloženo: ${s.assigned} přiřazení, spulek ${s.spoolsUsed}, odpad ${s.wastedMeters.toFixed(1)} m`;
+      toast.success(msg);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Chyba optimalizátoru");
+    } finally {
+      setOptimizing(false);
+    }
+  }
+
   return (
     <div className="rounded-sm border border-border p-3 text-sm">
-      <div className="mb-2 flex items-center justify-between">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <div className="font-semibold">Plánovač tažení</div>
-        <Button size="sm" variant="outline" onClick={() => onCreate()} className="h-7 text-xs">
-          + Den
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => runOptimize("preview")}
+            disabled={optimizing || dayPlans.length === 0}
+            className="h-7 text-xs"
+          >
+            Optim. náhled
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => runOptimize("apply")}
+            disabled={optimizing || dayPlans.length === 0}
+            className="h-7 text-xs"
+          >
+            Optim. použít
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => onCreate()} className="h-7 text-xs">
+            + Den
+          </Button>
+        </div>
       </div>
       <div className="mb-2 text-xs text-muted-foreground">
-        Rozděl kabely do dní / směn a nastav kapacitu cívek. Publikace zpřístupní tyto bloky v Režimu tahání.
+        Rozděl kabely do dní / směn a nastav kapacitu cívek. Optimalizátor auto-přiřadí kabely do bloků podle kapacity a fyzických spulek. Publikace zpřístupní bloky v Režimu tahání.
       </div>
       {dayPlans.length === 0 && (
         <div className="rounded-sm border border-dashed border-border p-3 text-center text-xs text-muted-foreground">
