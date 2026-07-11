@@ -537,7 +537,12 @@ function EndpointDetail({
           const cdone = c.status === "PULLED";
           const other = c.fromEndpointId === endpoint.id ? c.toEndpointCode : c.fromEndpointCode;
           return (
-            <div key={c.id} className="flex items-center gap-2 p-2">
+            <div
+              key={c.id}
+              className="flex items-center gap-2 p-2 hover:bg-muted/40"
+              onMouseEnter={() => onHoverCable?.(c.id)}
+              onMouseLeave={() => onHoverCable?.(null)}
+            >
               <button
                 type="button"
                 onClick={() => onSelectCable(c.id)}
