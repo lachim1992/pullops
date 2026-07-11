@@ -119,6 +119,150 @@ export const autoAssignBundlesForPlan = createServerFn({ method: "POST" })
     return { assigned, skipped, reason: "ok" as const };
   });
 
+/**
+ * Project-wide auto-assign: for every cable with a to_endpoint, pick the
+ * nearest bundle on the same plan as that endpoint. Handles cross-plan
+ * scenarios (rack on plan A, endpoints on plan B) — the rack prefix is
+ * only added when the rack sits on the same plan as the endpoint.
+ */
+export const autoAssignBundlesForProject = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        projectId: z.string().uuid(),
+        overwrite: z.boolean().optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+
+    const [{ data: bundles }, { data: eps }, { data: racks }, { data: panels }] =
+      await Promise.all([
+        supabase
+          .from("cable_bundles")
+          .select("id, floor_plan_id, points")
+          .eq("project_id", data.projectId),
+        supabase
+          .from("endpoints")
+          .select("id, floor_plan_id, norm_x, norm_y")
+          .eq("project_id", data.projectId),
+        supabase
+          .from("racks")
+          .select("id, floor_plan_id, x, y")
+          .eq("project_id", data.projectId),
+        supabase
+          .from("patch_panels")
+          .select("id, rack_id")
+          .eq("project_id", data.projectId),
+      ]);
+
+    // bundles indexed by plan
+    const bundlesByPlan = new Map<string, Array<{ id: string; points: NormPoint[] }>>();
+    for (const b of bundles ?? []) {
+      const plan = b.floor_plan_id as string;
+      const arr = bundlesByPlan.get(plan) ?? [];
+      arr.push({ id: b.id as string, points: (b.points as unknown as NormPoint[]) ?? [] });
+      bundlesByPlan.set(plan, arr);
+    }
+
+    // endpoint id -> {plan, pos}
+    const epInfo = new Map<string, { plan: string; pos: NormPoint }>();
+    for (const e of eps ?? []) {
+      if (!e.floor_plan_id) continue;
+      epInfo.set(e.id as string, {
+        plan: e.floor_plan_id as string,
+        pos: { x: Number(e.norm_x), y: Number(e.norm_y) },
+      });
+    }
+
+    // port -> rack
+    const rackById = new Map<string, { plan: string; pos: NormPoint }>();
+    for (const r of racks ?? []) {
+      if (!r.floor_plan_id) continue;
+      rackById.set(r.id as string, {
+        plan: r.floor_plan_id as string,
+        pos: { x: Number(r.x), y: Number(r.y) },
+      });
+    }
+    const panelToRack = new Map<string, string>();
+    for (const p of panels ?? []) {
+      if (p.rack_id) panelToRack.set(p.id as string, p.rack_id as string);
+    }
+    const panelIds = (panels ?? []).map((p) => p.id as string);
+    const portToRack = new Map<string, string>();
+    if (panelIds.length > 0) {
+      const { data: ports } = await supabase
+        .from("patch_ports")
+        .select("id, panel_id")
+        .in("panel_id", panelIds);
+      for (const p of ports ?? []) {
+        const r = panelToRack.get(p.panel_id as string);
+        if (r) portToRack.set(p.id as string, r);
+      }
+    }
+
+    let query = supabase
+      .from("cables")
+      .select("id, bundle_id, to_endpoint_id, from_port_id")
+      .eq("project_id", data.projectId)
+      .not("to_endpoint_id", "is", null);
+    if (!data.overwrite) query = query.is("bundle_id", null);
+    const { data: cables, error } = await query;
+    if (error) throw new Error(error.message);
+
+    let assigned = 0;
+    let skipped = 0;
+    const missingBundlesOnPlans = new Set<string>();
+
+    for (const c of cables ?? []) {
+      const epId = c.to_endpoint_id as string | null;
+      if (!epId) { skipped++; continue; }
+      const ep = epInfo.get(epId);
+      if (!ep) { skipped++; continue; }
+      const bundleList = bundlesByPlan.get(ep.plan) ?? [];
+      if (bundleList.length === 0) {
+        missingBundlesOnPlans.add(ep.plan);
+        skipped++;
+        continue;
+      }
+      const nb = nearestBundle(ep.pos, bundleList);
+      if (!nb) { skipped++; continue; }
+      const bundlePts = bundleList.find((b) => b.id === nb.id)!.points;
+      const anchorEp = closestPointOnPolyline(ep.pos, bundlePts);
+
+      const branch: NormPoint[] = [];
+      const portId = c.from_port_id as string | null;
+      const rackId = portId ? portToRack.get(portId) : undefined;
+      const rack = rackId ? rackById.get(rackId) : undefined;
+      // Only prepend rack if it lives on the SAME plan as the endpoint
+      if (rack && rack.plan === ep.plan) {
+        branch.push(rack.pos);
+        const anchorRack = closestPointOnPolyline(rack.pos, bundlePts);
+        if (anchorRack) branch.push(anchorRack.point);
+      }
+      if (anchorEp) branch.push(anchorEp.point);
+      branch.push(ep.pos);
+
+      const { error: uerr } = await supabase
+        .from("cables")
+        .update({ bundle_id: nb.id, branch_points: branch } as never)
+        .eq("id", c.id as string);
+      if (uerr) throw new Error(uerr.message);
+      assigned++;
+    }
+
+    return {
+      assigned,
+      skipped,
+      missingBundlesOnPlans: Array.from(missingBundlesOnPlans),
+      reason: (assigned === 0 && (bundles ?? []).length === 0
+        ? "no_bundles"
+        : "ok") as "ok" | "no_bundles",
+    };
+  });
+
 
 /**
  * List cables belonging to a floor plan that have branch_points recorded,
