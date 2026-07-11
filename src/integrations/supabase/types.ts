@@ -854,6 +854,9 @@ export type Database = {
           name: string
           organization_id: string
           project_id: string
+          published_at: string | null
+          published_by: string | null
+          published_to_pull: boolean
           updated_at: string
         }
         Insert: {
@@ -865,6 +868,9 @@ export type Database = {
           name: string
           organization_id: string
           project_id: string
+          published_at?: string | null
+          published_by?: string | null
+          published_to_pull?: boolean
           updated_at?: string
         }
         Update: {
@@ -876,6 +882,9 @@ export type Database = {
           name?: string
           organization_id?: string
           project_id?: string
+          published_at?: string | null
+          published_by?: string | null
+          published_to_pull?: boolean
           updated_at?: string
         }
         Relationships: [

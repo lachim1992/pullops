@@ -192,7 +192,8 @@ function PlanIndex({
   if (plans.length === 0) {
     return (
       <div className="rounded-sm border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
-        V tomto projektu zatím nejsou žádné plány. Musí je nahrát správce projektu.
+        Žádný plán zatím není publikován do režimu tahání. Správce projektu ho publikuje v editoru plánu
+        (záložka „5 · Zadat plán").
       </div>
     );
   }
@@ -329,7 +330,7 @@ function PlanWorkspace(props: {
       </div>
 
       {tab === "map" && (
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
           <section className="overflow-hidden rounded-sm border border-border bg-card">
             <PullMap
               plan={plan}
@@ -834,7 +835,7 @@ function PullMap({
   onSelectEndpoint: (id: string) => void;
 }) {
   return (
-    <div className="relative h-[640px] min-h-[480px] bg-muted">
+    <div className="relative h-[calc(100vh-220px)] min-h-[560px] w-full overflow-hidden bg-muted">
       {plan?.documentUrl ? (
         plan.mimeType === "application/pdf" ? (
           <PdfPlanBackground url={plan.documentUrl} title={plan.name} />

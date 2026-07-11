@@ -45,12 +45,34 @@ export const listFloorPlans = createServerFn({ method: "GET" })
     const { supabase } = context;
     const { data: rows, error } = await supabase
       .from("floor_plans")
-      .select("id, name, level, display_order, document_id, created_at")
+      .select(
+        "id, name, level, display_order, document_id, created_at, published_to_pull, published_at, published_by",
+      )
       .eq("project_id", data.projectId)
       .order("display_order", { ascending: true })
       .order("level", { ascending: true });
     if (error) throw new Error(dbErrorMessage(error));
     return rows ?? [];
+  });
+
+export const setFloorPlanPublished = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ id: z.string().uuid(), published: z.boolean() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const patch: Record<string, unknown> = {
+      published_to_pull: data.published,
+      published_at: data.published ? new Date().toISOString() : null,
+      published_by: data.published ? userId : null,
+    };
+    const { error } = await supabase
+      .from("floor_plans")
+      .update(patch as never)
+      .eq("id", data.id);
+    if (error) throw new Error(dbErrorMessage(error));
+    return { ok: true };
   });
 
 export const getFloorPlan = createServerFn({ method: "GET" })
@@ -60,7 +82,9 @@ export const getFloorPlan = createServerFn({ method: "GET" })
     const { supabase } = context;
     const { data: row, error } = await supabase
       .from("floor_plans")
-      .select("id, project_id, name, level, display_order, document_id")
+      .select(
+        "id, project_id, name, level, display_order, document_id, published_to_pull, published_at, published_by",
+      )
       .eq("id", data.id)
       .maybeSingle();
     if (error) throw new Error(dbErrorMessage(error));
