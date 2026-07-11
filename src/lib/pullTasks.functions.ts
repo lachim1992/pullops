@@ -212,7 +212,7 @@ export const getPullModeData = createServerFn({ method: "GET" })
     const { supabase } = context;
     const spoolLen = data.defaultSpoolLengthM;
 
-    const [plansRes, calsRes, endpointsRes, bundlesRes, typesRes, kindsRes, cablesRes] =
+    const [plansRes, calsRes, endpointsRes, bundlesRes, typesRes, kindsRes, cablesRes, panelsRes] =
       await Promise.all([
         supabase
           .from("floor_plans")
@@ -249,9 +249,13 @@ export const getPullModeData = createServerFn({ method: "GET" })
           )
           .eq("project_id", data.projectId)
           .order("code", { ascending: true }),
+        supabase
+          .from("patch_panels")
+          .select("id, code, name, floor_plan_id, port_count")
+          .eq("project_id", data.projectId),
       ]);
 
-    for (const res of [plansRes, calsRes, endpointsRes, bundlesRes, typesRes, kindsRes, cablesRes]) {
+    for (const res of [plansRes, calsRes, endpointsRes, bundlesRes, typesRes, kindsRes, cablesRes, panelsRes]) {
       if (res.error) throw new Error(res.error.message);
     }
 
@@ -346,19 +350,28 @@ export const getPullModeData = createServerFn({ method: "GET" })
       typeCode: string;
       meters: number | null;
       floorPlanId: string | null;
+      fromEndpointId: string | null;
+      fromEndpointCode: string | null;
+      toEndpointId: string | null;
       toEndpointCode: string | null;
       branchPoints: NormPoint[];
       bundleId: string | null;
       notes: string | null;
     };
 
+    const bundleCodeById = new Map<string, string>();
+    for (const b of bundlesRes.data ?? []) {
+      bundleCodeById.set(b.id as string, b.code as string);
+    }
+
     const cableRows: PullCable[] = [];
     let missing = 0;
     let totalMeters = 0;
     for (const c of cablesRes.data ?? []) {
       const type = c.cable_type_id ? typeMap.get(c.cable_type_id as string) : undefined;
+      const fromEp = endpointById.get(c.from_endpoint_id as string);
       const toEp = endpointById.get(c.to_endpoint_id as string);
-      const planId = toEp?.floorPlanId ?? null;
+      const planId = toEp?.floorPlanId ?? fromEp?.floorPlanId ?? null;
       const ctReserve = type?.reserve ?? 0;
       const result = computeCableLength({
         routePoints: (c.branch_points as unknown as NormPoint[]) ?? [],
@@ -377,6 +390,9 @@ export const getPullModeData = createServerFn({ method: "GET" })
         typeCode: type?.code ?? "—",
         meters: result.meters,
         floorPlanId: planId,
+        fromEndpointId: (c.from_endpoint_id as string | null) ?? null,
+        fromEndpointCode: fromEp?.code ?? null,
+        toEndpointId: (c.to_endpoint_id as string | null) ?? null,
         toEndpointCode: toEp?.code ?? null,
         branchPoints: (c.branch_points as unknown as NormPoint[]) ?? [],
         bundleId: (c.bundle_id as string | null) ?? null,
@@ -433,6 +449,13 @@ export const getPullModeData = createServerFn({ method: "GET" })
         code: b.code as string,
         floorPlanId: b.floor_plan_id as string,
         points: (b.points as unknown as NormPoint[]) ?? [],
+      })),
+      patchPanels: (panelsRes.data ?? []).map((p) => ({
+        id: p.id as string,
+        code: p.code as string,
+        name: (p.name as string | null) ?? null,
+        floorPlanId: (p.floor_plan_id as string | null) ?? null,
+        portCount: Number(p.port_count ?? 0),
       })),
       cables: cableRows,
       totalCables: cableRows.length,
