@@ -90,11 +90,20 @@ export const autoAssignBundlesForPlan = createServerFn({ method: "POST" })
     let skipped = 0;
     for (const c of cables ?? []) {
       const epId = c.to_endpoint_id as string | null;
-      if (!epId) { skipped++; continue; }
+      if (!epId) {
+        skipped++;
+        continue;
+      }
       const pos = epMap.get(epId);
-      if (!pos) { skipped++; continue; }
+      if (!pos) {
+        skipped++;
+        continue;
+      }
       const nb = nearestBundle(pos, bundleList);
-      if (!nb) { skipped++; continue; }
+      if (!nb) {
+        skipped++;
+        continue;
+      }
       const bundlePts = bundleList.find((b) => b.id === nb.id)!.points;
       const anchorEp = closestPointOnPolyline(pos, bundlePts);
       const branch: NormPoint[] = [];
@@ -138,8 +147,8 @@ export const autoAssignBundlesForProject = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase } = context;
 
-    const [{ data: bundles }, { data: eps }, { data: racks }, { data: panels }] =
-      await Promise.all([
+    const [{ data: bundles }, { data: eps }, { data: racks }, { data: panels }] = await Promise.all(
+      [
         supabase
           .from("cable_bundles")
           .select("id, floor_plan_id, points")
@@ -148,15 +157,10 @@ export const autoAssignBundlesForProject = createServerFn({ method: "POST" })
           .from("endpoints")
           .select("id, floor_plan_id, norm_x, norm_y")
           .eq("project_id", data.projectId),
-        supabase
-          .from("racks")
-          .select("id, floor_plan_id, x, y")
-          .eq("project_id", data.projectId),
-        supabase
-          .from("patch_panels")
-          .select("id, rack_id")
-          .eq("project_id", data.projectId),
-      ]);
+        supabase.from("racks").select("id, floor_plan_id, x, y").eq("project_id", data.projectId),
+        supabase.from("patch_panels").select("id, rack_id").eq("project_id", data.projectId),
+      ],
+    );
 
     // bundles indexed by plan
     const bundlesByPlan = new Map<string, Array<{ id: string; points: NormPoint[] }>>();
@@ -218,9 +222,15 @@ export const autoAssignBundlesForProject = createServerFn({ method: "POST" })
 
     for (const c of cables ?? []) {
       const epId = c.to_endpoint_id as string | null;
-      if (!epId) { skipped++; continue; }
+      if (!epId) {
+        skipped++;
+        continue;
+      }
       const ep = epInfo.get(epId);
-      if (!ep) { skipped++; continue; }
+      if (!ep) {
+        skipped++;
+        continue;
+      }
       const bundleList = bundlesByPlan.get(ep.plan) ?? [];
       if (bundleList.length === 0) {
         missingBundlesOnPlans.add(ep.plan);
@@ -228,7 +238,10 @@ export const autoAssignBundlesForProject = createServerFn({ method: "POST" })
         continue;
       }
       const nb = nearestBundle(ep.pos, bundleList);
-      if (!nb) { skipped++; continue; }
+      if (!nb) {
+        skipped++;
+        continue;
+      }
       const bundlePts = bundleList.find((b) => b.id === nb.id)!.points;
       const anchorEp = closestPointOnPolyline(ep.pos, bundlePts);
 
@@ -257,12 +270,11 @@ export const autoAssignBundlesForProject = createServerFn({ method: "POST" })
       assigned,
       skipped,
       missingBundlesOnPlans: Array.from(missingBundlesOnPlans),
-      reason: (assigned === 0 && (bundles ?? []).length === 0
-        ? "no_bundles"
-        : "ok") as "ok" | "no_bundles",
+      reason: (assigned === 0 && (bundles ?? []).length === 0 ? "no_bundles" : "ok") as
+        | "ok"
+        | "no_bundles",
     };
   });
-
 
 /**
  * List cables belonging to a floor plan that have branch_points recorded,
@@ -304,9 +316,7 @@ export const listPlanBranches = createServerFn({ method: "GET" })
  */
 export const listFreePorts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    z.object({ projectId: z.string().uuid() }).parse(d),
-  )
+  .inputValidator((d: unknown) => z.object({ projectId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { data: panels } = await supabase
@@ -320,7 +330,8 @@ export const listFreePorts = createServerFn({ method: "GET" })
       .eq("project_id", data.projectId)
       .order("code");
     const panelIds = (panels ?? []).map((p) => p.id);
-    let ports: Array<{ id: string; panel_id: string; port_number: number; label: string | null }> = [];
+    let ports: Array<{ id: string; panel_id: string; port_number: number; label: string | null }> =
+      [];
     let usedPortIds = new Set<string>();
     if (panelIds.length > 0) {
       const [portsRes, cablesRes] = await Promise.all([
@@ -493,4 +504,3 @@ export const createCableFromPort = createServerFn({ method: "POST" })
       bundleId: nearest?.id ?? null,
     };
   });
-

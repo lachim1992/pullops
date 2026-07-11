@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { dbErrorMessage } from "@/lib/dbErrors";
 
 const CreateInput = z.object({
   projectId: z.string().uuid(),
@@ -32,7 +33,7 @@ async function orgFor(supabase: any, projectId: string): Promise<string> {
     .select("organization_id")
     .eq("id", projectId)
     .maybeSingle();
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(dbErrorMessage(error));
   if (!data) throw new Error("project not found");
   return data.organization_id as string;
 }
@@ -48,7 +49,7 @@ export const listFloorPlans = createServerFn({ method: "GET" })
       .eq("project_id", data.projectId)
       .order("display_order", { ascending: true })
       .order("level", { ascending: true });
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return rows ?? [];
   });
 
@@ -62,13 +63,15 @@ export const getFloorPlan = createServerFn({ method: "GET" })
       .select("id, project_id, name, level, display_order, document_id")
       .eq("id", data.id)
       .maybeSingle();
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     if (!row) throw new Error("floor plan not found");
 
     const [{ data: cal }, { data: doc }] = await Promise.all([
       supabase
         .from("floor_plan_calibrations")
-        .select("point_a_norm_x, point_a_norm_y, point_b_norm_x, point_b_norm_y, real_distance_m, calibrated_at")
+        .select(
+          "point_a_norm_x, point_a_norm_y, point_b_norm_x, point_b_norm_y, real_distance_m, calibrated_at",
+        )
         .eq("floor_plan_id", data.id)
         .maybeSingle(),
       row.document_id
@@ -109,7 +112,7 @@ export const createFloorPlan = createServerFn({ method: "POST" })
       })
       .select("id")
       .single();
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { id: row.id as string };
   });
 
@@ -123,8 +126,11 @@ export const updateFloorPlan = createServerFn({ method: "POST" })
     if (data.name !== undefined) patch.name = data.name;
     if (data.level !== undefined) patch.level = data.level;
     if (data.displayOrder !== undefined) patch.display_order = data.displayOrder;
-    const { error } = await supabase.from("floor_plans").update(patch as never).eq("id", data.id);
-    if (error) throw new Error(error.message);
+    const { error } = await supabase
+      .from("floor_plans")
+      .update(patch as never)
+      .eq("id", data.id);
+    if (error) throw new Error(dbErrorMessage(error));
     return { ok: true };
   });
 
@@ -134,7 +140,7 @@ export const deleteFloorPlan = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { error } = await supabase.from("floor_plans").delete().eq("id", data.id);
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { ok: true };
   });
 
@@ -148,7 +154,7 @@ export const setCalibration = createServerFn({ method: "POST" })
       .select("project_id")
       .eq("id", data.floorPlanId)
       .maybeSingle();
-    if (perr) throw new Error(perr.message);
+    if (perr) throw new Error(dbErrorMessage(perr));
     if (!plan) throw new Error("floor plan not found");
     const { error } = await supabase.from("floor_plan_calibrations").upsert(
       {
@@ -164,6 +170,6 @@ export const setCalibration = createServerFn({ method: "POST" })
       },
       { onConflict: "floor_plan_id" },
     );
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { ok: true };
   });

@@ -2,11 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import {
-  computeCableLength,
-  type Calibration,
-  type NormPoint,
-} from "@/lib/length";
+import { computeCableLength, type Calibration, type NormPoint } from "@/lib/length";
 
 /**
  * Aggregate project cable lengths and pack them into virtual spools (first-fit-decreasing).
@@ -29,7 +25,9 @@ export const simulateSpools = createServerFn({ method: "GET" })
     // Load calibrations per plan
     const { data: cals } = await supabase
       .from("floor_plan_calibrations")
-      .select("floor_plan_id, point_a_norm_x, point_a_norm_y, point_b_norm_x, point_b_norm_y, real_distance_m");
+      .select(
+        "floor_plan_id, point_a_norm_x, point_a_norm_y, point_b_norm_x, point_b_norm_y, real_distance_m",
+      );
     const calByPlan = new Map<string, Calibration>();
     for (const c of cals ?? []) {
       calByPlan.set(c.floor_plan_id as string, {
@@ -38,7 +36,6 @@ export const simulateSpools = createServerFn({ method: "GET" })
         real_distance_m: Number(c.real_distance_m),
       });
     }
-
 
     const { data: endpoints } = await supabase
       .from("endpoints")
@@ -65,10 +62,7 @@ export const simulateSpools = createServerFn({ method: "GET" })
       .from("cable_types")
       .select("id, code, default_reserve_m, meters_per_hour")
       .eq("project_id", data.projectId);
-    const typeMap = new Map<
-      string,
-      { code: string; reserve: number; mph: number | null }
-    >();
+    const typeMap = new Map<string, { code: string; reserve: number; mph: number | null }>();
     for (const t of types ?? []) {
       typeMap.set(t.id as string, {
         code: (t.code as string) ?? "?",
@@ -87,10 +81,18 @@ export const simulateSpools = createServerFn({ method: "GET" })
 
     const { data: cables } = await supabase
       .from("cables")
-      .select("id, code, cable_type_id, override_length_m, branch_points, from_endpoint_id, to_endpoint_id")
+      .select(
+        "id, code, cable_type_id, override_length_m, branch_points, from_endpoint_id, to_endpoint_id",
+      )
       .eq("project_id", data.projectId);
 
-    type Row = { id: string; code: string; typeId: string | null; typeCode: string; meters: number };
+    type Row = {
+      id: string;
+      code: string;
+      typeId: string | null;
+      typeCode: string;
+      meters: number;
+    };
     const rows: Row[] = [];
     let totalMeters = 0;
     let missing = 0;
@@ -141,7 +143,13 @@ export const simulateSpools = createServerFn({ method: "GET" })
       for (const r of list) {
         // cable longer than a spool → mark on its own oversized spool
         if (r.meters > spoolLen) {
-          spools.push({ index: idx++, typeCode: tc, used: r.meters, capacity: r.meters, cables: [r] });
+          spools.push({
+            index: idx++,
+            typeCode: tc,
+            used: r.meters,
+            capacity: r.meters,
+            cables: [r],
+          });
           continue;
         }
         const fit = spools.find((s) => s.capacity === spoolLen && s.used + r.meters <= spoolLen);
@@ -149,7 +157,13 @@ export const simulateSpools = createServerFn({ method: "GET" })
           fit.used += r.meters;
           fit.cables.push(r);
         } else {
-          spools.push({ index: idx++, typeCode: tc, used: r.meters, capacity: spoolLen, cables: [r] });
+          spools.push({
+            index: idx++,
+            typeCode: tc,
+            used: r.meters,
+            capacity: spoolLen,
+            cables: [r],
+          });
         }
       }
       spoolsByType.set(tc, spools);

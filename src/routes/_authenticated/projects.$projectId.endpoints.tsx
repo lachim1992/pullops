@@ -58,7 +58,6 @@ function EndpointsPage() {
     return m;
   }, [kindsQuery.data]);
 
-
   const plans = useQuery({
     queryKey: ["plans", projectId],
     queryFn: () => listPlansFn({ data: { projectId } }),
@@ -70,9 +69,7 @@ function EndpointsPage() {
 
   const filtered = useMemo(() => {
     const all = eps.data ?? [];
-    return selectedPlanId === "ALL"
-      ? all
-      : all.filter((e) => e.floor_plan_id === selectedPlanId);
+    return selectedPlanId === "ALL" ? all : all.filter((e) => e.floor_plan_id === selectedPlanId);
   }, [eps.data, selectedPlanId]);
 
   return (
@@ -210,9 +207,7 @@ function EndpointsTable({
               <tr
                 key={e.id}
                 onClick={() => onSelect(e.id)}
-                className={`cursor-pointer hover:bg-muted ${
-                  selectedId === e.id ? "bg-muted" : ""
-                }`}
+                className={`cursor-pointer hover:bg-muted ${selectedId === e.id ? "bg-muted" : ""}`}
               >
                 <td className="p-2 font-mono">{e.code}</td>
                 <td className="p-2">{e.label ?? "—"}</td>
@@ -272,12 +267,7 @@ function PlanPreview({
       </div>
       <div className="relative aspect-[4/3] max-h-[70vh] w-full bg-muted/30">
         {url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={url}
-            alt=""
-            className="absolute inset-0 h-full w-full object-contain"
-          />
+          <img src={url} alt="" className="absolute inset-0 h-full w-full object-contain" />
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
             {plan.isLoading ? "Načítám…" : "Bez nahraného výkresu"}
@@ -292,11 +282,7 @@ function PlanPreview({
             const c = kindMap.get(e.endpoint_kind)?.color ?? "hsl(0 0% 40%)";
             const sel = selectedId === e.id;
             return (
-              <g
-                key={e.id}
-                style={{ cursor: "pointer" }}
-                onClick={() => onSelect(e.id)}
-              >
+              <g key={e.id} style={{ cursor: "pointer" }} onClick={() => onSelect(e.id)}>
                 <circle
                   cx={e.norm_x * 100}
                   cy={e.norm_y * 100}
@@ -452,11 +438,7 @@ function EndpointDetail({
         </div>
         <div>
           <Label className="text-xs">Poznámka</Label>
-          <Textarea
-            rows={3}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
+          <Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
         </div>
       </div>
 
@@ -593,13 +575,7 @@ function AttrsEditor({
   );
 }
 
-function PhotosSection({
-  endpointId,
-  projectId,
-}: {
-  endpointId: string;
-  projectId: string;
-}) {
+function PhotosSection({ endpointId, projectId }: { endpointId: string; projectId: string }) {
   const listFn = useServerFn(listEndpointPhotos);
   const regFn = useServerFn(registerEndpointPhoto);
   const delFn = useServerFn(deleteEndpointPhoto);
@@ -668,9 +644,11 @@ function PhotosSection({
       </div>
       <div className="grid grid-cols-2 gap-2">
         {(photos.data ?? []).map((p) => (
-          <div key={p.id} className="group relative overflow-hidden rounded-sm border border-border">
+          <div
+            key={p.id}
+            className="group relative overflow-hidden rounded-sm border border-border"
+          >
             {p.url ? (
-              // eslint-disable-next-line @next/next/no-img-element
               <img src={p.url} alt="" className="aspect-square w-full object-cover" />
             ) : (
               <div className="aspect-square w-full bg-muted" />

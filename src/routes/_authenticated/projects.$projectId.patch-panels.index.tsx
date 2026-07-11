@@ -31,12 +31,7 @@ import {
   getPatchPanel,
   listPatchPanels,
 } from "@/lib/patchPanels.functions";
-import {
-  assignPanelToRack,
-  createRack,
-  deleteRack,
-  listRacks,
-} from "@/lib/racks.functions";
+import { assignPanelToRack, createRack, deleteRack, listRacks } from "@/lib/racks.functions";
 import { listFloorPlans } from "@/lib/floorPlans.functions";
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/patch-panels/")({
@@ -95,7 +90,10 @@ function PatchPanelsPage() {
     }
   }
 
-  const panelsByRack = new Map<string | null, typeof panels.data extends undefined ? never : NonNullable<typeof panels.data>>();
+  const panelsByRack = new Map<
+    string | null,
+    typeof panels.data extends undefined ? never : NonNullable<typeof panels.data>
+  >();
   for (const p of panels.data ?? []) {
     const key = p.rack_id ?? null;
     const arr = (panelsByRack.get(key) ?? []) as NonNullable<typeof panels.data>;
@@ -162,7 +160,13 @@ function PatchPanelsPage() {
   );
 }
 
-type Panel = { id: string; code: string; name: string | null; port_count: number; rack_id: string | null };
+type Panel = {
+  id: string;
+  code: string;
+  name: string | null;
+  port_count: number;
+  rack_id: string | null;
+};
 type Rack = { id: string; code: string; name: string | null };
 
 function RackCard({
@@ -392,11 +396,20 @@ function NewRackDialog({ projectId, plans }: { projectId: string; plans: any[] }
         <form onSubmit={submit} className="space-y-3">
           <div className="space-y-1.5">
             <Label>Kód</Label>
-            <Input value={code} onChange={(e) => setCode(e.target.value)} required placeholder="RACK-A" />
+            <Input
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              required
+              placeholder="RACK-A"
+            />
           </div>
           <div className="space-y-1.5">
             <Label>Název</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Serverovna 1.NP" />
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Serverovna 1.NP"
+            />
           </div>
           <div className="space-y-1.5">
             <Label>Plán</Label>
@@ -483,11 +496,20 @@ function NewPanelDialog({
         <form onSubmit={submit} className="space-y-3">
           <div className="space-y-1.5">
             <Label>Kód</Label>
-            <Input value={code} onChange={(e) => setCode(e.target.value)} required placeholder="PP-01" />
+            <Input
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              required
+              placeholder="PP-01"
+            />
           </div>
           <div className="space-y-1.5">
             <Label>Název</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Rack A – 1U" />
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Rack A – 1U"
+            />
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">

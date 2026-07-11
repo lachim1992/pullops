@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { dbErrorMessage } from "@/lib/dbErrors";
 
 const CreateInput = z.object({
   projectId: z.string().uuid(),
@@ -31,7 +32,7 @@ async function orgFor(supabase: any, projectId: string): Promise<string> {
     .select("organization_id")
     .eq("id", projectId)
     .maybeSingle();
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(dbErrorMessage(error));
   if (!data) throw new Error("project not found");
   return data.organization_id as string;
 }
@@ -56,7 +57,7 @@ export const listRoutes = createServerFn({ method: "GET" })
       .eq("project_id", data.projectId);
     if (data.floorPlanId) q = q.eq("floor_plan_id", data.floorPlanId);
     const { data: rows, error } = await q;
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return rows ?? [];
   });
 
@@ -72,14 +73,14 @@ export const getRouteWithPoints = createServerFn({ method: "GET" })
       )
       .eq("id", data.id)
       .maybeSingle();
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     if (!row) throw new Error("route not found");
     const { data: points, error: perr } = await supabase
       .from("cable_route_points")
       .select("id, sequence, norm_x, norm_y")
       .eq("route_id", data.id)
       .order("sequence", { ascending: true });
-    if (perr) throw new Error(perr.message);
+    if (perr) throw new Error(dbErrorMessage(perr));
     return { route: row, points: points ?? [] };
   });
 
@@ -103,7 +104,7 @@ export const createRoute = createServerFn({ method: "POST" })
       })
       .select("id")
       .single();
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { id: row.id as string };
   });
 
@@ -129,8 +130,11 @@ export const updateRoute = createServerFn({ method: "POST" })
     if (data.toEndpointId !== undefined) patch.to_endpoint_id = data.toEndpointId;
     if (data.rackEndpointId !== undefined) patch.rack_endpoint_id = data.rackEndpointId;
     if (data.manualLengthM !== undefined) patch.manual_length_m = data.manualLengthM;
-    const { error } = await supabase.from("cable_routes").update(patch as never).eq("id", data.id);
-    if (error) throw new Error(error.message);
+    const { error } = await supabase
+      .from("cable_routes")
+      .update(patch as never)
+      .eq("id", data.id);
+    if (error) throw new Error(dbErrorMessage(error));
     return { ok: true };
   });
 
@@ -144,13 +148,13 @@ export const updateRoutePoints = createServerFn({ method: "POST" })
       .select("project_id, floor_plan_id")
       .eq("id", data.routeId)
       .maybeSingle();
-    if (rerr) throw new Error(rerr.message);
+    if (rerr) throw new Error(dbErrorMessage(rerr));
     if (!r) throw new Error("route not found");
     const { error: derr } = await supabase
       .from("cable_route_points")
       .delete()
       .eq("route_id", data.routeId);
-    if (derr) throw new Error(derr.message);
+    if (derr) throw new Error(dbErrorMessage(derr));
     if (data.points.length === 0) return { ok: true };
     const payload = data.points.map((p, i) => ({
       route_id: data.routeId,
@@ -161,7 +165,7 @@ export const updateRoutePoints = createServerFn({ method: "POST" })
       norm_y: p.y,
     }));
     const { error } = await supabase.from("cable_route_points").insert(payload);
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { ok: true };
   });
 
@@ -171,6 +175,6 @@ export const deleteRoute = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { error } = await supabase.from("cable_routes").delete().eq("id", data.id);
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { ok: true };
   });

@@ -141,8 +141,8 @@ function OrgSettingsPage() {
       <section className="mb-8 rounded-sm border border-border bg-card p-4">
         <h2 className="mb-3 text-sm font-semibold">Přidat člena podle emailu</h2>
         <p className="mb-3 text-xs text-muted-foreground">
-          Uživatel musí mít existující účet v PullOps. E-mailové pozvánky pro
-          nové uživatele přijdou v Checkpointu B.
+          Uživatel musí mít existující účet v PullOps. E-mailové pozvánky pro nové uživatele přijdou
+          v Checkpointu B.
         </p>
         <div className="flex items-end gap-2">
           <div className="flex-1 space-y-1.5">
@@ -200,11 +200,7 @@ function OrgSettingsPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeMember(m.user_id)}
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => removeMember(m.user_id)}>
                         <UserMinus className="h-4 w-4" />
                       </Button>
                     </TableCell>

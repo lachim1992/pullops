@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  computeCableLength,
-  metersPerNormUnit,
-  normDistance,
-  polylineNormLength,
-} from "./length";
+import { computeCableLength, metersPerNormUnit, normDistance, polylineNormLength } from "./length";
 
 describe("length engine", () => {
   it("computes normalized distance", () => {

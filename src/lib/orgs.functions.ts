@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { dbErrorMessage } from "@/lib/dbErrors";
 
 const CreateOrgInput = z.object({ name: z.string().min(1).max(120) });
 const UpdateOrgInput = z.object({
@@ -40,7 +41,7 @@ export const listMyOrganizations = createServerFn({ method: "GET" })
       .from("organization_members")
       .select("organization_id, organizations!inner(id, name, created_at)")
       .eq("user_id", userId);
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return (data ?? []).map((r) => ({
       id: r.organizations.id,
       name: r.organizations.name,
@@ -56,7 +57,7 @@ export const createOrganization = createServerFn({ method: "POST" })
     const { data: orgId, error } = await supabase.rpc("create_organization_tx", {
       p_name: data.name,
     });
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { id: orgId as string };
   });
 
@@ -69,22 +70,20 @@ export const updateOrganization = createServerFn({ method: "POST" })
       .from("organizations")
       .update({ name: data.name })
       .eq("id", data.id);
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { ok: true };
   });
 
 export const listOrgMembers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) =>
-    z.object({ organizationId: z.string().uuid() }).parse(data),
-  )
+  .inputValidator((data: unknown) => z.object({ organizationId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { data: rows, error } = await supabase
       .from("organization_members")
       .select("user_id, joined_at")
       .eq("organization_id", data.organizationId);
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
 
     const userIds = (rows ?? []).map((r) => r.user_id);
     const profilesById = new Map<string, string>();
@@ -93,7 +92,7 @@ export const listOrgMembers = createServerFn({ method: "GET" })
         .from("profiles")
         .select("id, full_name")
         .in("id", userIds);
-      if (perr) throw new Error(perr.message);
+      if (perr) throw new Error(dbErrorMessage(perr));
       for (const p of profiles ?? []) profilesById.set(p.id, p.full_name ?? "");
     }
 
@@ -102,7 +101,7 @@ export const listOrgMembers = createServerFn({ method: "GET" })
       .select("user_id, role")
       .eq("organization_id", data.organizationId)
       .is("project_id", null);
-    if (rerr) throw new Error(rerr.message);
+    if (rerr) throw new Error(dbErrorMessage(rerr));
 
     const rolesByUser = new Map<string, string[]>();
     for (const r of roles ?? []) {
@@ -127,7 +126,7 @@ export const addOrgMemberByEmail = createServerFn({ method: "POST" })
       p_organization_id: data.organizationId,
       p_email: data.email,
     });
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { userId: uid as string };
   });
 
@@ -140,7 +139,7 @@ export const removeOrgMember = createServerFn({ method: "POST" })
       p_organization_id: data.organizationId,
       p_user_id: data.userId,
     });
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { ok: true };
   });
 
@@ -155,7 +154,7 @@ export const setOrgRole = createServerFn({ method: "POST" })
       p_role: data.role,
       p_grant: data.grant,
     });
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { ok: true };
   });
 
@@ -168,7 +167,7 @@ export const getMyProfile = createServerFn({ method: "GET" })
       .select("id, full_name, default_organization_id")
       .eq("id", userId)
       .maybeSingle();
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return {
       id: userId,
       email: (claims as { email?: string }).email ?? "",

@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { dbErrorMessage } from "@/lib/dbErrors";
 
 export const listRacks = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -22,7 +23,7 @@ export const listRacks = createServerFn({ method: "GET" })
       .order("code");
     if (data.floorPlanId) q = q.eq("floor_plan_id", data.floorPlanId);
     const { data: rows, error } = await q;
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return rows ?? [];
   });
 
@@ -57,7 +58,7 @@ export const createRack = createServerFn({ method: "POST" })
       } as never)
       .select("id")
       .single();
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { id: (row as { id: string }).id };
   });
 
@@ -83,8 +84,11 @@ export const updateRack = createServerFn({ method: "POST" })
     if (data.x !== undefined) patch.x = data.x;
     if (data.y !== undefined) patch.y = data.y;
     if (data.notes !== undefined) patch.notes = data.notes;
-    const { error } = await supabase.from("racks").update(patch as never).eq("id", data.id);
-    if (error) throw new Error(error.message);
+    const { error } = await supabase
+      .from("racks")
+      .update(patch as never)
+      .eq("id", data.id);
+    if (error) throw new Error(dbErrorMessage(error));
     return { ok: true };
   });
 
@@ -94,7 +98,7 @@ export const deleteRack = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { error } = await supabase.from("racks").delete().eq("id", data.id);
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { ok: true };
   });
 
@@ -114,6 +118,6 @@ export const assignPanelToRack = createServerFn({ method: "POST" })
       .from("patch_panels")
       .update({ rack_id: data.rackId } as never)
       .eq("id", data.panelId);
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { ok: true };
   });

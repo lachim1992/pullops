@@ -72,12 +72,42 @@ function ProjectDetailPage() {
               Sekce projektu
             </h2>
             <div className="grid gap-2 md:grid-cols-3">
-              <SectionLink projectId={projectId} to="/projects/$projectId/documents" title="Dokumenty" desc="Podklady, půdorysy, PDF" />
-              <SectionLink projectId={projectId} to="/projects/$projectId/plans" title="Plány" desc="Kalibrace, endpointy, trasy" />
-              <SectionLink projectId={projectId} to="/projects/$projectId/endpoints" title="Endpointy" desc="Seznam koncových bodů" />
-              <SectionLink projectId={projectId} to="/projects/$projectId/cable-types" title="Typy kabelů" desc="Číselník s rezervou" />
-              <SectionLink projectId={projectId} to="/projects/$projectId/cables" title="Kabelový registr" desc="Kabely, stavy, délky" />
-              <SectionLink projectId={projectId} to="/projects/$projectId/members" title="Členové" desc="Přístupy a role" />
+              <SectionLink
+                projectId={projectId}
+                to="/projects/$projectId/documents"
+                title="Dokumenty"
+                desc="Podklady, půdorysy, PDF"
+              />
+              <SectionLink
+                projectId={projectId}
+                to="/projects/$projectId/plans"
+                title="Plány"
+                desc="Kalibrace, endpointy, trasy"
+              />
+              <SectionLink
+                projectId={projectId}
+                to="/projects/$projectId/endpoints"
+                title="Endpointy"
+                desc="Seznam koncových bodů"
+              />
+              <SectionLink
+                projectId={projectId}
+                to="/projects/$projectId/cable-types"
+                title="Typy kabelů"
+                desc="Číselník s rezervou"
+              />
+              <SectionLink
+                projectId={projectId}
+                to="/projects/$projectId/cables"
+                title="Kabelový registr"
+                desc="Kabely, stavy, délky"
+              />
+              <SectionLink
+                projectId={projectId}
+                to="/projects/$projectId/members"
+                title="Členové"
+                desc="Přístupy a role"
+              />
             </div>
           </div>
         </>

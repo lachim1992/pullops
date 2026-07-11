@@ -2,10 +2,15 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { dbErrorMessage } from "@/lib/dbErrors";
 
 const CreateInput = z.object({
   projectId: z.string().uuid(),
-  code: z.string().min(1).max(40).regex(/^[A-Z0-9_]+$/, "Kód: velká písmena, číslice, podtržítko"),
+  code: z
+    .string()
+    .min(1)
+    .max(40)
+    .regex(/^[A-Z0-9_]+$/, "Kód: velká písmena, číslice, podtržítko"),
   label: z.string().min(1).max(80),
   defaultReserveM: z.number().min(0).max(50),
   color: z.string().max(64).optional(),
@@ -28,7 +33,7 @@ async function orgFor(supabase: any, projectId: string): Promise<string> {
     .select("organization_id")
     .eq("id", projectId)
     .maybeSingle();
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(dbErrorMessage(error));
   if (!data) throw new Error("project not found");
   return data.organization_id as string;
 }
@@ -44,7 +49,7 @@ export const listEndpointKinds = createServerFn({ method: "GET" })
       .eq("project_id", data.projectId)
       .order("sort_order", { ascending: true })
       .order("label", { ascending: true });
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return rows ?? [];
   });
 
@@ -69,7 +74,7 @@ export const createEndpointKind = createServerFn({ method: "POST" })
       })
       .select("id")
       .single();
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { id: row.id as string };
   });
 
@@ -84,8 +89,11 @@ export const updateEndpointKind = createServerFn({ method: "POST" })
     if (data.color !== undefined) patch.color = data.color;
     if (data.icon !== undefined) patch.icon = data.icon;
     if (data.sortOrder !== undefined) patch.sort_order = data.sortOrder;
-    const { error } = await supabase.from("endpoint_kinds").update(patch as never).eq("id", data.id);
-    if (error) throw new Error(error.message);
+    const { error } = await supabase
+      .from("endpoint_kinds")
+      .update(patch as never)
+      .eq("id", data.id);
+    if (error) throw new Error(dbErrorMessage(error));
     return { ok: true };
   });
 
@@ -99,9 +107,9 @@ export const deleteEndpointKind = createServerFn({ method: "POST" })
       .select("is_system")
       .eq("id", data.id)
       .maybeSingle();
-    if (readErr) throw new Error(readErr.message);
+    if (readErr) throw new Error(dbErrorMessage(readErr));
     if (row?.is_system) throw new Error("Systémový typ nelze smazat");
     const { error } = await supabase.from("endpoint_kinds").delete().eq("id", data.id);
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { ok: true };
   });

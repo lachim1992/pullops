@@ -53,12 +53,10 @@ function OnboardingPage() {
           </div>
           <span className="font-mono text-sm font-semibold">PullOps</span>
         </div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Vytvořte první organizaci
-        </h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Vytvořte první organizaci</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Stanete se administrátorem této organizace. Můžete přizvat další členy
-          a spravovat projekty.
+          Stanete se administrátorem této organizace. Můžete přizvat další členy a spravovat
+          projekty.
         </p>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-3">

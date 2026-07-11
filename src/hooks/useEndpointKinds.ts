@@ -62,7 +62,10 @@ export const ICON_CHOICES = [
   "HelpCircle",
 ];
 
-export function resolveKindIcon(name: string | null | undefined, codeFallback?: string): LucideIcon {
+export function resolveKindIcon(
+  name: string | null | undefined,
+  codeFallback?: string,
+): LucideIcon {
   if (name && ICONS[name]) return ICONS[name];
   if (codeFallback) return endpointKindInfo(codeFallback).icon;
   return HelpCircle;
@@ -89,8 +92,7 @@ export function useEndpointKindMutations(projectId: string | undefined) {
   const createFn = useServerFn(createEndpointKind);
   const updateFn = useServerFn(updateEndpointKind);
   const deleteFn = useServerFn(deleteEndpointKind);
-  const invalidate = () =>
-    qc.invalidateQueries({ queryKey: ["endpoint-kinds", projectId] });
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["endpoint-kinds", projectId] });
   return {
     create: useMutation({
       mutationFn: (payload: {

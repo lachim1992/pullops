@@ -53,9 +53,8 @@ function LandingPage() {
               Celý životní cyklus na jednom místě.
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground">
-              PullOps řídí strukturovanou kabeláž na renovacích a nových stavbách
-              McDonald's — od projektové dokumentace přes trasy a cívky až po
-              tah v terénu, testování a předání.
+              PullOps řídí strukturovanou kabeláž na renovacích a nových stavbách McDonald's — od
+              projektové dokumentace přes trasy a cívky až po tah v terénu, testování a předání.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild size="lg">
@@ -98,10 +97,9 @@ function LandingPage() {
         <section className="mx-auto max-w-6xl px-6 py-16">
           <h2 className="text-xl font-semibold">Kde jsme teď</h2>
           <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-            Aktuální dodávka pokrývá základ: přihlášení, organizace, projekty,
-            role a auditní vrstva. Dokumentace, plány s kalibrací, kabelový
-            registr, cívky a Visual Pull Station přijdou v následujících
-            checkpointech.
+            Aktuální dodávka pokrývá základ: přihlášení, organizace, projekty, role a auditní
+            vrstva. Dokumentace, plány s kalibrací, kabelový registr, cívky a Visual Pull Station
+            přijdou v následujících checkpointech.
           </p>
         </section>
       </main>
@@ -116,15 +114,7 @@ function LandingPage() {
   );
 }
 
-function Feature({
-  icon: Icon,
-  title,
-  body,
-}: {
-  icon: typeof Cable;
-  title: string;
-  body: string;
-}) {
+function Feature({ icon: Icon, title, body }: { icon: typeof Cable; title: string; body: string }) {
   return (
     <div className="bg-card p-6">
       <Icon className="h-5 w-5 text-accent" />

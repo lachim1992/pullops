@@ -9,15 +9,9 @@ import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  getPatchPanel,
-  updatePatchPanel,
-  updatePatchPort,
-} from "@/lib/patchPanels.functions";
+import { getPatchPanel, updatePatchPanel, updatePatchPort } from "@/lib/patchPanels.functions";
 
-export const Route = createFileRoute(
-  "/_authenticated/projects/$projectId/patch-panels/$panelId",
-)({
+export const Route = createFileRoute("/_authenticated/projects/$projectId/patch-panels/$panelId")({
   head: () => ({
     meta: [{ title: "Detail patch panelu · PullOps" }, { name: "robots", content: "noindex" }],
   }),

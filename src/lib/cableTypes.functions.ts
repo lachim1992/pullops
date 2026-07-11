@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { dbErrorMessage } from "@/lib/dbErrors";
 
 const CreateInput = z.object({
   projectId: z.string().uuid(),
@@ -25,7 +26,7 @@ async function orgFor(supabase: any, projectId: string): Promise<string> {
     .select("organization_id")
     .eq("id", projectId)
     .maybeSingle();
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(dbErrorMessage(error));
   if (!data) throw new Error("project not found");
   return data.organization_id as string;
 }
@@ -40,7 +41,7 @@ export const listCableTypes = createServerFn({ method: "GET" })
       .select("id, code, description, default_reserve_m, color_hint, updated_at")
       .eq("project_id", data.projectId)
       .order("code", { ascending: true });
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return rows ?? [];
   });
 
@@ -62,7 +63,7 @@ export const createCableType = createServerFn({ method: "POST" })
       })
       .select("id")
       .single();
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { id: row.id as string };
   });
 
@@ -76,8 +77,11 @@ export const updateCableType = createServerFn({ method: "POST" })
     if (data.description !== undefined) patch.description = data.description;
     if (data.defaultReserveM !== undefined) patch.default_reserve_m = data.defaultReserveM;
     if (data.colorHint !== undefined) patch.color_hint = data.colorHint;
-    const { error } = await supabase.from("cable_types").update(patch as never).eq("id", data.id);
-    if (error) throw new Error(error.message);
+    const { error } = await supabase
+      .from("cable_types")
+      .update(patch as never)
+      .eq("id", data.id);
+    if (error) throw new Error(dbErrorMessage(error));
     return { ok: true };
   });
 
@@ -87,6 +91,6 @@ export const deleteCableType = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { error } = await supabase.from("cable_types").delete().eq("id", data.id);
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { ok: true };
   });

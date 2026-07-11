@@ -30,14 +30,9 @@ import {
   useEndpointKinds,
 } from "@/hooks/useEndpointKinds";
 
-export const Route = createFileRoute(
-  "/_authenticated/projects/$projectId/endpoint-kinds",
-)({
+export const Route = createFileRoute("/_authenticated/projects/$projectId/endpoint-kinds")({
   head: () => ({
-    meta: [
-      { title: "Typy endpointů · PullOps" },
-      { name: "robots", content: "noindex" },
-    ],
+    meta: [{ title: "Typy endpointů · PullOps" }, { name: "robots", content: "noindex" }],
   }),
   component: EndpointKindsPage,
 });
@@ -85,9 +80,9 @@ function EndpointKindsPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Typy endpointů</h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Rezerva u každého typu představuje metry navíc připočtené na tuto
-            stranu kabelu (vertikální trasy, přebytek na zapojení). Součet obou
-            stran kabelu se přičítá k naměřené trase v plánu.
+            Rezerva u každého typu představuje metry navíc připočtené na tuto stranu kabelu
+            (vertikální trasy, přebytek na zapojení). Součet obou stran kabelu se přičítá k naměřené
+            trase v plánu.
           </p>
         </div>
         <NewKindDialog projectId={projectId} />
@@ -96,8 +91,8 @@ function EndpointKindsPage() {
       <div className="mb-4 flex items-start gap-2 rounded-sm border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
         <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
         <div>
-          Rezerva z endpointu <strong>přebíjí</strong> rezervu z typu kabelu.
-          Pokud u endpointu není typ nastaven, použije se rezerva typu kabelu.
+          Rezerva z endpointu <strong>přebíjí</strong> rezervu z typu kabelu. Pokud u endpointu není
+          typ nastaven, použije se rezerva typu kabelu.
         </div>
       </div>
 
@@ -164,11 +159,7 @@ function EndpointKindsPage() {
                     </td>
                     <td className="p-2 text-right">
                       {!k.is_system && (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => onDelete(k.id, k.label)}
-                        >
+                        <Button size="icon" variant="ghost" onClick={() => onDelete(k.id, k.label)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       )}
@@ -195,7 +186,10 @@ function NewKindDialog({ projectId }: { projectId: string }) {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    const normalized = code.trim().toUpperCase().replace(/[^A-Z0-9_]/g, "_");
+    const normalized = code
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9_]/g, "_");
     if (!normalized || !label.trim()) return;
     try {
       await create.mutateAsync({
