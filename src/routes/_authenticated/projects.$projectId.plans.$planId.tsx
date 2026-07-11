@@ -80,7 +80,7 @@ const BUNDLE_SEGMENT_TYPES: Record<
   BundleSegmentType,
   { label: string; color: string; extra_pct: number }
 > = {
-  DIRECT: { label: "Přímá", color: "hsl(var(--accent))", extra_pct: 0 },
+  DIRECT: { label: "Přímá", color: "var(--accent)", extra_pct: 0 },
   TRAY: { label: "Žlab / lišta", color: "hsl(210 80% 50%)", extra_pct: 0 },
   WALL: { label: "Výsek / trubka", color: "hsl(15 80% 55%)", extra_pct: 10 },
   CEILING: { label: "Podhled", color: "hsl(280 55% 55%)", extra_pct: 15 },
@@ -794,23 +794,23 @@ function PlanEditorPage() {
                     y1={calibration.a.y}
                     x2={calibration.b.x}
                     y2={calibration.b.y}
-                    stroke="hsl(var(--accent))"
+                    stroke="var(--accent)"
                     strokeWidth={0.003}
                   />
                   <circle
                     cx={calibration.a.x}
                     cy={calibration.a.y}
                     r={0.002}
-                    fill="hsl(var(--accent))"
-                    stroke="hsl(var(--background))"
+                    fill="var(--accent)"
+                    stroke="var(--background)"
                     strokeWidth={0.0005}
                   />
                   <circle
                     cx={calibration.b.x}
                     cy={calibration.b.y}
                     r={0.002}
-                    fill="hsl(var(--accent))"
-                    stroke="hsl(var(--background))"
+                    fill="var(--accent)"
+                    stroke="var(--background)"
                     strokeWidth={0.0005}
                   />
                 </>
@@ -820,8 +820,8 @@ function PlanEditorPage() {
                   cx={calA.x}
                   cy={calA.y}
                   r={0.0025}
-                  fill="hsl(var(--primary))"
-                  stroke="hsl(var(--background))"
+                  fill="var(--primary)"
+                  stroke="var(--background)"
                   strokeWidth={0.0005}
                 />
               )}
@@ -830,8 +830,8 @@ function PlanEditorPage() {
                   cx={calB.x}
                   cy={calB.y}
                   r={0.0025}
-                  fill="hsl(var(--primary))"
-                  stroke="hsl(var(--background))"
+                  fill="var(--primary)"
+                  stroke="var(--background)"
                   strokeWidth={0.0005}
                 />
               )}
@@ -841,7 +841,7 @@ function PlanEditorPage() {
                   y1={calA.y}
                   x2={calB.x}
                   y2={calB.y}
-                  stroke="hsl(var(--primary))"
+                  stroke="var(--primary)"
                   strokeWidth={0.003}
                   strokeDasharray="0.01 0.005"
                 />
@@ -869,8 +869,8 @@ function PlanEditorPage() {
                           const p2 = pts[i + 1];
                           const seg = savedSegs[i];
                           const color = seg
-                            ? (BUNDLE_SEGMENT_TYPES[seg.type]?.color ?? "hsl(var(--primary))")
-                            : "hsl(var(--primary))";
+                            ? (BUNDLE_SEGMENT_TYPES[seg.type]?.color ?? "var(--primary)")
+                            : "var(--primary)";
                           return (
                             <line
                               key={`seg-${i}`}
@@ -891,8 +891,8 @@ function PlanEditorPage() {
                             cx={p.x}
                             cy={p.y}
                             r={0.008 / zoom}
-                            fill="hsl(var(--primary))"
-                            stroke="white"
+                            fill="var(--primary)"
+                            stroke="var(--background)"
                             strokeWidth={0.002 / zoom}
                             style={{ cursor: "grab" }}
                             onMouseDown={(e) => {
@@ -907,7 +907,7 @@ function PlanEditorPage() {
                         x={pts[0].x}
                         y={pts[0].y - 0.012 / zoom}
                         fontSize={0.014 / zoom}
-                        fill="hsl(var(--primary))"
+                        fill="var(--primary)"
                         style={{ pointerEvents: "none", userSelect: "none" }}
                       >
                         {b.code}
@@ -944,8 +944,8 @@ function PlanEditorPage() {
                       cx={p.x}
                       cy={p.y}
                       r={0.01 / zoom}
-                      fill="hsl(var(--accent))"
-                      stroke="white"
+                      fill="var(--accent)"
+                      stroke="var(--background)"
                       strokeWidth={0.002 / zoom}
                       onDoubleClick={(e) => {
                         e.stopPropagation();
@@ -970,7 +970,7 @@ function PlanEditorPage() {
                       <polyline
                         points={pts.map((p) => `${p.x},${p.y}`).join(" ")}
                         fill="none"
-                        stroke="hsl(var(--accent))"
+                        stroke="var(--accent)"
                         strokeOpacity={0.85}
                         strokeWidth={0.003 / zoom}
                         strokeLinejoin="round"
@@ -979,7 +979,7 @@ function PlanEditorPage() {
                         cx={pts[0].x}
                         cy={pts[0].y}
                         r={0.004 / zoom}
-                        fill="hsl(var(--accent))"
+                        fill="var(--accent)"
                       />
                     </g>
                   );
@@ -1000,8 +1000,8 @@ function PlanEditorPage() {
                         y={cy - s}
                         width={s * 2}
                         height={s * 2}
-                        fill="hsl(var(--foreground))"
-                        stroke="hsl(var(--background))"
+                        fill="var(--foreground)"
+                        stroke="var(--background)"
                         strokeWidth={0.002 / zoom}
                         style={{ cursor: racksInteractive ? "grab" : "default" }}
                         onMouseDown={(e) => {
@@ -1017,7 +1017,7 @@ function PlanEditorPage() {
                         y={cy + s + 0.012 / zoom}
                         textAnchor="middle"
                         fontSize={0.014 / zoom}
-                        fill="hsl(var(--foreground))"
+                        fill="var(--foreground)"
                         style={{ pointerEvents: "none", userSelect: "none" }}
                       >
                         {r.code}
@@ -1033,7 +1033,7 @@ function PlanEditorPage() {
                   width={0.036 / zoom}
                   height={0.036 / zoom}
                   fill="none"
-                  stroke="hsl(var(--destructive))"
+                  stroke="var(--destructive)"
                   strokeWidth={0.003 / zoom}
                   strokeDasharray="0.01 0.005"
                 />
@@ -1044,7 +1044,7 @@ function PlanEditorPage() {
                   cy={pendingPortPos.y}
                   r={0.014 / zoom}
                   fill="none"
-                  stroke="hsl(var(--destructive))"
+                  stroke="var(--destructive)"
                   strokeWidth={0.003 / zoom}
                   strokeDasharray="0.01 0.005"
                 />
@@ -1054,7 +1054,7 @@ function PlanEditorPage() {
                   const kindInfo = endpointKindInfo(ep.endpoint_kind);
                   const isPatch = ep.endpoint_kind === "PATCH";
                   const isSelected = ep.id === selectedEndpointId;
-                  const fill = isSelected ? "hsl(var(--destructive))" : kindInfo.color;
+                  const fill = isSelected ? "var(--destructive)" : kindInfo.color;
                   const isDragging =
                     dragTarget?.kind === "endpoint" && dragTarget.id === ep.id && dragPos;
                   const cx = isDragging ? dragPos!.x : Number(ep.norm_x);
@@ -1092,18 +1092,25 @@ function PlanEditorPage() {
                           width={r * 2}
                           height={r * 2}
                           fill={fill}
-                          stroke="white"
+                          stroke="var(--background)"
                           strokeWidth={sw}
                         />
                       ) : (
-                        <circle cx={cx} cy={cy} r={r} fill={fill} stroke="white" strokeWidth={sw} />
+                        <circle
+                          cx={cx}
+                          cy={cy}
+                          r={r}
+                          fill={fill}
+                          stroke="var(--background)"
+                          strokeWidth={sw}
+                        />
                       )}
                       <text
                         x={cx}
                         y={cy - r - 0.006 / zoom}
                         textAnchor="middle"
                         fontSize={0.014 / zoom}
-                        fill="hsl(var(--foreground))"
+                        fill="var(--foreground)"
                         style={{ pointerEvents: "none", userSelect: "none" }}
                       >
                         {ep.code}
@@ -1116,7 +1123,7 @@ function PlanEditorPage() {
                 <polyline
                   points={draftPoints.map((p) => `${p.x},${p.y}`).join(" ")}
                   fill="none"
-                  stroke="hsl(var(--destructive))"
+                  stroke="var(--destructive)"
                   strokeWidth={0.004 / zoom}
                   strokeLinejoin="round"
                 />
@@ -1128,8 +1135,8 @@ function PlanEditorPage() {
                     cx={p.x}
                     cy={p.y}
                     r={0.012 / zoom}
-                    fill="hsl(var(--destructive))"
-                    stroke="white"
+                    fill="var(--destructive)"
+                    stroke="var(--background)"
                     strokeWidth={0.002 / zoom}
                     style={{ cursor: "grab" }}
                     onMouseDown={(e) => {
@@ -1148,7 +1155,7 @@ function PlanEditorPage() {
                   cy={pendingPos.y}
                   r={0.012 / zoom}
                   fill="none"
-                  stroke="hsl(var(--destructive))"
+                  stroke="var(--destructive)"
                   strokeWidth={0.003 / zoom}
                 />
               )}
