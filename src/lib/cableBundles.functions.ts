@@ -4,6 +4,12 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const PointSchema = z.object({ x: z.number(), y: z.number() });
+const SegmentTypeSchema = z.enum(["DIRECT", "TRAY", "WALL", "CEILING"]);
+const SegmentSchema = z.object({
+  type: SegmentTypeSchema,
+  extra_pct: z.number().min(0).max(200).default(0),
+});
+
 
 export const listBundles = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
