@@ -721,7 +721,7 @@ function SpoolsTab({
     byType.set(s.typeCode, arr);
   }
 
-  if (spools.length === 0) {
+  if (spools.length === 0 && dayBlocks.length === 0) {
     return (
       <div className="rounded-sm border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
         Spulky nejde nasimulovat, dokud kabely nemají trasu a kalibraci.
@@ -729,45 +729,101 @@ function SpoolsTab({
     );
   }
 
+  const hasBlocks = dayBlocks.length > 0;
+
   return (
     <div className="space-y-6">
-      {Array.from(byType.entries()).map(([typeCode, list]) => {
-        let typePulled = 0;
-        let typePlanned = 0;
-        for (const s of list) {
-          typePlanned += s.used;
-          for (const c of s.cables) {
-            if (cableById.get(c.id)?.status === "PULLED") typePulled += c.meters;
+      {hasBlocks &&
+        dayBlocks.map((block) => {
+          let pulled = 0;
+          let planned = 0;
+          for (const s of block.spools) {
+            planned += s.used;
+            for (const c of s.cables) {
+              if (cableById.get(c.id)?.status === "PULLED") pulled += c.meters;
+            }
           }
-        }
-        return (
-          <section key={typeCode} className="rounded-sm border border-border bg-card">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border p-3">
-              <div className="flex items-center gap-2">
-                <PackageOpen className="h-4 w-4 text-muted-foreground" />
-                <h2 className="font-mono text-sm font-bold uppercase">{typeCode}</h2>
-                <Badge variant="outline" className="font-mono text-[10px]">
-                  {list.length} {list.length === 1 ? "spulka" : list.length < 5 ? "spulky" : "spulek"}
-                </Badge>
+          return (
+            <section key={block.id} className="rounded-sm border border-border bg-card">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border p-3">
+                <div className="flex items-center gap-2">
+                  <PackageOpen className="h-4 w-4 text-muted-foreground" />
+                  <h2 className="font-mono text-sm font-bold uppercase">{block.name}</h2>
+                  {block.plannedDate && (
+                    <Badge variant="outline" className="font-mono text-[10px]">
+                      {block.plannedDate}
+                    </Badge>
+                  )}
+                  <Badge variant="outline" className="font-mono text-[10px]">
+                    {block.spoolCount} × {block.spoolLengthM.toFixed(0)} m
+                  </Badge>
+                </div>
+                <div className="font-mono text-xs text-muted-foreground">
+                  nataženo {pulled.toFixed(1)} / plán {planned.toFixed(1)} m ·{" "}
+                  kapacita {block.totalCapacity.toFixed(0)} m ·{" "}
+                  zbývá {Math.max(0, planned - pulled).toFixed(1)} m
+                </div>
               </div>
-              <div className="font-mono text-xs text-muted-foreground">
-                nataženo {typePulled.toFixed(1)} / plán {typePlanned.toFixed(1)} m ·{" "}
-                zbývá {Math.max(0, typePlanned - typePulled).toFixed(1)} m
+              <div className="grid gap-4 p-4 lg:grid-cols-2">
+                {block.spools.map((spool) => (
+                  <SpoolCard
+                    key={`${block.id}-${spool.index}`}
+                    spool={spool}
+                    cableById={cableById}
+                    onToggle={onToggle}
+                  />
+                ))}
               </div>
+            </section>
+          );
+        })}
+
+      {spools.length > 0 && (
+        <>
+          {hasBlocks && (
+            <div className="border-t border-dashed border-border pt-2 font-mono text-xs uppercase tracking-wide text-muted-foreground">
+              Nezařazené kabely (bez denního bloku)
             </div>
-            <div className="grid gap-4 p-4 lg:grid-cols-2">
-              {list.map((spool) => (
-                <SpoolCard
-                  key={`${typeCode}-${spool.index}`}
-                  spool={spool}
-                  cableById={cableById}
-                  onToggle={onToggle}
-                />
-              ))}
-            </div>
-          </section>
-        );
-      })}
+          )}
+          {Array.from(byType.entries()).map(([typeCode, list]) => {
+            let typePulled = 0;
+            let typePlanned = 0;
+            for (const s of list) {
+              typePlanned += s.used;
+              for (const c of s.cables) {
+                if (cableById.get(c.id)?.status === "PULLED") typePulled += c.meters;
+              }
+            }
+            return (
+              <section key={typeCode} className="rounded-sm border border-border bg-card">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border p-3">
+                  <div className="flex items-center gap-2">
+                    <PackageOpen className="h-4 w-4 text-muted-foreground" />
+                    <h2 className="font-mono text-sm font-bold uppercase">{typeCode}</h2>
+                    <Badge variant="outline" className="font-mono text-[10px]">
+                      {list.length} {list.length === 1 ? "spulka" : list.length < 5 ? "spulky" : "spulek"}
+                    </Badge>
+                  </div>
+                  <div className="font-mono text-xs text-muted-foreground">
+                    nataženo {typePulled.toFixed(1)} / plán {typePlanned.toFixed(1)} m ·{" "}
+                    zbývá {Math.max(0, typePlanned - typePulled).toFixed(1)} m
+                  </div>
+                </div>
+                <div className="grid gap-4 p-4 lg:grid-cols-2">
+                  {list.map((spool) => (
+                    <SpoolCard
+                      key={`${typeCode}-${spool.index}`}
+                      spool={spool}
+                      cableById={cableById}
+                      onToggle={onToggle}
+                    />
+                  ))}
+                </div>
+              </section>
+            );
+          })}
+        </>
+      )}
     </div>
   );
 }
