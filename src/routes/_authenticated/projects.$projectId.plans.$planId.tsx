@@ -603,18 +603,16 @@ function PlanEditorPage() {
                 Body A/B jsou příliš blízko sebe ({calNormDist.toFixed(4)}) — překalibrujte
               </span>
             )}
-            <Button size="sm" variant="outline" className="h-6 px-2 text-[10px]" onClick={autoAssign}>
-              Přiřadit kabely k nejbližšímu kmeni
-            </Button>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant={mode === "endpoint" ? "default" : "outline"} size="sm" onClick={() => setMode("endpoint")}>Endpointy</Button>
-          <Button variant={mode === "rack" ? "default" : "outline"} size="sm" onClick={() => setMode("rack")}>Racky</Button>
-          <Button variant={mode === "bundle" ? "default" : "outline"} size="sm" onClick={() => setMode("bundle")}>Kmeny</Button>
-          <Button variant={mode === "port" ? "default" : "outline"} size="sm" onClick={() => setMode("port")}>Trasy</Button>
-          <Button variant={mode === "calibrate" ? "default" : "outline"} size="sm" onClick={() => setMode("calibrate")}>Kalibrace</Button>
+        <div className="flex flex-wrap gap-1 rounded-md border border-border bg-muted/40 p-1">
+          <Button variant={mode === "endpoint" ? "default" : "ghost"} size="sm" onClick={() => setMode("endpoint")}>1 · Endpointy</Button>
+          <Button variant={mode === "rack" ? "default" : "ghost"} size="sm" onClick={() => setMode("rack")}>2 · Racky</Button>
+          <Button variant={mode === "bundle" ? "default" : "ghost"} size="sm" onClick={() => setMode("bundle")}>3 · Kmeny</Button>
+          <Button variant={mode === "port" ? "default" : "ghost"} size="sm" onClick={() => setMode("port")}>4 · Trasy</Button>
+          <Button variant={mode === "calibrate" ? "default" : "ghost"} size="sm" onClick={() => setMode("calibrate")}>Kalibrace</Button>
         </div>
+
       </header>
 
 
