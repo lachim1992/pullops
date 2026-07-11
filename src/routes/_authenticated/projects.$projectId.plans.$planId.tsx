@@ -824,7 +824,7 @@ function PlanEditorPage() {
                 </>
               )}
               {/* Branch lines: bundle anchor → cable endpoint */}
-              {(branches.data ?? []).map((br) => {
+              {showBranches && (branches.data ?? []).map((br) => {
                 const pts = br.branchPoints ?? [];
                 if (pts.length < 2) return null;
                 return (
@@ -833,7 +833,7 @@ function PlanEditorPage() {
                       points={pts.map((p) => `${p.x},${p.y}`).join(" ")}
                       fill="none"
                       stroke="hsl(var(--accent))"
-                      strokeOpacity={0.75}
+                      strokeOpacity={0.85}
                       strokeWidth={0.003 / zoom}
                       strokeLinejoin="round"
                     />
@@ -847,13 +847,14 @@ function PlanEditorPage() {
                 );
               })}
               {/* Racks */}
-              {(racks.data ?? []).map((r) => {
+              {showRacks && (racks.data ?? []).map((r) => {
                 const isDragging = dragTarget?.kind === "rack" && dragTarget.id === r.id && dragPos;
                 const cx = isDragging ? dragPos!.x : Number(r.x);
                 const cy = isDragging ? dragPos!.y : Number(r.y);
                 const s = 0.018 / zoom;
+                const opacity = racksGhost ? 0.4 : 1;
                 return (
-                  <g key={r.id}>
+                  <g key={r.id} opacity={opacity}>
                     <rect
                       x={cx - s}
                       y={cy - s}
@@ -862,8 +863,9 @@ function PlanEditorPage() {
                       fill="hsl(var(--foreground))"
                       stroke="hsl(var(--background))"
                       strokeWidth={0.002 / zoom}
-                      style={{ cursor: "grab" }}
+                      style={{ cursor: racksInteractive ? "grab" : "default" }}
                       onMouseDown={(e) => {
+                        if (!racksInteractive) return;
                         e.stopPropagation();
                         dragMovedRef.current = false;
                         setDragTarget({ kind: "rack", id: r.id });
@@ -883,6 +885,7 @@ function PlanEditorPage() {
                   </g>
                 );
               })}
+
               {pendingRackPos && mode === "rack" && (
                 <rect
                   x={pendingRackPos.x - 0.018 / zoom}
