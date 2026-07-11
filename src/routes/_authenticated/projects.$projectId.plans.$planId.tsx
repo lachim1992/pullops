@@ -1425,30 +1425,47 @@ function PlanEditorPage() {
           )}
 
 
-          <div className="rounded-sm border border-border">
-            <div className="border-b border-border p-3 text-sm font-semibold">
-              Endpointy na plánu ({endpoints.data?.length ?? 0})
-            </div>
-            <div className="max-h-96 divide-y divide-border overflow-y-auto text-sm">
-              {(endpoints.data ?? []).map((ep) => (
-                <div key={ep.id} className="flex items-center gap-2 p-2">
-                  <div className="flex-1">
-                    <div className="font-mono text-xs">{ep.code}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {ep.label ?? ep.endpoint_kind}
+          {mode === "endpoint" && (
+            <div className="rounded-sm border border-border">
+              <div className="border-b border-border p-3 text-sm font-semibold">
+                Endpointy na plánu ({endpoints.data?.length ?? 0})
+              </div>
+              <div className="max-h-96 divide-y divide-border overflow-y-auto text-sm">
+                {(endpoints.data ?? []).map((ep) => {
+                  const info = endpointKindInfo(ep.endpoint_kind);
+                  const Icon = info.icon;
+                  return (
+                    <div key={ep.id} className="flex items-center gap-2 p-2">
+                      <span
+                        className="flex h-6 w-6 items-center justify-center rounded-sm"
+                        style={{ background: info.color, color: "white" }}
+                        title={info.label}
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-mono text-xs truncate">{ep.code}</div>
+                        <div className="text-[10px] text-muted-foreground truncate">
+                          {ep.label ?? info.label}
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeEndpoint(ep.id)}
+                      >
+                        ✕
+                      </Button>
                     </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeEndpoint(ep.id)}
-                  >
-                    ✕
-                  </Button>
-                </div>
-              ))}
+                  );
+                })}
+                {(endpoints.data?.length ?? 0) === 0 && (
+                  <div className="p-3 text-center text-xs text-muted-foreground">Zatím žádný endpoint.</div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
+
         </aside>
       </div>
     </AppShell>
