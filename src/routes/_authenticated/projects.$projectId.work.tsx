@@ -341,6 +341,7 @@ function PlanWorkspace(props: {
               cables={filteredCables}
               selectedCableId={selectedCable?.id ?? null}
               selectedEndpointId={selectedEndpoint?.id ?? null}
+              hoveredCableId={hoveredCableId}
               onSelectCable={(id) => {
                 setSelectedCableId(id);
                 setSelectedEndpointId(null);
