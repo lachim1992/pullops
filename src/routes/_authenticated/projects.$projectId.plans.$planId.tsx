@@ -17,7 +17,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { getFloorPlan, setCalibration, updateFloorPlan } from "@/lib/floorPlans.functions";
+import { getFloorPlan, setCalibration, setFloorPlanPublished, updateFloorPlan } from "@/lib/floorPlans.functions";
 import { listProjectDocuments } from "@/lib/documents.functions";
 
 import {
@@ -71,7 +71,7 @@ export const Route = createFileRoute("/_authenticated/projects/$projectId/plans/
   component: PlanEditorPage,
 });
 
-type Mode = "calibrate" | "endpoint" | "route" | "rack" | "bundle" | "port";
+type Mode = "calibrate" | "endpoint" | "route" | "rack" | "bundle" | "port" | "publish";
 
 type BundleSegmentType = "DIRECT" | "TRAY" | "WALL" | "CEILING";
 type BundleSegment = { type: BundleSegmentType; extra_pct: number };
@@ -694,8 +694,16 @@ function PlanEditorPage() {
           >
             Kalibrace
           </Button>
+          <Button
+            variant={mode === "publish" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setMode("publish")}
+          >
+            5 · Zadat plán
+          </Button>
         </div>
       </header>
+
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div
