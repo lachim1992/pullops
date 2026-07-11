@@ -72,6 +72,20 @@ export const Route = createFileRoute(
 
 type Mode = "calibrate" | "endpoint" | "route" | "rack" | "bundle" | "port";
 
+type BundleSegmentType = "DIRECT" | "TRAY" | "WALL" | "CEILING";
+type BundleSegment = { type: BundleSegmentType; extra_pct: number };
+
+const BUNDLE_SEGMENT_TYPES: Record<BundleSegmentType, { label: string; color: string; extra_pct: number }> = {
+  DIRECT:  { label: "Přímá",           color: "hsl(var(--accent))",       extra_pct: 0 },
+  TRAY:    { label: "Žlab / lišta",     color: "hsl(210 80% 50%)",         extra_pct: 0 },
+  WALL:    { label: "Výsek / trubka",   color: "hsl(15 80% 55%)",          extra_pct: 10 },
+  CEILING: { label: "Podhled",          color: "hsl(280 55% 55%)",         extra_pct: 15 },
+};
+
+function defaultSegment(): BundleSegment {
+  return { type: "DIRECT", extra_pct: BUNDLE_SEGMENT_TYPES.DIRECT.extra_pct };
+}
+
 function PlanEditorPage() {
   const { projectId, planId } = useParams({
     from: "/_authenticated/projects/$projectId/plans/$planId",
@@ -180,6 +194,7 @@ function PlanEditorPage() {
   const [newRackName, setNewRackName] = useState("");
   // Bundle mode
   const [draftBundlePoints, setDraftBundlePoints] = useState<NormPoint[]>([]);
+  const [draftBundleSegments, setDraftBundleSegments] = useState<BundleSegment[]>([]);
   const [newBundleCode, setNewBundleCode] = useState("");
   // Port mode
   const [selectedPortId, setSelectedPortId] = useState<string | null>(null);
@@ -349,7 +364,16 @@ function PlanEditorPage() {
     } else if (mode === "rack") {
       setPendingRackPos(pos);
     } else if (mode === "bundle") {
-      setDraftBundlePoints((pts) => [...pts, pos]);
+      setDraftBundlePoints((pts) => {
+        const next = [...pts, pos];
+        if (next.length >= 2) {
+          setDraftBundleSegments((segs) => {
+            if (segs.length >= next.length - 1) return segs;
+            return [...segs, defaultSegment()];
+          });
+        }
+        return next;
+      });
     } else if (mode === "port") {
       if (!selectedPortId) {
         toast.error("Nejprve vyberte volný port ze seznamu");
@@ -497,15 +521,21 @@ function PlanEditorPage() {
     if (draftBundlePoints.length < 2) return toast.error("Alespoň 2 body");
     if (!newBundleCode.trim()) return toast.error("Zadejte kód kmenu");
     try {
+      const needed = Math.max(0, draftBundlePoints.length - 1);
+      const segs: BundleSegment[] = Array.from({ length: needed }, (_, i) =>
+        draftBundleSegments[i] ?? defaultSegment(),
+      );
       await createBundleFn({
         data: {
           projectId,
           floorPlanId: planId,
           code: newBundleCode.trim(),
           points: draftBundlePoints,
+          segments: segs,
         },
       });
       setDraftBundlePoints([]);
+      setDraftBundleSegments([]);
       setNewBundleCode("");
       qc.invalidateQueries({ queryKey: ["bundles", projectId, planId] });
       toast.success("Kmen uložen");
@@ -768,15 +798,23 @@ function PlanEditorPage() {
                     : p,
                 );
                 const opacity = bundlesGhost ? 0.35 : 0.9;
+                const savedSegs = (b as unknown as { segments?: BundleSegment[] }).segments ?? [];
                 return (
                   <g key={b.id} opacity={opacity}>
-                    <polyline
-                      points={pts.map((p) => `${p.x},${p.y}`).join(" ")}
-                      fill="none"
-                      stroke="hsl(var(--primary))"
-                      strokeWidth={0.014 / zoom}
-                      strokeLinejoin="round"
-                    />
+                    {pts.length > 1 && pts.slice(0, -1).map((p1, i) => {
+                      const p2 = pts[i + 1];
+                      const seg = savedSegs[i];
+                      const color = seg ? BUNDLE_SEGMENT_TYPES[seg.type]?.color ?? "hsl(var(--primary))" : "hsl(var(--primary))";
+                      return (
+                        <line
+                          key={`seg-${i}`}
+                          x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y}
+                          stroke={color}
+                          strokeWidth={0.014 / zoom}
+                          strokeLinecap="round"
+                        />
+                      );
+                    })}
                     {bundlePointsInteractive && pts.map((p, i) => (
                       <circle
                         key={i}
@@ -811,15 +849,21 @@ function PlanEditorPage() {
               {/* Draft bundle in progress */}
               {mode === "bundle" && draftBundlePoints.length > 0 && (
                 <>
-                  {draftBundlePoints.length > 1 && (
-                    <polyline
-                      points={draftBundlePoints.map((p) => `${p.x},${p.y}`).join(" ")}
-                      fill="none"
-                      stroke="hsl(var(--accent))"
-                      strokeWidth={0.006 / zoom}
-                      strokeDasharray="0.01 0.005"
-                    />
-                  )}
+                  {draftBundlePoints.length > 1 && draftBundlePoints.slice(0, -1).map((p1, i) => {
+                    const p2 = draftBundlePoints[i + 1];
+                    const seg = draftBundleSegments[i] ?? defaultSegment();
+                    const color = BUNDLE_SEGMENT_TYPES[seg.type].color;
+                    return (
+                      <line
+                        key={`draft-seg-${i}`}
+                        x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y}
+                        stroke={color}
+                        strokeWidth={0.006 / zoom}
+                        strokeDasharray="0.01 0.005"
+                        strokeLinecap="round"
+                      />
+                    );
+                  })}
                   {draftBundlePoints.map((p, i) => (
                     <circle
                       key={i}
@@ -832,6 +876,11 @@ function PlanEditorPage() {
                       onDoubleClick={(e) => {
                         e.stopPropagation();
                         setDraftBundlePoints((pts) => pts.filter((_, j) => j !== i));
+                        setDraftBundleSegments((segs) => {
+                          // segment between i-1 and i disappears when point i removed
+                          const idx = Math.max(0, i - 1);
+                          return segs.filter((_, j) => j !== idx);
+                        });
                       }}
                     />
                   ))}
@@ -949,6 +998,10 @@ function PlanEditorPage() {
                     opacity={opacity}
                     style={{ cursor: endpointsInteractive ? "grab" : "pointer" }}
                     onClick={(e) => {
+                      // Only consume the click when this dot is the interactive target.
+                      // In bundle / rack / calibrate modes, let the click bubble up so the
+                      // canvas can add points there instead of getting swallowed by the endpoint dot.
+                      if (mode !== "endpoint" && mode !== "port" && mode !== "route") return;
                       e.stopPropagation();
                       if (dragMovedRef.current) return;
                       setSelectedEndpointId(ep.id);
@@ -1353,8 +1406,64 @@ function PlanEditorPage() {
               </div>
               <div className="mt-2 flex gap-2">
                 <Button size="sm" className="flex-1" onClick={saveBundle}>Uložit kmen</Button>
-                <Button size="sm" variant="outline" onClick={() => setDraftBundlePoints([])}>Vymazat</Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setDraftBundlePoints([]);
+                    setDraftBundleSegments([]);
+                  }}
+                >
+                  Vymazat
+                </Button>
               </div>
+
+              {draftBundlePoints.length >= 2 && (
+                <div className="mt-3">
+                  <div className="mb-1 text-[11px] font-semibold uppercase text-muted-foreground">
+                    Typ trasy pro každý úsek
+                  </div>
+                  <div className="max-h-56 space-y-1 overflow-y-auto rounded-sm border border-border p-2">
+                    {draftBundlePoints.slice(0, -1).map((_, i) => {
+                      const seg = draftBundleSegments[i] ?? defaultSegment();
+                      return (
+                        <div key={i} className="flex items-center gap-2">
+                          <span
+                            className="inline-block h-3 w-3 rounded-sm border border-border"
+                            style={{ background: BUNDLE_SEGMENT_TYPES[seg.type].color }}
+                          />
+                          <span className="font-mono text-[11px] text-muted-foreground">
+                            #{i + 1}
+                          </span>
+                          <select
+                            className="flex-1 rounded-sm border border-input bg-background px-1.5 py-1 text-xs"
+                            value={seg.type}
+                            onChange={(e) => {
+                              const t = e.target.value as BundleSegmentType;
+                              setDraftBundleSegments((prev) => {
+                                const next = draftBundlePoints.slice(0, -1).map((_, j) =>
+                                  prev[j] ?? defaultSegment(),
+                                );
+                                next[i] = { type: t, extra_pct: BUNDLE_SEGMENT_TYPES[t].extra_pct };
+                                return next;
+                              });
+                            }}
+                          >
+                            {(Object.keys(BUNDLE_SEGMENT_TYPES) as BundleSegmentType[]).map((k) => (
+                              <option key={k} value={k}>
+                                {BUNDLE_SEGMENT_TYPES[k].label}
+                                {BUNDLE_SEGMENT_TYPES[k].extra_pct > 0
+                                  ? ` (+${BUNDLE_SEGMENT_TYPES[k].extra_pct}%)`
+                                  : ""}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               <div className="mt-3 max-h-48 divide-y divide-border overflow-y-auto rounded-sm border border-border">
                 {(bundles.data ?? []).map((b) => (
                   <div key={b.id} className="flex items-center gap-2 p-2">

@@ -4,6 +4,12 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const PointSchema = z.object({ x: z.number(), y: z.number() });
+const SegmentTypeSchema = z.enum(["DIRECT", "TRAY", "WALL", "CEILING"]);
+const SegmentSchema = z.object({
+  type: SegmentTypeSchema,
+  extra_pct: z.number().min(0).max(200).default(0),
+});
+
 
 export const listBundles = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -19,7 +25,7 @@ export const listBundles = createServerFn({ method: "GET" })
     const { supabase } = context;
     let q = supabase
       .from("cable_bundles")
-      .select("id, code, floor_plan_id, rack_id, points, notes, is_primary, updated_at")
+      .select("id, code, floor_plan_id, rack_id, points, segments, notes, is_primary, updated_at")
       .eq("project_id", data.projectId)
       .order("code");
     if (data.floorPlanId) q = q.eq("floor_plan_id", data.floorPlanId);
@@ -39,6 +45,7 @@ export const createBundle = createServerFn({ method: "POST" })
         code: z.string().min(1).max(80),
         rackId: z.string().uuid().nullable().optional(),
         points: z.array(PointSchema).min(2),
+        segments: z.array(SegmentSchema).optional(),
         notes: z.string().max(2000).optional(),
       })
       .parse(d),
@@ -53,6 +60,7 @@ export const createBundle = createServerFn({ method: "POST" })
         code: data.code,
         rack_id: data.rackId ?? null,
         points: data.points,
+        segments: data.segments ?? [],
         notes: data.notes ?? null,
         created_by: userId,
       } as never)
@@ -71,6 +79,7 @@ export const updateBundle = createServerFn({ method: "POST" })
         code: z.string().min(1).max(80).optional(),
         rackId: z.string().uuid().nullable().optional(),
         points: z.array(PointSchema).min(2).optional(),
+        segments: z.array(SegmentSchema).optional(),
         notes: z.string().max(2000).nullable().optional(),
       })
       .parse(d),
@@ -81,6 +90,7 @@ export const updateBundle = createServerFn({ method: "POST" })
     if (data.code !== undefined) patch.code = data.code;
     if (data.rackId !== undefined) patch.rack_id = data.rackId;
     if (data.points !== undefined) patch.points = data.points;
+    if (data.segments !== undefined) patch.segments = data.segments;
     if (data.notes !== undefined) patch.notes = data.notes;
     const { error } = await supabase
       .from("cable_bundles")

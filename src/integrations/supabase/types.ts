@@ -81,6 +81,7 @@ export type Database = {
           points: Json
           project_id: string
           rack_id: string | null
+          segments: Json
           updated_at: string
         }
         Insert: {
@@ -95,6 +96,7 @@ export type Database = {
           points?: Json
           project_id: string
           rack_id?: string | null
+          segments?: Json
           updated_at?: string
         }
         Update: {
@@ -109,6 +111,7 @@ export type Database = {
           points?: Json
           project_id?: string
           rack_id?: string | null
+          segments?: Json
           updated_at?: string
         }
         Relationships: [
