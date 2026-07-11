@@ -93,11 +93,26 @@ export function useEndpointKindMutations(projectId: string | undefined) {
     qc.invalidateQueries({ queryKey: ["endpoint-kinds", projectId] });
   return {
     create: useMutation({
-      mutationFn: (data: Parameters<typeof createFn>[0]["data"]) => createFn({ data }),
+      mutationFn: (payload: {
+        projectId: string;
+        code: string;
+        label: string;
+        defaultReserveM: number;
+        color?: string;
+        icon?: string;
+        sortOrder?: number;
+      }) => createFn({ data: payload }),
       onSuccess: invalidate,
     }),
     update: useMutation({
-      mutationFn: (data: Parameters<typeof updateFn>[0]["data"]) => updateFn({ data }),
+      mutationFn: (payload: {
+        id: string;
+        label?: string;
+        defaultReserveM?: number;
+        color?: string | null;
+        icon?: string | null;
+        sortOrder?: number;
+      }) => updateFn({ data: payload }),
       onSuccess: invalidate,
     }),
     remove: useMutation({
