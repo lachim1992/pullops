@@ -514,6 +514,66 @@ export type Database = {
           },
         ]
       }
+      endpoint_kinds: {
+        Row: {
+          code: string
+          color: string | null
+          created_at: string
+          default_reserve_m: number
+          icon: string | null
+          id: string
+          is_system: boolean
+          label: string
+          organization_id: string
+          project_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          color?: string | null
+          created_at?: string
+          default_reserve_m?: number
+          icon?: string | null
+          id?: string
+          is_system?: boolean
+          label: string
+          organization_id: string
+          project_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          color?: string | null
+          created_at?: string
+          default_reserve_m?: number
+          icon?: string | null
+          id?: string
+          is_system?: boolean
+          label?: string
+          organization_id?: string
+          project_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "endpoint_kinds_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_kinds_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       endpoints: {
         Row: {
           code: string
@@ -1295,6 +1355,10 @@ export type Database = {
       }
       remove_project_member_tx: {
         Args: { p_project_id: string; p_user_id: string }
+        Returns: undefined
+      }
+      seed_endpoint_kinds: {
+        Args: { p_project_id: string }
         Returns: undefined
       }
       set_org_role_tx: {
