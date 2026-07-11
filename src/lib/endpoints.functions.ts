@@ -129,9 +129,30 @@ export const updateEndpoint = createServerFn({ method: "POST" })
     if (data.x !== undefined) patch.norm_x = data.x;
     if (data.y !== undefined) patch.norm_y = data.y;
     if (data.notes !== undefined) patch.notes = data.notes;
+    if (data.description !== undefined) patch.description = data.description;
+    if (data.customerCode !== undefined) patch.customer_code = data.customerCode;
+    if (data.room !== undefined) patch.room = data.room;
+    if (data.floor !== undefined) patch.floor = data.floor;
+    if (data.customAttrs !== undefined) patch.custom_attrs = data.customAttrs;
+    if (data.referencePoints !== undefined) patch.reference_points = data.referencePoints;
     const { error } = await supabase.from("endpoints").update(patch as never).eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+export const getEndpoint = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: row, error } = await supabase
+      .from("endpoints")
+      .select("id, project_id, floor_plan_id, code, label, endpoint_kind, norm_x, norm_y, notes, description, customer_code, room, floor, custom_attrs, reference_points, updated_at")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!row) throw new Error("endpoint not found");
+    return row;
   });
 
 export const deleteEndpoint = createServerFn({ method: "POST" })
@@ -143,6 +164,7 @@ export const deleteEndpoint = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
 
 const BulkImportInput = z.object({
   projectId: z.string().uuid(),
