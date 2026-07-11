@@ -1319,7 +1319,7 @@ function PlanEditorPage() {
                         published: !plan.data?.plan.published_to_pull,
                       },
                     });
-                    await queryClient.invalidateQueries({ queryKey: ["floor-plan", planId] });
+                    await qc.invalidateQueries({ queryKey: ["plan", planId] });
                     toast.success(
                       plan.data?.plan.published_to_pull
                         ? "Plán stažen z režimu tahání"
