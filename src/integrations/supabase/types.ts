@@ -71,6 +71,7 @@ export type Database = {
       cable_bundles: {
         Row: {
           code: string
+          color: string | null
           created_at: string
           created_by: string | null
           floor_plan_id: string
@@ -84,6 +85,7 @@ export type Database = {
         }
         Insert: {
           code: string
+          color?: string | null
           created_at?: string
           created_by?: string | null
           floor_plan_id: string
@@ -97,6 +99,7 @@ export type Database = {
         }
         Update: {
           code?: string
+          color?: string | null
           created_at?: string
           created_by?: string | null
           floor_plan_id?: string
@@ -1342,7 +1345,20 @@ export type Database = {
         | "viewer"
       cable_status: "PLANNED" | "PULLED" | "TERMINATED" | "TESTED" | "CANCELLED"
       document_kind: "FLOOR_PLAN" | "SCHEMATIC" | "OTHER"
-      endpoint_kind: "WORKSTATION" | "AP" | "CAMERA" | "PATCH" | "OTHER"
+      endpoint_kind:
+        | "WORKSTATION"
+        | "AP"
+        | "CAMERA"
+        | "PATCH"
+        | "OTHER"
+        | "SOCKET"
+        | "TRUNK_STRIP"
+        | "CEILING"
+        | "KIOSK"
+        | "OUTDOOR_KIOSK"
+        | "OUTDOOR_CABLE"
+        | "KITCHEN"
+        | "MONITOR"
       project_status:
         | "planning"
         | "active"
@@ -1487,7 +1503,21 @@ export const Constants = {
       ],
       cable_status: ["PLANNED", "PULLED", "TERMINATED", "TESTED", "CANCELLED"],
       document_kind: ["FLOOR_PLAN", "SCHEMATIC", "OTHER"],
-      endpoint_kind: ["WORKSTATION", "AP", "CAMERA", "PATCH", "OTHER"],
+      endpoint_kind: [
+        "WORKSTATION",
+        "AP",
+        "CAMERA",
+        "PATCH",
+        "OTHER",
+        "SOCKET",
+        "TRUNK_STRIP",
+        "CEILING",
+        "KIOSK",
+        "OUTDOOR_KIOSK",
+        "OUTDOOR_CABLE",
+        "KITCHEN",
+        "MONITOR",
+      ],
       project_status: [
         "planning",
         "active",
