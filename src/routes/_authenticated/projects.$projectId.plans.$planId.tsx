@@ -97,6 +97,7 @@ function PlanEditorPage() {
   const getPlanFn = useServerFn(getFloorPlan);
   const setCalFn = useServerFn(setCalibration);
   const updatePlanFn = useServerFn(updateFloorPlan);
+  const publishPlanFn = useServerFn(setFloorPlanPublished);
   const listEpFn = useServerFn(listEndpoints);
   const createEpFn = useServerFn(createEndpoint);
   const deleteEpFn = useServerFn(deleteEndpoint);
