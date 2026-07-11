@@ -1,105 +1,130 @@
+# Audit stávajícího systému rezerv
 
-Editor plánů je teď přeplácaný — jedna SVG plocha, všechny vrstvy najednou, přepínače módů nedělají to, co uživatel čeká. Přestavíme editor a napojený workflow.
+**Kde se rezerva dnes používá:**
+- `cable_types.default_reserve_m` — jediný zdroj rezervy
+- `length.ts` → `computeCableLength({ reserveM })` — přičítá `2 × reserveM` (obě strany stejně)
+- `cables.functions.ts` → `recomputeOne` — načte rezervu z `cable_types`
+- `pullTasks.functions.ts` → agregace, také z `cable_types`
 
-## 1. Rozšířit typy koncových bodů (endpoint_kind)
+**Problémy:**
+- Neumí rozlišit, že rack má jinou realitu (kratší přebytek) než venkovní kiosek (dlouhý přebytek)
+- Neumí zohlednit vertikální trasy neviditelné ve 2D
+- `endpoint_kind` je jen enum bez data — nelze uživatelsky rozšiřovat
 
-Migrace do enumu / textového pole `endpoint_kind`:
-- `RACK_PORT` (zásuvka v racku — jen pro cross-reference)
-- `WORKSTATION` (PC/monitor)
-- `SOCKET` (datová zásuvka na zdi)
-- `TRUNK_STRIP` (lišta)
-- `CEILING` (strop)
-- `KIOSK` (kiosek uvnitř)
-- `OUTDOOR_KIOSK` (venkovní kiosek)
-- `OUTDOOR_CABLE` (venkovní kabel)
-- `KITCHEN` (kuchyně)
-- `AP` (Wi-Fi AP)
-- `CAMERA`
-- `MONITOR`
-- `PATCH`
-- `OTHER`
+# Cílový model
 
-Každý druh má vlastní ikonu (SVG) a barvu. Racky zůstávají v tabulce `racks` (mají patch panely) — nejsou to endpointy, ale zdroje kabelů.
-
-## 2. Editor plánu — 5 samostatných tabů, každý filtruje canvas
-
-Přepínač módu je teď jen barva tlačítka. Změníme na "režim = úloha" — každý tab má vlastní bok s formulářem A vlastní vrstvu na plánu:
+**Rezerva se počítá per strana kabelu podle typu endpointu na dané straně.** Endpoint kind přebíjí rezervu z typu kabelu. Součet obou stran = celková rezerva.
 
 ```text
-[Endpointy] [Racky] [Kmeny] [Trasy] [Kalibrace]
+cable.length = polyline × meters_per_unit + reserve_from + reserve_to
 ```
 
-Tab **Endpointy**: canvas zobrazuje POUZE endpointy + slabě podklad. Klik = umístit nový, drag = přesun, klik na existující = detail (kód, štítek, druh s výběrem ikon, kabely přiřazené).
+## Nová tabulka `endpoint_kinds` (per-projekt)
 
-Tab **Racky**: canvas zobrazuje POUZE racky + podklad. Klik = umístit rack, drag = přesun, klik na rack = přiřazení patch panelů (multi-select z volných panelů projektu). Panel přiřazený k racku = jeho kabely se automaticky napojí na tento rack v generátoru tras.
+Sloupce: `project_id`, `organization_id`, `code` (string, uniq per projekt), `label` (CS), `default_reserve_m`, `color`, `icon` (Lucide jméno), `sort_order`, `is_system` (bool — systémové nelze smazat, jen editovat rezervu/label).
 
-Tab **Kmeny**: canvas zobrazuje POUZE kmeny (polyline) + podklad + racky slabě (kontext). Klik = přidat bod do aktivního kmenu, Enter = ukončit, dvojklik na bod = drag, tlačítko "Hlavní kmen" toggluje `is_primary`. Barevné rozlišení kmenů.
+Vazba: `endpoints.endpoint_kind` zůstane `text`; nově odkazuje na `endpoint_kinds.code` v rámci projektu (bez FK — enum-like, aby migrace nezlomila existující data).
 
-Tab **Trasy**: read-only canvas — zobrazuje racky, endpointy, kmeny slabě, a nad tím trasy jednotlivých kabelů. Jedno velké tlačítko **"Vygenerovat trasy"**. Boční panel: seznam kabelů s délkou / stavem (bez kmene → "silný bod" varování). Klik na řádek = zvýraznit trasu.
+**Seed při vytvoření projektu (rozšíření `create_project_tx`):** nasadí systémové typy s výchozími rezervami dle domluvy:
 
-Tab **Kalibrace**: 2 body + reálná vzdálenost, jako teď.
+| code | label | reserve (m) |
+|---|---|---|
+| WORKSTATION | Pracoviště / PC | 3 |
+| MONITOR | Monitor | 3 |
+| AP | Wi-Fi AP | 2 |
+| CAMERA | Kamera | 2 |
+| SOCKET | Datová zásuvka | 3 |
+| TRUNK_STRIP | Lišta | 3 |
+| CEILING | Strop | 1 |
+| KITCHEN | Kuchyně | 3 |
+| KIOSK | Kiosek | 5 |
+| OUTDOOR_KIOSK | Venkovní kiosek | 5 |
+| OUTDOOR_CABLE | Venkovní kabel | 5 |
+| PATCH | Patch / rack | 4 |
+| OTHER | Jiné | 3 |
 
-## 3. Generátor tras — logika "musí přes kmen"
+Existujícím projektům doplní migrace stejný seed idempotentně.
 
-Přepsat `autoAssignBundlesForPlan`:
+## Změny v engine
 
-1. Vyžadovat aspoň jeden kmen na plánu → jinak vrátit chybu.
-2. Pro každý kabel (from_port → to_endpoint) na tomto plánu:
-   - Rack pozice = pozice racku patch panelu portu.
-   - Endpoint pozice = pozice endpointu.
-   - Najít **nejbližší kmen** (preferuje `is_primary`, tie-break vzdáleností).
-   - Trasa = `[rack, kotva rack→kmen, (bod na kmeni), kotva kmen→endpoint, endpoint]`.
-   - Uložit `branch_points` a `bundle_id`.
-3. Vypočítat délku pomocí `computeCableLength` (kalibrace + reserve typu).
-4. Vrátit souhrn: přiřazeno / bez kmene / chybějící kalibrace / celková délka / počet "slabých" (velmi krátký přípoj) a "silných" (překročeny meze / mimo kmen) bodů.
+`computeCableLength` — nová signatura:
+```ts
+{
+  routePoints, manualRouteLengthM, calibration,
+  reserveFromM: number,   // podle from_endpoint.kind
+  reserveToM: number,     // podle to_endpoint.kind
+  overrideCableLengthM
+}
+```
+`reserveM` (starý parametr) zůstane volitelně jako fallback (pokud jsou obě `reserveFrom/To` nedodány → `2 × reserveM` jako dřív), aby netříštil kompatibilitu testů.
 
-## 4. Workflow průvodce v hlavičce projektu
+## Změny v resolveru rezerv (server)
 
-Nad editorem plánu horizontální stepper:
+Nová interní helper `getEndpointReserve(supabase, projectId, endpointId, cableTypeId)`:
+1. načti `endpoints.endpoint_kind`
+2. `select default_reserve_m from endpoint_kinds where project_id=? and code=?`
+3. fallback na `cable_types.default_reserve_m`, pak 0
 
-```text
-1. Podklad → 2. Kalibrace → 3. Endpointy → 4. Racky → 5. Kmeny → 6. Generovat trasy → 7. Zkontrolovat → 8. Odeslat do tahání
+Použije se v:
+- `cables.functions.ts` `recomputeOne` — načte from/to endpoint kind → dvě rezervy
+- `pullTasks.functions.ts` `simulateSpools` — dtto (batch: načti `endpoint_kinds` do mapy jednou)
+
+`cable_types.default_reserve_m` **neodstraníme** — slouží jako fallback, když kabel nemá endpoint na dané straně (např. patch↔patch bez endpointu, nebo neuzavřený kabel).
+
+## Nové server funkce
+
+`src/lib/endpointKinds.functions.ts`:
+- `listEndpointKinds({ projectId })`
+- `createEndpointKind({ projectId, code, label, defaultReserveM, color?, icon?, sortOrder? })`
+- `updateEndpointKind({ id, ... })`
+- `deleteEndpointKind({ id })` — jen pokud `is_system=false`
+
+## Změny v UI
+
+**Nová stránka:** `/projects/:id/endpoint-kinds` — tabulka: kód, název, rezerva (m), barva, ikona, systémový. Inline editace rezervy a labelu. Tlačítko „Přidat vlastní typ". Odkaz z Nastavení projektu.
+
+**Aktualizace `src/lib/endpointKinds.ts`:** místo statické konstanty přejde na React hook `useEndpointKinds(projectId)` (načte z DB a cachuje). Fallback ikona/barva pro custom typy. Systémové výchozí (statická konstanta) zůstane jako defaults pro seedovací migraci.
+
+**Editor plánu** (`plans.$planId.tsx`) — select endpoint kind se plní z DB, nikoli konstanty.
+
+**Detail kabelu** — přidat řádek „Rezerva: from X m + to Y m = Z m" pro transparenci.
+
+# Migrace
+
+```sql
+-- 1. tabulka
+CREATE TABLE public.endpoint_kinds (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references public.projects on delete cascade,
+  organization_id uuid not null,
+  code text not null,
+  label text not null,
+  default_reserve_m numeric not null default 3 check (default_reserve_m >= 0),
+  color text,
+  icon text,
+  sort_order int not null default 100,
+  is_system boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (project_id, code)
+);
+
+-- 2. grants + RLS: read = project member, write = admin/PM na projektu
+-- 3. tenant validace + updated_at trigger
+-- 4. seed: pro každý existující projekt vlož 13 systémových typů (ON CONFLICT DO NOTHING)
+-- 5. rozšířit create_project_tx() aby seedoval při vytvoření
 ```
 
-Každý krok má stav (splněno / v pořádku / chybí). Kliknutí přepne tab. Krok 8 zpřístupní tlačítko **"Odeslat do režimu tahání"** — vygeneruje záznamy do `pull_tasks` z aktuálních kabelů (seřazené podle typu, délky, kmenu).
+# Rollout (pořadí commitů)
 
-## 5. Režim tahání — interaktivní editor pro tým
+1. **Migrace** — tabulka + seed + rozšíření `create_project_tx`.
+2. **Server layer** — `endpointKinds.functions.ts`, helper `getEndpointReserve`, update `length.ts` (nové parametry, backward-compat), update `cables.functions.ts` + `pullTasks.functions.ts`.
+3. **UI** — stránka nastavení typů, hook `useEndpointKinds`, přepis pickerů v editoru plánu.
+4. **Recompute** — tlačítko „Přepočítat všechny kabely" v Nastavení projektu (už existuje? pokud ne, jednorázový server fn).
 
-Přestavět `/projects/:id/work` na 3 pod-taby:
+# Otevřené otázky (mohu rozhodnout sám, ale ptám se)
 
-- **Přehled**: karty (celkem kabelů, celkem metrů, spulky, hodiny). Zůstává.
-- **Simulace spulek**: zůstává.
-- **Tahání (nové, hlavní tab)**:
-  - Levá strana: seznam endpointů / racků k tahání. Klik = vybrat cíl.
-  - Pravá strana: mini plán (SVG) — zobrazí se jen trasa vybraného cíle, ostatní ztlumeno.
-  - Nad trasou nadpis: `RACK-01 → KIOSK-3 · 42.5 m · 3× UTP Cat6a`. Počet kabelů viditelný jako pilulka podél trasy.
-  - Tlačítka: "Začít tahat" (status = in_progress), "Hotovo" (status = done, done_at = now).
-  - Realtime aktualizace stavu pomocí `pull_tasks`.
+- **Přepočet existujících kabelů:** spustit ihned po migraci pro všechny projekty, nebo nechat na uživatele (tlačítko)? → navrhuji **automaticky** v samostatné neinvazivní server fn po migraci.
+- **Ikona custom typu:** dovolit uživateli zadat Lucide jméno stringem (validace vůči seznamu), nebo pevný set 6–8 obecných ikon k výběru? → navrhuji **pevný set** (Plug, Wifi, Cctv, Monitor, Server, Warehouse, Utensils, HelpCircle) + color picker.
 
-## 6. Změny v datech
-
-- Migrace: `endpoints.endpoint_kind` — rozšířit povolené hodnoty (v aplikačním kódu, sloupec je text). 
-- `pull_tasks` už existuje z minula.
-- Přidat `racks.assigned_panel_ids` výpočtem z `patch_panels.rack_id` (už existuje) — jen UI úprava.
-- Přidat `cable_bundles.color` (text, default null) pro barevné odlišení.
-
-## 7. Nové/upravené soubory
-
-- `src/lib/endpointKinds.ts` — konstanta všech druhů + ikony (inline SVG).
-- `src/components/plan-editor/CanvasEndpoints.tsx`, `CanvasRacks.tsx`, `CanvasBundles.tsx`, `CanvasRoutes.tsx`, `CanvasCalibration.tsx` — 5 samostatných canvasů s filtrovaným zobrazením.
-- `src/components/plan-editor/WorkflowStepper.tsx`.
-- `src/components/work-mode/PullingBoard.tsx` (nový hlavní tab).
-- `src/lib/cableBundles.functions.ts` — přidat `color` do listBundles/updateBundle.
-- Přepsat `autoAssignBundlesForPlan` v `src/lib/cablesFromPort.functions.ts`.
-- Rozdělit současný `plans.$planId.tsx` (1952 řádků) do menších komponent.
-
-## 8. Otázky před realizací
-
-1. Máme zavést i variantu "kmen na kmen" (větvení kmenů), nebo jeden kmen = jedna lineární cesta?
-2. Kdy generátor selže — má trasu vytvořit i bez kmene (padne varováním), nebo úplně odmítnout?
-3. "Slabý bod" = definice? (návrh: kabel < 3 m nebo přímá vzdálenost > 90 m Cat6a).
-4. Ikony endpointů — mám navrhnout vlastní minimalistické SVG, nebo použít Lucide sadu (RackServer, Cctv, Wifi, MonitorSpeaker, Utensils …)?
-
-## Rozsah
-
-Tohle je 2–3 velké iterace. Doporučuji začít bodem 2 (rozdělit editor do 5 tabů s filtrem canvasu) a bodem 3 (generátor přes kmen), pak workflow (4) a nakonec režim tahání (5). Migrace endpoint kindů je malá a jde první.
+Pokud souhlasíš, začnu migrací a serverovou vrstvou.
