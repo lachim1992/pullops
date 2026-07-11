@@ -216,8 +216,9 @@ export const getPullModeData = createServerFn({ method: "GET" })
       await Promise.all([
         supabase
           .from("floor_plans")
-          .select("id, name, level, display_order, document_id")
+          .select("id, name, level, display_order, document_id, published_to_pull")
           .eq("project_id", data.projectId)
+          .eq("published_to_pull", true)
           .order("display_order", { ascending: true })
           .order("level", { ascending: true }),
         supabase
