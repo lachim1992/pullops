@@ -998,6 +998,10 @@ function PlanEditorPage() {
                     opacity={opacity}
                     style={{ cursor: endpointsInteractive ? "grab" : "pointer" }}
                     onClick={(e) => {
+                      // Only consume the click when this dot is the interactive target.
+                      // In bundle / rack / calibrate modes, let the click bubble up so the
+                      // canvas can add points there instead of getting swallowed by the endpoint dot.
+                      if (mode !== "endpoint" && mode !== "port" && mode !== "route") return;
                       e.stopPropagation();
                       if (dragMovedRef.current) return;
                       setSelectedEndpointId(ep.id);
