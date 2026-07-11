@@ -578,6 +578,19 @@ function PlanEditorPage() {
 
   const currentRoute = routes.data?.find((r) => r.id === selectedRouteId) ?? null;
 
+  // Per-tab visibility flags. Each tab shows only its layer plus minimal context.
+  const showBundles   = mode === "bundle" || mode === "port" || mode === "rack";
+  const bundlesGhost  = mode !== "bundle" && mode !== "port";
+  const showRacks     = mode === "rack" || mode === "bundle" || mode === "port";
+  const racksGhost    = mode !== "rack" && mode !== "port";
+  const showEndpoints = mode === "endpoint" || mode === "port";
+  const endpointsGhost = mode !== "endpoint" && mode !== "port";
+  const showBranches  = mode === "port";
+  const racksInteractive    = mode === "rack";
+  const endpointsInteractive = mode === "endpoint";
+  const bundlePointsInteractive = mode === "bundle";
+
+
   return (
     <AppShell projectId={projectId}>
       <header className="mb-4 flex flex-wrap items-center justify-between gap-2">
