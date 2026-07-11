@@ -249,7 +249,7 @@ export const recomputeProjectLengths = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { data: cables, error } = await supabase
       .from("cables")
-      .select("id, cable_type_id, route_id, override_length_m")
+      .select("id, cable_type_id, route_id, override_length_m, from_endpoint_id, to_endpoint_id")
       .eq("project_id", data.projectId);
     if (error) throw new Error(error.message);
     let count = 0;
