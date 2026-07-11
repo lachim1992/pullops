@@ -25,6 +25,7 @@ import {
   listDayPlans,
   upsertDayPlan,
 } from "@/lib/pullDayPlans.functions";
+import { runOptimizer } from "@/lib/pullOptimizer.functions";
 
 import {
   createEndpoint,
