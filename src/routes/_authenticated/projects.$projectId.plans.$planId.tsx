@@ -45,6 +45,7 @@ import { createRack, listRacks, deleteRack, updateRack } from "@/lib/racks.funct
 import { createBundle, listBundles, deleteBundle, updateBundle } from "@/lib/cableBundles.functions";
 import {
   autoAssignBundlesForPlan,
+  autoAssignBundlesForProject,
   createCableFromPort,
   listFreePorts,
   listPlanBranches,
@@ -106,6 +107,7 @@ function PlanEditorPage() {
   const createCableFromPortFn = useServerFn(createCableFromPort);
   const listPlanBranchesFn = useServerFn(listPlanBranches);
   const autoAssignBundlesFn = useServerFn(autoAssignBundlesForPlan);
+  const autoAssignProjectFn = useServerFn(autoAssignBundlesForProject);
   const qc = useQueryClient();
 
 
@@ -588,12 +590,14 @@ function PlanEditorPage() {
 
   const currentRoute = routes.data?.find((r) => r.id === selectedRouteId) ?? null;
 
-  // Per-tab visibility flags. Each tab shows only its layer plus minimal context.
-  const showBundles   = mode === "bundle" || mode === "port" || mode === "rack";
+  // Per-tab visibility flags. Bundles, racks and endpoints are always visible
+  // (ghosted in modes where they aren't the primary target) so the user has
+  // spatial context while editing another layer.
+  const showBundles   = mode !== "calibrate";
   const bundlesGhost  = mode !== "bundle" && mode !== "port";
-  const showRacks     = mode === "rack" || mode === "bundle" || mode === "port";
+  const showRacks     = mode !== "calibrate";
   const racksGhost    = mode !== "rack" && mode !== "port";
-  const showEndpoints = mode === "endpoint" || mode === "port";
+  const showEndpoints = mode !== "calibrate";
   const endpointsGhost = mode !== "endpoint" && mode !== "port";
   const showBranches  = mode === "port";
   const racksInteractive    = mode === "rack";
@@ -1380,7 +1384,7 @@ function PlanEditorPage() {
                 </div>
               ) : (
                 <div className="mb-2 text-xs text-muted-foreground">
-                  Automaticky přepočítá trasy všech kabelů: <b>rack → nejbližší kmen → endpoint</b>.
+                  Přepočítá trasy všech kabelů v projektu: <b>rack → nejbližší kmen na plánu endpointu → endpoint</b>. Funguje i napříč plány (rack a endpointy v různých patrech) — vertikální metry řeší rezerva u typu endpointu.
                 </div>
               )}
               <Button
@@ -1389,13 +1393,21 @@ function PlanEditorPage() {
                 disabled={(bundles.data?.length ?? 0) === 0}
                 onClick={async () => {
                   try {
-                    const r = await autoAssignBundlesFn({ data: { projectId, floorPlanId: planId, overwrite: true } });
+                    const r = await autoAssignProjectFn({ data: { projectId, overwrite: true } });
                     if (r.reason === "no_bundles") {
-                      toast.error("Není žádný kmen — nakreslete kmen v záložce Kmeny");
-                    } else if (r.reason === "no_endpoints") {
-                      toast.error("Na tomto plánu nejsou žádné endpointy");
+                      toast.error("V projektu není nakreslen žádný kmen");
+                    } else if (r.assigned === 0) {
+                      const miss = r.missingBundlesOnPlans?.length ?? 0;
+                      toast.error(
+                        miss > 0
+                          ? `0 tras — na ${miss} ${miss === 1 ? "plánu chybí kmen" : "plánech chybí kmen"}. Nakreslete kmen na plánu s endpointy.`
+                          : `0 tras — zkontrolujte, že kabely mají cílový endpoint (to_endpoint).`,
+                      );
                     } else {
-                      toast.success(`Vygenerováno ${r.assigned} tras · přeskočeno ${r.skipped}`);
+                      const extra = (r.missingBundlesOnPlans?.length ?? 0) > 0
+                        ? ` · ${r.missingBundlesOnPlans!.length} ${r.missingBundlesOnPlans!.length === 1 ? "plán bez kmene" : "plánů bez kmene"}`
+                        : "";
+                      toast.success(`Vygenerováno ${r.assigned} tras · přeskočeno ${r.skipped}${extra}`);
                     }
                     qc.invalidateQueries({ queryKey: ["plan-branches", projectId, planId] });
                     qc.invalidateQueries({ queryKey: ["cables", projectId] });
@@ -1404,7 +1416,7 @@ function PlanEditorPage() {
                   }
                 }}
               >
-                Vygenerovat trasy
+                Vygenerovat trasy (celý projekt)
               </Button>
               {(branches.data?.length ?? 0) > 0 && (
                 <div className="mb-3 max-h-40 divide-y divide-border overflow-y-auto rounded-sm border border-border text-xs">
