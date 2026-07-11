@@ -73,6 +73,28 @@ type Plan = {
 
 type Bundle = { id: string; code: string; floorPlanId: string; points: NormPoint[] };
 
+type SpoolRow = {
+  typeCode: string;
+  index: number;
+  used: number;
+  capacity: number;
+  wasted: number;
+  cables: Array<{ id: string; code: string; meters: number }>;
+};
+
+type DayBlock = {
+  id: string;
+  name: string;
+  sortOrder: number;
+  plannedDate: string | null;
+  floorPlanId: string | null;
+  spoolCount: number;
+  spoolLengthM: number;
+  totalUsed: number;
+  totalCapacity: number;
+  spools: SpoolRow[];
+};
+
 type Tab = "map" | "spools" | "queue";
 
 function WorkModePage() {
