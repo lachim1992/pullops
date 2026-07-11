@@ -1476,11 +1476,15 @@ export type Database = {
           dispenser_slot_id: string | null
           id: string
           notes: string | null
+          optimizer_reasons: Json | null
+          optimizer_score: number | null
           organization_id: string
+          planned_after_assignment_id: string | null
           planned_meters: number | null
           project_id: string
           pulled_at: string | null
           pulled_by: string | null
+          sequence_number: number | null
           spool_id: string | null
           status: Database["public"]["Enums"]["pull_assignment_status"]
           updated_at: string
@@ -1495,11 +1499,15 @@ export type Database = {
           dispenser_slot_id?: string | null
           id?: string
           notes?: string | null
+          optimizer_reasons?: Json | null
+          optimizer_score?: number | null
           organization_id: string
+          planned_after_assignment_id?: string | null
           planned_meters?: number | null
           project_id: string
           pulled_at?: string | null
           pulled_by?: string | null
+          sequence_number?: number | null
           spool_id?: string | null
           status?: Database["public"]["Enums"]["pull_assignment_status"]
           updated_at?: string
@@ -1514,11 +1522,15 @@ export type Database = {
           dispenser_slot_id?: string | null
           id?: string
           notes?: string | null
+          optimizer_reasons?: Json | null
+          optimizer_score?: number | null
           organization_id?: string
+          planned_after_assignment_id?: string | null
           planned_meters?: number | null
           project_id?: string
           pulled_at?: string | null
           pulled_by?: string | null
+          sequence_number?: number | null
           spool_id?: string | null
           status?: Database["public"]["Enums"]["pull_assignment_status"]
           updated_at?: string
@@ -1550,6 +1562,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pull_assignments_planned_after_assignment_id_fkey"
+            columns: ["planned_after_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "pull_assignments"
             referencedColumns: ["id"]
           },
           {
