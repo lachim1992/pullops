@@ -379,6 +379,7 @@ function PlanWorkspace(props: {
                   setSelectedEndpointId(null);
                 }}
                 onToggle={onToggleCable}
+                onHoverCable={setHoveredCableId}
               />
             )}
 
