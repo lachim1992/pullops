@@ -159,6 +159,7 @@ function WorkModePage() {
           patchPanels={pull.data.patchPanels.filter((p) => p.floorPlanId === selectedPlanId)}
           cables={pull.data.cables.filter((c) => c.floorPlanId === selectedPlanId)}
           allSpools={pull.data.spools}
+          allDayBlocks={pull.data.dayBlocks ?? []}
           tab={tab}
           setTab={setTab}
           selectedCableId={selectedCableId}
