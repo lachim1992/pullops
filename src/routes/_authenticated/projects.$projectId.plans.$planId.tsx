@@ -1344,7 +1344,27 @@ function PlanEditorPage() {
 
           {mode === "port" && (
             <div className="rounded-sm border border-border p-3 text-sm">
-              <div className="mb-2 font-semibold">Trasa z portu</div>
+              <div className="mb-2 font-semibold">Trasy</div>
+              <div className="mb-2 text-xs text-muted-foreground">
+                Automaticky přepočítá trasy všech kabelů: rack → nejbližší kmen → endpoint.
+              </div>
+              <Button
+                size="sm"
+                className="mb-3 w-full"
+                onClick={async () => {
+                  try {
+                    const r = await autoAssignBundlesFn({ data: { projectId, floorPlanId: planId, overwrite: true } });
+                    toast.success(`Vygenerováno: ${r.assigned} tras, přeskočeno ${r.skipped}`);
+                    qc.invalidateQueries({ queryKey: ["plan-branches", projectId, planId] });
+                    qc.invalidateQueries({ queryKey: ["cables", projectId] });
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : "Chyba");
+                  }
+                }}
+              >
+                Vygenerovat trasy
+              </Button>
+              <div className="mb-2 border-t border-border pt-2 text-xs font-semibold">Nový kabel z portu</div>
               <div className="mb-2 text-xs text-muted-foreground">
                 1) Vyber volný port · 2) Klikni na plán · 3) Zadej kód endpointu a kabelu
               </div>
