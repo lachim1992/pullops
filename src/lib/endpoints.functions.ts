@@ -30,6 +30,15 @@ const CreateInput = z.object({
   notes: z.string().max(2000).optional(),
 });
 
+const CustomAttr = z.object({
+  key: z.string().min(1).max(80),
+  value: z.string().max(500),
+});
+const ReferencePoint = z.object({
+  label: z.string().min(1).max(80),
+  distanceM: z.number().min(0).max(1000),
+});
+
 const UpdateInput = z.object({
   id: z.string().uuid(),
   floorPlanId: z.string().uuid().optional(),
@@ -39,7 +48,14 @@ const UpdateInput = z.object({
   x: z.number().min(0).max(1).optional(),
   y: z.number().min(0).max(1).optional(),
   notes: z.string().max(2000).nullable().optional(),
+  description: z.string().max(4000).nullable().optional(),
+  customerCode: z.string().max(80).nullable().optional(),
+  room: z.string().max(80).nullable().optional(),
+  floor: z.string().max(40).nullable().optional(),
+  customAttrs: z.array(CustomAttr).max(50).optional(),
+  referencePoints: z.array(ReferencePoint).max(20).optional(),
 });
+
 
 async function orgFor(supabase: any, projectId: string): Promise<string> {
   const { data, error } = await supabase
