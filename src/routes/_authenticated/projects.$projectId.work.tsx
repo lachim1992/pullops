@@ -953,7 +953,7 @@ function SpoolDrum({ pulledPct }: { pulledPct: number }) {
 /* ----------------------------- Map ----------------------------- */
 
 function PullMap({
-  plan, bundles, endpoints, cables, selectedCableId, selectedEndpointId, onSelectCable, onSelectEndpoint,
+  plan, bundles, endpoints, cables, selectedCableId, selectedEndpointId, hoveredCableId, onSelectCable, onSelectEndpoint,
 }: {
   plan: Plan | null;
   bundles: Bundle[];
@@ -961,96 +961,186 @@ function PullMap({
   cables: PullCable[];
   selectedCableId: string | null;
   selectedEndpointId: string | null;
+  hoveredCableId?: string | null;
   onSelectCable: (id: string) => void;
   onSelectEndpoint: (id: string) => void;
 }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [view, setView] = useState({ tx: 0, ty: 0, s: 1 });
+  const panRef = useRef<{ startX: number; startY: number; tx0: number; ty0: number } | null>(null);
+
+  const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+    setView((v) => {
+      const ns = Math.min(8, Math.max(0.5, v.s * factor));
+      const k = ns / v.s;
+      return { tx: mx - k * (mx - v.tx), ty: my - k * (my - v.ty), s: ns };
+    });
+  };
+
+  const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0 && e.button !== 1) return;
+    const target = e.target as SVGElement | HTMLElement;
+    if (target instanceof SVGElement && target.tagName !== "svg") return;
+    panRef.current = { startX: e.clientX, startY: e.clientY, tx0: view.tx, ty0: view.ty };
+  };
+  const onMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!panRef.current) return;
+    const dx = e.clientX - panRef.current.startX;
+    const dy = e.clientY - panRef.current.startY;
+    setView((v) => ({ ...v, tx: panRef.current!.tx0 + dx, ty: panRef.current!.ty0 + dy }));
+  };
+  const onMouseUp = () => { panRef.current = null; };
+  const resetView = () => setView({ tx: 0, ty: 0, s: 1 });
+
   return (
-    <div className="relative h-[calc(100vh-220px)] min-h-[560px] w-full overflow-hidden bg-muted">
-      {plan?.documentUrl ? (
-        plan.mimeType === "application/pdf" ? (
-          <PdfPlanBackground url={plan.documentUrl} title={plan.name} />
+    <div
+      ref={containerRef}
+      onWheel={onWheel}
+      onMouseDown={onMouseDown}
+      onMouseMove={onMouseMove}
+      onMouseUp={onMouseUp}
+      onMouseLeave={onMouseUp}
+      className="relative h-[calc(100vh-220px)] min-h-[560px] w-full overflow-hidden bg-muted select-none"
+    >
+      <div
+        className="absolute inset-0"
+        style={{ transform: `translate(${view.tx}px, ${view.ty}px) scale(${view.s})`, transformOrigin: "0 0" }}
+      >
+        {plan?.documentUrl ? (
+          plan.mimeType === "application/pdf" ? (
+            <PdfPlanBackground url={plan.documentUrl} title={plan.name} />
+          ) : (
+            <img
+              src={plan.documentUrl}
+              alt={plan.name}
+              className="pointer-events-none absolute inset-0 h-full w-full select-none object-contain"
+            />
+          )
         ) : (
-          <img
-            src={plan.documentUrl}
-            alt={plan.name}
-            className="pointer-events-none absolute inset-0 h-full w-full select-none object-contain"
-          />
-        )
-      ) : (
-        <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
-          Plán nemá podkladový obrázek.
-        </div>
-      )}
-      <svg viewBox="0 0 1 1" preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
-        {bundles.map((b) =>
-          b.points.length < 2 ? null : (
-            <g key={b.id}>
-              <polyline
-                points={b.points.map((p) => `${p.x},${p.y}`).join(" ")}
-                fill="none"
-                stroke="var(--primary)"
-                strokeOpacity={0.85}
-                strokeWidth={0.008}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <text x={b.points[0].x} y={b.points[0].y - 0.012} fontSize={0.014} fill="var(--primary)">
-                {b.code}
-              </text>
-            </g>
-          ),
+          <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
+            Plán nemá podkladový obrázek.
+          </div>
         )}
+        <svg viewBox="0 0 1 1" preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
+          {bundles.map((b) =>
+            b.points.length < 2 ? null : (
+              <g key={b.id}>
+                <polyline
+                  points={b.points.map((p) => `${p.x},${p.y}`).join(" ")}
+                  fill="none"
+                  stroke="var(--primary)"
+                  strokeOpacity={0.85}
+                  strokeWidth={0.008 / view.s}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <text x={b.points[0].x} y={b.points[0].y - 0.012} fontSize={0.014 / view.s} fill="var(--primary)">
+                  {b.code}
+                </text>
+              </g>
+            ),
+          )}
 
-        {cables.map((c) => {
-          if (c.branchPoints.length < 2) return null;
-          const selected = c.id === selectedCableId;
-          const done = c.status === "PULLED";
-          const points = c.branchPoints.map((p) => `${p.x},${p.y}`).join(" ");
-          return (
-            <g key={c.id} onClick={() => onSelectCable(c.id)} style={{ cursor: "pointer" }}>
-              <polyline
-                points={points}
-                fill="none"
-                stroke="transparent"
-                strokeWidth={0.022}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-              <polyline
-                points={points}
-                fill="none"
-                stroke={selected ? "var(--destructive)" : done ? "var(--muted-foreground)" : "var(--accent)"}
-                strokeOpacity={selected ? 1 : done ? 0.35 : 0.8}
-                strokeWidth={selected ? 0.006 : 0.0035}
-                strokeLinejoin="round"
-              />
-            </g>
-          );
-        })}
+          {cables.map((c) => {
+            if (c.branchPoints.length < 2) return null;
+            const selected = c.id === selectedCableId;
+            const hovered = c.id === hoveredCableId;
+            const done = c.status === "PULLED";
+            const points = c.branchPoints.map((p) => `${p.x},${p.y}`).join(" ");
+            const stroke = selected
+              ? "var(--destructive)"
+              : hovered
+                ? "var(--primary)"
+                : done
+                  ? "var(--muted-foreground)"
+                  : "var(--accent)";
+            const width = selected ? 0.006 : hovered ? 0.007 : 0.0035;
+            return (
+              <g key={c.id} onClick={() => onSelectCable(c.id)} style={{ cursor: "pointer" }}>
+                <polyline
+                  points={points}
+                  fill="none"
+                  stroke="transparent"
+                  strokeWidth={0.022 / view.s}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <polyline
+                  points={points}
+                  fill="none"
+                  stroke={stroke}
+                  strokeOpacity={selected || hovered ? 1 : done ? 0.35 : 0.8}
+                  strokeWidth={width / view.s}
+                  strokeLinejoin="round"
+                />
+              </g>
+            );
+          })}
 
-        {endpoints.map((ep) => {
-          const info = endpointKindInfo(ep.kind);
-          const selected = ep.id === selectedEndpointId;
-          return (
-            <g key={ep.id} onClick={() => onSelectEndpoint(ep.id)} style={{ cursor: "pointer" }}>
-              <circle
-                cx={ep.x}
-                cy={ep.y}
-                r={selected ? 0.014 : 0.01}
-                fill={info.color}
-                stroke={selected ? "var(--destructive)" : "var(--background)"}
-                strokeWidth={selected ? 0.004 : 0.002}
-              />
-              <text x={ep.x} y={ep.y - 0.014} textAnchor="middle" fontSize={0.012} fill="var(--foreground)">
-                {ep.code}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
+          {endpoints.map((ep) => {
+            const info = endpointKindInfo(ep.kind);
+            const selected = ep.id === selectedEndpointId;
+            const eCables = cables.filter((c) => c.fromEndpointId === ep.id || c.toEndpointId === ep.id);
+            const total = eCables.length;
+            const doneN = eCables.filter((c) => c.status === "PULLED").length;
+            const rightFill =
+              total === 0
+                ? "var(--muted-foreground)"
+                : doneN === total
+                  ? "hsl(140 60% 42%)"
+                  : "hsl(0 72% 50%)";
+            const r = selected ? 0.014 : 0.01;
+            const stroke = selected ? "var(--destructive)" : "var(--background)";
+            const sw = (selected ? 0.004 : 0.002) / view.s;
+            const leftPath = `M ${ep.x} ${ep.y - r} A ${r} ${r} 0 0 0 ${ep.x} ${ep.y + r} Z`;
+            const rightPath = `M ${ep.x} ${ep.y - r} A ${r} ${r} 0 0 1 ${ep.x} ${ep.y + r} Z`;
+            return (
+              <g key={ep.id} onClick={() => onSelectEndpoint(ep.id)} style={{ cursor: "pointer" }}>
+                <path d={leftPath} fill={info.color} stroke={stroke} strokeWidth={sw} />
+                <path d={rightPath} fill={rightFill} stroke={stroke} strokeWidth={sw} />
+                <text x={ep.x} y={ep.y - r - 0.004} textAnchor="middle" fontSize={0.012 / view.s} fill="var(--foreground)">
+                  {ep.code}
+                </text>
+                {total > 0 && (
+                  <text x={ep.x} y={ep.y + r + 0.014} textAnchor="middle" fontSize={0.01 / view.s} fill="var(--foreground)" opacity={0.75}>
+                    {doneN}/{total}
+                  </text>
+                )}
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+
+      <div className="pointer-events-none absolute right-3 top-3 flex flex-col gap-1">
+        <button
+          type="button"
+          onClick={() => setView((v) => ({ ...v, s: Math.min(8, v.s * 1.2) }))}
+          className="pointer-events-auto rounded-sm border border-border bg-background/90 px-2 py-1 text-xs font-mono hover:bg-background"
+        >+</button>
+        <button
+          type="button"
+          onClick={() => setView((v) => ({ ...v, s: Math.max(0.5, v.s / 1.2) }))}
+          className="pointer-events-auto rounded-sm border border-border bg-background/90 px-2 py-1 text-xs font-mono hover:bg-background"
+        >−</button>
+        <button
+          type="button"
+          onClick={resetView}
+          className="pointer-events-auto rounded-sm border border-border bg-background/90 px-2 py-1 text-[10px] font-mono hover:bg-background"
+        >1:1</button>
+        <div className="pointer-events-none rounded-sm bg-background/70 px-1 py-0.5 text-center text-[10px] font-mono text-muted-foreground">
+          {Math.round(view.s * 100)}%
+        </div>
+      </div>
     </div>
   );
 }
+
 
 function PdfPlanBackground({ url, title }: { url: string; title: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
