@@ -745,7 +745,7 @@ function PlanEditorPage() {
                 />
               )}
               {/* Bundles (kmeny) */}
-              {(bundles.data ?? []).map((b) => {
+              {showBundles && (bundles.data ?? []).map((b) => {
                 const rawPts = (b.points as unknown as NormPoint[]) ?? [];
                 if (rawPts.length < 2) return null;
                 const pts = rawPts.map((p, i) =>
@@ -753,17 +753,17 @@ function PlanEditorPage() {
                     ? dragPos
                     : p,
                 );
+                const opacity = bundlesGhost ? 0.35 : 0.9;
                 return (
-                  <g key={b.id}>
+                  <g key={b.id} opacity={opacity}>
                     <polyline
                       points={pts.map((p) => `${p.x},${p.y}`).join(" ")}
                       fill="none"
                       stroke="hsl(var(--primary))"
-                      strokeOpacity={0.9}
                       strokeWidth={0.014 / zoom}
                       strokeLinejoin="round"
                     />
-                    {pts.map((p, i) => (
+                    {bundlePointsInteractive && pts.map((p, i) => (
                       <circle
                         key={i}
                         cx={p.x}
@@ -793,6 +793,7 @@ function PlanEditorPage() {
                   </g>
                 );
               })}
+
               {/* Draft bundle in progress */}
               {mode === "bundle" && draftBundlePoints.length > 0 && (
                 <>
