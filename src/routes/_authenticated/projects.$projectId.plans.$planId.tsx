@@ -722,15 +722,15 @@ function PlanEditorPage() {
                     stroke="hsl(var(--accent))"
                     strokeWidth={0.003}
                   />
-                  <circle cx={calibration.a.x} cy={calibration.a.y} r={0.008} fill="hsl(var(--accent))" />
-                  <circle cx={calibration.b.x} cy={calibration.b.y} r={0.008} fill="hsl(var(--accent))" />
+                  <circle cx={calibration.a.x} cy={calibration.a.y} r={0.002} fill="hsl(var(--accent))" stroke="hsl(var(--background))" strokeWidth={0.0005} />
+                  <circle cx={calibration.b.x} cy={calibration.b.y} r={0.002} fill="hsl(var(--accent))" stroke="hsl(var(--background))" strokeWidth={0.0005} />
                 </>
               )}
               {mode === "calibrate" && calA && (
-                <circle cx={calA.x} cy={calA.y} r={0.01} fill="hsl(var(--primary))" />
+                <circle cx={calA.x} cy={calA.y} r={0.0025} fill="hsl(var(--primary))" stroke="hsl(var(--background))" strokeWidth={0.0005} />
               )}
               {mode === "calibrate" && calB && (
-                <circle cx={calB.x} cy={calB.y} r={0.01} fill="hsl(var(--primary))" />
+                <circle cx={calB.x} cy={calB.y} r={0.0025} fill="hsl(var(--primary))" stroke="hsl(var(--background))" strokeWidth={0.0005} />
               )}
               {mode === "calibrate" && calA && calB && (
                 <line
