@@ -192,7 +192,8 @@ function PlanIndex({
   if (plans.length === 0) {
     return (
       <div className="rounded-sm border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
-        V tomto projektu zatím nejsou žádné plány. Musí je nahrát správce projektu.
+        Žádný plán zatím není publikován do režimu tahání. Správce projektu ho publikuje v editoru plánu
+        (záložka „5 · Zadat plán").
       </div>
     );
   }
