@@ -58,6 +58,7 @@ import {
   type Calibration,
   type NormPoint,
 } from "@/lib/length";
+import { endpointKindInfo, ENDPOINT_KIND_GROUPS, type EndpointKind } from "@/lib/endpointKinds";
 
 export const Route = createFileRoute(
   "/_authenticated/projects/$projectId/plans/$planId",
@@ -158,9 +159,7 @@ function PlanEditorPage() {
   const [calDistance, setCalDistance] = useState<string>("");
   const [newEpCode, setNewEpCode] = useState("");
   const [newEpLabel, setNewEpLabel] = useState("");
-  const [newEpKind, setNewEpKind] = useState<
-    "WORKSTATION" | "AP" | "CAMERA" | "PATCH" | "OTHER"
-  >("WORKSTATION");
+  const [newEpKind, setNewEpKind] = useState<EndpointKind>("WORKSTATION");
   const [pendingPos, setPendingPos] = useState<NormPoint | null>(null);
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
   const [selectedEndpointId, setSelectedEndpointId] = useState<string | null>(null);
@@ -578,6 +577,19 @@ function PlanEditorPage() {
 
   const currentRoute = routes.data?.find((r) => r.id === selectedRouteId) ?? null;
 
+  // Per-tab visibility flags. Each tab shows only its layer plus minimal context.
+  const showBundles   = mode === "bundle" || mode === "port" || mode === "rack";
+  const bundlesGhost  = mode !== "bundle" && mode !== "port";
+  const showRacks     = mode === "rack" || mode === "bundle" || mode === "port";
+  const racksGhost    = mode !== "rack" && mode !== "port";
+  const showEndpoints = mode === "endpoint" || mode === "port";
+  const endpointsGhost = mode !== "endpoint" && mode !== "port";
+  const showBranches  = mode === "port";
+  const racksInteractive    = mode === "rack";
+  const endpointsInteractive = mode === "endpoint";
+  const bundlePointsInteractive = mode === "bundle";
+
+
   return (
     <AppShell projectId={projectId}>
       <header className="mb-4 flex flex-wrap items-center justify-between gap-2">
@@ -603,18 +615,16 @@ function PlanEditorPage() {
                 Body A/B jsou příliš blízko sebe ({calNormDist.toFixed(4)}) — překalibrujte
               </span>
             )}
-            <Button size="sm" variant="outline" className="h-6 px-2 text-[10px]" onClick={autoAssign}>
-              Přiřadit kabely k nejbližšímu kmeni
-            </Button>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant={mode === "endpoint" ? "default" : "outline"} size="sm" onClick={() => setMode("endpoint")}>Endpointy</Button>
-          <Button variant={mode === "rack" ? "default" : "outline"} size="sm" onClick={() => setMode("rack")}>Racky</Button>
-          <Button variant={mode === "bundle" ? "default" : "outline"} size="sm" onClick={() => setMode("bundle")}>Kmeny</Button>
-          <Button variant={mode === "port" ? "default" : "outline"} size="sm" onClick={() => setMode("port")}>Trasy</Button>
-          <Button variant={mode === "calibrate" ? "default" : "outline"} size="sm" onClick={() => setMode("calibrate")}>Kalibrace</Button>
+        <div className="flex flex-wrap gap-1 rounded-md border border-border bg-muted/40 p-1">
+          <Button variant={mode === "endpoint" ? "default" : "ghost"} size="sm" onClick={() => setMode("endpoint")}>1 · Endpointy</Button>
+          <Button variant={mode === "rack" ? "default" : "ghost"} size="sm" onClick={() => setMode("rack")}>2 · Racky</Button>
+          <Button variant={mode === "bundle" ? "default" : "ghost"} size="sm" onClick={() => setMode("bundle")}>3 · Kmeny</Button>
+          <Button variant={mode === "port" ? "default" : "ghost"} size="sm" onClick={() => setMode("port")}>4 · Trasy</Button>
+          <Button variant={mode === "calibrate" ? "default" : "ghost"} size="sm" onClick={() => setMode("calibrate")}>Kalibrace</Button>
         </div>
+
       </header>
 
 
@@ -734,7 +744,7 @@ function PlanEditorPage() {
                 />
               )}
               {/* Bundles (kmeny) */}
-              {(bundles.data ?? []).map((b) => {
+              {showBundles && (bundles.data ?? []).map((b) => {
                 const rawPts = (b.points as unknown as NormPoint[]) ?? [];
                 if (rawPts.length < 2) return null;
                 const pts = rawPts.map((p, i) =>
@@ -742,17 +752,17 @@ function PlanEditorPage() {
                     ? dragPos
                     : p,
                 );
+                const opacity = bundlesGhost ? 0.35 : 0.9;
                 return (
-                  <g key={b.id}>
+                  <g key={b.id} opacity={opacity}>
                     <polyline
                       points={pts.map((p) => `${p.x},${p.y}`).join(" ")}
                       fill="none"
                       stroke="hsl(var(--primary))"
-                      strokeOpacity={0.9}
                       strokeWidth={0.014 / zoom}
                       strokeLinejoin="round"
                     />
-                    {pts.map((p, i) => (
+                    {bundlePointsInteractive && pts.map((p, i) => (
                       <circle
                         key={i}
                         cx={p.x}
@@ -782,6 +792,7 @@ function PlanEditorPage() {
                   </g>
                 );
               })}
+
               {/* Draft bundle in progress */}
               {mode === "bundle" && draftBundlePoints.length > 0 && (
                 <>
@@ -812,7 +823,7 @@ function PlanEditorPage() {
                 </>
               )}
               {/* Branch lines: bundle anchor → cable endpoint */}
-              {(branches.data ?? []).map((br) => {
+              {showBranches && (branches.data ?? []).map((br) => {
                 const pts = br.branchPoints ?? [];
                 if (pts.length < 2) return null;
                 return (
@@ -821,7 +832,7 @@ function PlanEditorPage() {
                       points={pts.map((p) => `${p.x},${p.y}`).join(" ")}
                       fill="none"
                       stroke="hsl(var(--accent))"
-                      strokeOpacity={0.75}
+                      strokeOpacity={0.85}
                       strokeWidth={0.003 / zoom}
                       strokeLinejoin="round"
                     />
@@ -835,13 +846,14 @@ function PlanEditorPage() {
                 );
               })}
               {/* Racks */}
-              {(racks.data ?? []).map((r) => {
+              {showRacks && (racks.data ?? []).map((r) => {
                 const isDragging = dragTarget?.kind === "rack" && dragTarget.id === r.id && dragPos;
                 const cx = isDragging ? dragPos!.x : Number(r.x);
                 const cy = isDragging ? dragPos!.y : Number(r.y);
                 const s = 0.018 / zoom;
+                const opacity = racksGhost ? 0.4 : 1;
                 return (
-                  <g key={r.id}>
+                  <g key={r.id} opacity={opacity}>
                     <rect
                       x={cx - s}
                       y={cy - s}
@@ -850,8 +862,9 @@ function PlanEditorPage() {
                       fill="hsl(var(--foreground))"
                       stroke="hsl(var(--background))"
                       strokeWidth={0.002 / zoom}
-                      style={{ cursor: "grab" }}
+                      style={{ cursor: racksInteractive ? "grab" : "default" }}
                       onMouseDown={(e) => {
+                        if (!racksInteractive) return;
                         e.stopPropagation();
                         dragMovedRef.current = false;
                         setDragTarget({ kind: "rack", id: r.id });
@@ -871,6 +884,7 @@ function PlanEditorPage() {
                   </g>
                 );
               })}
+
               {pendingRackPos && mode === "rack" && (
                 <rect
                   x={pendingRackPos.x - 0.018 / zoom}
@@ -894,27 +908,21 @@ function PlanEditorPage() {
                   strokeDasharray="0.01 0.005"
                 />
               )}
-              {(endpoints.data ?? []).map((ep) => {
+              {showEndpoints && (endpoints.data ?? []).map((ep) => {
+                const kindInfo = endpointKindInfo(ep.endpoint_kind);
                 const isPatch = ep.endpoint_kind === "PATCH";
-                const isRouteEnd =
-                  mode === "route" &&
-                  (ep.id === currentRoute?.from_endpoint_id ||
-                    ep.id === currentRoute?.to_endpoint_id ||
-                    ep.id === currentRoute?.rack_endpoint_id);
                 const isSelected = ep.id === selectedEndpointId;
-                const fill = isRouteEnd
-                  ? "hsl(var(--accent))"
-                  : isSelected
-                    ? "hsl(var(--destructive))"
-                    : isPatch
-                      ? "hsl(var(--foreground))"
-                      : "hsl(var(--primary))";
+                const fill = isSelected
+                  ? "hsl(var(--destructive))"
+                  : kindInfo.color;
                 const isDragging = dragTarget?.kind === "endpoint" && dragTarget.id === ep.id && dragPos;
                 const cx = isDragging ? dragPos!.x : Number(ep.norm_x);
                 const cy = isDragging ? dragPos!.y : Number(ep.norm_y);
                 const r = 0.012 / zoom;
                 const sw = 0.002 / zoom;
+                const opacity = endpointsGhost ? 0.55 : 1;
                 const onHandleDown = (e: React.MouseEvent) => {
+                  if (!endpointsInteractive) return;
                   e.stopPropagation();
                   dragMovedRef.current = false;
                   setDragTarget({ kind: "endpoint", id: ep.id });
@@ -923,7 +931,8 @@ function PlanEditorPage() {
                 return (
                   <g
                     key={ep.id}
-                    style={{ cursor: "grab" }}
+                    opacity={opacity}
+                    style={{ cursor: endpointsInteractive ? "grab" : "pointer" }}
                     onClick={(e) => {
                       e.stopPropagation();
                       if (dragMovedRef.current) return;
@@ -964,6 +973,7 @@ function PlanEditorPage() {
                   </g>
                 );
               })}
+
               {mode === "route" && draftPoints.length > 1 && (
                 <polyline
                   points={draftPoints.map((p) => `${p.x},${p.y}`).join(" ")}
@@ -1135,13 +1145,15 @@ function PlanEditorPage() {
                     <select
                       className="w-full rounded-sm border border-input bg-background px-3 py-1.5 text-sm"
                       value={newEpKind}
-                      onChange={(e) => setNewEpKind(e.target.value as typeof newEpKind)}
+                      onChange={(e) => setNewEpKind(e.target.value as EndpointKind)}
                     >
-                      <option value="WORKSTATION">Zásuvka</option>
-                      <option value="AP">AP</option>
-                      <option value="CAMERA">Kamera</option>
-                      <option value="PATCH">Patch</option>
-                      <option value="OTHER">Jiné</option>
+                      {ENDPOINT_KIND_GROUPS.map((g) => (
+                        <optgroup key={g.id} label={g.label}>
+                          {g.kinds.map((k) => (
+                            <option key={k.value} value={k.value}>{k.label}</option>
+                          ))}
+                        </optgroup>
+                      ))}
                     </select>
                   </div>
                   <div className="flex gap-2">
@@ -1345,16 +1357,35 @@ function PlanEditorPage() {
           {mode === "port" && (
             <div className="rounded-sm border border-border p-3 text-sm">
               <div className="mb-2 font-semibold">Trasy</div>
-              <div className="mb-2 text-xs text-muted-foreground">
-                Automaticky přepočítá trasy všech kabelů: rack → nejbližší kmen → endpoint.
+              <div className="mb-2 rounded-sm bg-muted/40 p-2 font-mono text-[11px]">
+                <div>Kmenů: {bundles.data?.length ?? 0}</div>
+                <div>Endpointů: {endpoints.data?.length ?? 0}</div>
+                <div>Racků: {racks.data?.length ?? 0}</div>
+                <div>Vygenerovaných tras: {branches.data?.length ?? 0}</div>
               </div>
+              {(bundles.data?.length ?? 0) === 0 ? (
+                <div className="mb-3 rounded-sm border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive">
+                  Není nakreslen žádný kmen. Přejděte na <b>Kmeny</b> a zakreslete hlavní tahací cestu — bez ní nelze generovat trasy.
+                </div>
+              ) : (
+                <div className="mb-2 text-xs text-muted-foreground">
+                  Automaticky přepočítá trasy všech kabelů: <b>rack → nejbližší kmen → endpoint</b>.
+                </div>
+              )}
               <Button
                 size="sm"
                 className="mb-3 w-full"
+                disabled={(bundles.data?.length ?? 0) === 0}
                 onClick={async () => {
                   try {
                     const r = await autoAssignBundlesFn({ data: { projectId, floorPlanId: planId, overwrite: true } });
-                    toast.success(`Vygenerováno: ${r.assigned} tras, přeskočeno ${r.skipped}`);
+                    if (r.reason === "no_bundles") {
+                      toast.error("Není žádný kmen — nakreslete kmen v záložce Kmeny");
+                    } else if (r.reason === "no_endpoints") {
+                      toast.error("Na tomto plánu nejsou žádné endpointy");
+                    } else {
+                      toast.success(`Vygenerováno ${r.assigned} tras · přeskočeno ${r.skipped}`);
+                    }
                     qc.invalidateQueries({ queryKey: ["plan-branches", projectId, planId] });
                     qc.invalidateQueries({ queryKey: ["cables", projectId] });
                   } catch (e) {
@@ -1364,6 +1395,17 @@ function PlanEditorPage() {
               >
                 Vygenerovat trasy
               </Button>
+              {(branches.data?.length ?? 0) > 0 && (
+                <div className="mb-3 max-h-40 divide-y divide-border overflow-y-auto rounded-sm border border-border text-xs">
+                  {(branches.data ?? []).map((br) => (
+                    <div key={br.id} className="flex items-center justify-between gap-2 p-1.5">
+                      <span className="font-mono truncate">{br.code}</span>
+                      <span className="text-[10px] text-muted-foreground">{br.branchPoints.length} bodů</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <div className="mb-2 border-t border-border pt-2 text-xs font-semibold">Nový kabel z portu</div>
               <div className="mb-2 text-xs text-muted-foreground">
                 1) Vyber volný port · 2) Klikni na plán · 3) Zadej kód endpointu a kabelu
@@ -1413,30 +1455,47 @@ function PlanEditorPage() {
           )}
 
 
-          <div className="rounded-sm border border-border">
-            <div className="border-b border-border p-3 text-sm font-semibold">
-              Endpointy na plánu ({endpoints.data?.length ?? 0})
-            </div>
-            <div className="max-h-96 divide-y divide-border overflow-y-auto text-sm">
-              {(endpoints.data ?? []).map((ep) => (
-                <div key={ep.id} className="flex items-center gap-2 p-2">
-                  <div className="flex-1">
-                    <div className="font-mono text-xs">{ep.code}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {ep.label ?? ep.endpoint_kind}
+          {mode === "endpoint" && (
+            <div className="rounded-sm border border-border">
+              <div className="border-b border-border p-3 text-sm font-semibold">
+                Endpointy na plánu ({endpoints.data?.length ?? 0})
+              </div>
+              <div className="max-h-96 divide-y divide-border overflow-y-auto text-sm">
+                {(endpoints.data ?? []).map((ep) => {
+                  const info = endpointKindInfo(ep.endpoint_kind);
+                  const Icon = info.icon;
+                  return (
+                    <div key={ep.id} className="flex items-center gap-2 p-2">
+                      <span
+                        className="flex h-6 w-6 items-center justify-center rounded-sm"
+                        style={{ background: info.color, color: "white" }}
+                        title={info.label}
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-mono text-xs truncate">{ep.code}</div>
+                        <div className="text-[10px] text-muted-foreground truncate">
+                          {ep.label ?? info.label}
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeEndpoint(ep.id)}
+                      >
+                        ✕
+                      </Button>
                     </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeEndpoint(ep.id)}
-                  >
-                    ✕
-                  </Button>
-                </div>
-              ))}
+                  );
+                })}
+                {(endpoints.data?.length ?? 0) === 0 && (
+                  <div className="p-3 text-center text-xs text-muted-foreground">Zatím žádný endpoint.</div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
+
         </aside>
       </div>
     </AppShell>

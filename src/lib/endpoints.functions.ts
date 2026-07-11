@@ -3,7 +3,21 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const EndpointKind = z.enum(["WORKSTATION", "AP", "CAMERA", "PATCH", "OTHER"]);
+const EndpointKind = z.enum([
+  "WORKSTATION",
+  "AP",
+  "CAMERA",
+  "PATCH",
+  "SOCKET",
+  "TRUNK_STRIP",
+  "CEILING",
+  "KIOSK",
+  "OUTDOOR_KIOSK",
+  "OUTDOOR_CABLE",
+  "KITCHEN",
+  "MONITOR",
+  "OTHER",
+]);
 
 const CreateInput = z.object({
   projectId: z.string().uuid(),
