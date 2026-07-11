@@ -1357,16 +1357,35 @@ function PlanEditorPage() {
           {mode === "port" && (
             <div className="rounded-sm border border-border p-3 text-sm">
               <div className="mb-2 font-semibold">Trasy</div>
-              <div className="mb-2 text-xs text-muted-foreground">
-                Automaticky přepočítá trasy všech kabelů: rack → nejbližší kmen → endpoint.
+              <div className="mb-2 rounded-sm bg-muted/40 p-2 font-mono text-[11px]">
+                <div>Kmenů: {bundles.data?.length ?? 0}</div>
+                <div>Endpointů: {endpoints.data?.length ?? 0}</div>
+                <div>Racků: {racks.data?.length ?? 0}</div>
+                <div>Vygenerovaných tras: {branches.data?.length ?? 0}</div>
               </div>
+              {(bundles.data?.length ?? 0) === 0 ? (
+                <div className="mb-3 rounded-sm border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive">
+                  Není nakreslen žádný kmen. Přejděte na <b>Kmeny</b> a zakreslete hlavní tahací cestu — bez ní nelze generovat trasy.
+                </div>
+              ) : (
+                <div className="mb-2 text-xs text-muted-foreground">
+                  Automaticky přepočítá trasy všech kabelů: <b>rack → nejbližší kmen → endpoint</b>.
+                </div>
+              )}
               <Button
                 size="sm"
                 className="mb-3 w-full"
+                disabled={(bundles.data?.length ?? 0) === 0}
                 onClick={async () => {
                   try {
                     const r = await autoAssignBundlesFn({ data: { projectId, floorPlanId: planId, overwrite: true } });
-                    toast.success(`Vygenerováno: ${r.assigned} tras, přeskočeno ${r.skipped}`);
+                    if (r.reason === "no_bundles") {
+                      toast.error("Není žádný kmen — nakreslete kmen v záložce Kmeny");
+                    } else if (r.reason === "no_endpoints") {
+                      toast.error("Na tomto plánu nejsou žádné endpointy");
+                    } else {
+                      toast.success(`Vygenerováno ${r.assigned} tras · přeskočeno ${r.skipped}`);
+                    }
                     qc.invalidateQueries({ queryKey: ["plan-branches", projectId, planId] });
                     qc.invalidateQueries({ queryKey: ["cables", projectId] });
                   } catch (e) {
@@ -1376,6 +1395,17 @@ function PlanEditorPage() {
               >
                 Vygenerovat trasy
               </Button>
+              {(branches.data?.length ?? 0) > 0 && (
+                <div className="mb-3 max-h-40 divide-y divide-border overflow-y-auto rounded-sm border border-border text-xs">
+                  {(branches.data ?? []).map((br) => (
+                    <div key={br.id} className="flex items-center justify-between gap-2 p-1.5">
+                      <span className="font-mono truncate">{br.code}</span>
+                      <span className="text-[10px] text-muted-foreground">{br.branchPoints.length} bodů</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <div className="mb-2 border-t border-border pt-2 text-xs font-semibold">Nový kabel z portu</div>
               <div className="mb-2 text-xs text-muted-foreground">
                 1) Vyber volný port · 2) Klikni na plán · 3) Zadej kód endpointu a kabelu
