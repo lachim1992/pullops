@@ -43,8 +43,15 @@ export type LengthInput = {
   manualRouteLengthM?: number | null;
   /** two-point calibration for the plan the route belongs to */
   calibration: Calibration | null | undefined;
-  /** per-cable-type reserve added to both endpoints, in meters */
-  reserveM: number;
+  /**
+   * Legacy: single reserve applied 2×. Used only when reserveFromM / reserveToM are both undefined.
+   * Kept for backward compatibility.
+   */
+  reserveM?: number;
+  /** Reserve at the "from" endpoint (m). Preferred over reserveM. */
+  reserveFromM?: number;
+  /** Reserve at the "to" endpoint (m). */
+  reserveToM?: number;
   /** per-cable manual override; when set, engine returns this value */
   overrideCableLengthM?: number | null;
 };
@@ -56,19 +63,24 @@ export type LengthResult = {
 };
 
 /**
- * Compute cable length in meters, honouring:
+ * Compute cable length in meters:
  *   1. explicit cable override
- *   2. manual route length
- *   3. polyline * calibration + 2 * reserve
+ *   2. manual route length + reserves
+ *   3. polyline × calibration + reserve_from + reserve_to
+ *
+ * Reserve: if reserveFromM / reserveToM given, use their sum; otherwise 2 × reserveM.
  */
 export function computeCableLength(input: LengthInput): LengthResult {
-  const reserve = Math.max(0, input.reserveM ?? 0);
+  const hasPerSide = input.reserveFromM != null || input.reserveToM != null;
+  const totalReserve = hasPerSide
+    ? Math.max(0, input.reserveFromM ?? 0) + Math.max(0, input.reserveToM ?? 0)
+    : 2 * Math.max(0, input.reserveM ?? 0);
 
   if (input.overrideCableLengthM != null && input.overrideCableLengthM >= 0) {
     return { meters: input.overrideCableLengthM, source: "override" };
   }
   if (input.manualRouteLengthM != null && input.manualRouteLengthM >= 0) {
-    return { meters: input.manualRouteLengthM + 2 * reserve, source: "manual_route" };
+    return { meters: input.manualRouteLengthM + totalReserve, source: "manual_route" };
   }
   if (!input.routePoints || input.routePoints.length < 2) {
     return { meters: null, source: "no_route" };
@@ -77,7 +89,7 @@ export function computeCableLength(input: LengthInput): LengthResult {
   if (mpu == null) {
     return { meters: null, source: "no_calibration" };
   }
-  const meters = polylineNormLength(input.routePoints) * mpu + 2 * reserve;
+  const meters = polylineNormLength(input.routePoints) * mpu + totalReserve;
   return { meters, source: "polyline" };
 }
 

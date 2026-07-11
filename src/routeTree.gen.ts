@@ -22,6 +22,7 @@ import { Route as AuthenticatedProjectsProjectIdPlansRouteImport } from './route
 import { Route as AuthenticatedProjectsProjectIdPatchPanelsRouteImport } from './routes/_authenticated/projects.$projectId.patch-panels'
 import { Route as AuthenticatedProjectsProjectIdMembersRouteImport } from './routes/_authenticated/projects.$projectId.members'
 import { Route as AuthenticatedProjectsProjectIdEndpointsRouteImport } from './routes/_authenticated/projects.$projectId.endpoints'
+import { Route as AuthenticatedProjectsProjectIdEndpointKindsRouteImport } from './routes/_authenticated/projects.$projectId.endpoint-kinds'
 import { Route as AuthenticatedProjectsProjectIdDocumentsRouteImport } from './routes/_authenticated/projects.$projectId.documents'
 import { Route as AuthenticatedProjectsProjectIdCablesRouteImport } from './routes/_authenticated/projects.$projectId.cables'
 import { Route as AuthenticatedProjectsProjectIdCableTypesRouteImport } from './routes/_authenticated/projects.$projectId.cable-types'
@@ -104,6 +105,12 @@ const AuthenticatedProjectsProjectIdEndpointsRoute =
     path: '/projects/$projectId/endpoints',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedProjectsProjectIdEndpointKindsRoute =
+  AuthenticatedProjectsProjectIdEndpointKindsRouteImport.update({
+    id: '/projects/$projectId/endpoint-kinds',
+    path: '/projects/$projectId/endpoint-kinds',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedProjectsProjectIdDocumentsRoute =
   AuthenticatedProjectsProjectIdDocumentsRouteImport.update({
     id: '/projects/$projectId/documents',
@@ -175,6 +182,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId/cable-types': typeof AuthenticatedProjectsProjectIdCableTypesRoute
   '/projects/$projectId/cables': typeof AuthenticatedProjectsProjectIdCablesRouteWithChildren
   '/projects/$projectId/documents': typeof AuthenticatedProjectsProjectIdDocumentsRoute
+  '/projects/$projectId/endpoint-kinds': typeof AuthenticatedProjectsProjectIdEndpointKindsRoute
   '/projects/$projectId/endpoints': typeof AuthenticatedProjectsProjectIdEndpointsRoute
   '/projects/$projectId/members': typeof AuthenticatedProjectsProjectIdMembersRoute
   '/projects/$projectId/patch-panels': typeof AuthenticatedProjectsProjectIdPatchPanelsRouteWithChildren
@@ -198,6 +206,7 @@ export interface FileRoutesByTo {
   '/organizations/$orgId/settings': typeof AuthenticatedOrganizationsOrgIdSettingsRoute
   '/projects/$projectId/cable-types': typeof AuthenticatedProjectsProjectIdCableTypesRoute
   '/projects/$projectId/documents': typeof AuthenticatedProjectsProjectIdDocumentsRoute
+  '/projects/$projectId/endpoint-kinds': typeof AuthenticatedProjectsProjectIdEndpointKindsRoute
   '/projects/$projectId/endpoints': typeof AuthenticatedProjectsProjectIdEndpointsRoute
   '/projects/$projectId/members': typeof AuthenticatedProjectsProjectIdMembersRoute
   '/projects/$projectId/settings': typeof AuthenticatedProjectsProjectIdSettingsRoute
@@ -222,6 +231,7 @@ export interface FileRoutesById {
   '/_authenticated/projects/$projectId/cable-types': typeof AuthenticatedProjectsProjectIdCableTypesRoute
   '/_authenticated/projects/$projectId/cables': typeof AuthenticatedProjectsProjectIdCablesRouteWithChildren
   '/_authenticated/projects/$projectId/documents': typeof AuthenticatedProjectsProjectIdDocumentsRoute
+  '/_authenticated/projects/$projectId/endpoint-kinds': typeof AuthenticatedProjectsProjectIdEndpointKindsRoute
   '/_authenticated/projects/$projectId/endpoints': typeof AuthenticatedProjectsProjectIdEndpointsRoute
   '/_authenticated/projects/$projectId/members': typeof AuthenticatedProjectsProjectIdMembersRoute
   '/_authenticated/projects/$projectId/patch-panels': typeof AuthenticatedProjectsProjectIdPatchPanelsRouteWithChildren
@@ -248,6 +258,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/cable-types'
     | '/projects/$projectId/cables'
     | '/projects/$projectId/documents'
+    | '/projects/$projectId/endpoint-kinds'
     | '/projects/$projectId/endpoints'
     | '/projects/$projectId/members'
     | '/projects/$projectId/patch-panels'
@@ -271,6 +282,7 @@ export interface FileRouteTypes {
     | '/organizations/$orgId/settings'
     | '/projects/$projectId/cable-types'
     | '/projects/$projectId/documents'
+    | '/projects/$projectId/endpoint-kinds'
     | '/projects/$projectId/endpoints'
     | '/projects/$projectId/members'
     | '/projects/$projectId/settings'
@@ -294,6 +306,7 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/$projectId/cable-types'
     | '/_authenticated/projects/$projectId/cables'
     | '/_authenticated/projects/$projectId/documents'
+    | '/_authenticated/projects/$projectId/endpoint-kinds'
     | '/_authenticated/projects/$projectId/endpoints'
     | '/_authenticated/projects/$projectId/members'
     | '/_authenticated/projects/$projectId/patch-panels'
@@ -407,6 +420,13 @@ declare module '@tanstack/react-router' {
       path: '/projects/$projectId/endpoints'
       fullPath: '/projects/$projectId/endpoints'
       preLoaderRoute: typeof AuthenticatedProjectsProjectIdEndpointsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/projects/$projectId/endpoint-kinds': {
+      id: '/_authenticated/projects/$projectId/endpoint-kinds'
+      path: '/projects/$projectId/endpoint-kinds'
+      fullPath: '/projects/$projectId/endpoint-kinds'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdEndpointKindsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/projects/$projectId/documents': {
@@ -543,6 +563,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedProjectsProjectIdCableTypesRoute: typeof AuthenticatedProjectsProjectIdCableTypesRoute
   AuthenticatedProjectsProjectIdCablesRoute: typeof AuthenticatedProjectsProjectIdCablesRouteWithChildren
   AuthenticatedProjectsProjectIdDocumentsRoute: typeof AuthenticatedProjectsProjectIdDocumentsRoute
+  AuthenticatedProjectsProjectIdEndpointKindsRoute: typeof AuthenticatedProjectsProjectIdEndpointKindsRoute
   AuthenticatedProjectsProjectIdEndpointsRoute: typeof AuthenticatedProjectsProjectIdEndpointsRoute
   AuthenticatedProjectsProjectIdMembersRoute: typeof AuthenticatedProjectsProjectIdMembersRoute
   AuthenticatedProjectsProjectIdPatchPanelsRoute: typeof AuthenticatedProjectsProjectIdPatchPanelsRouteWithChildren
@@ -563,6 +584,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedProjectsProjectIdCablesRouteWithChildren,
   AuthenticatedProjectsProjectIdDocumentsRoute:
     AuthenticatedProjectsProjectIdDocumentsRoute,
+  AuthenticatedProjectsProjectIdEndpointKindsRoute:
+    AuthenticatedProjectsProjectIdEndpointKindsRoute,
   AuthenticatedProjectsProjectIdEndpointsRoute:
     AuthenticatedProjectsProjectIdEndpointsRoute,
   AuthenticatedProjectsProjectIdMembersRoute:

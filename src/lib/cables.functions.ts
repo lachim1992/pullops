@@ -136,16 +136,44 @@ export const deleteCable = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+async function resolveEndpointReserve(
+  supabase: any,
+  endpointId: string | null | undefined,
+  cableTypeReserve: number,
+): Promise<number> {
+  if (!endpointId) return cableTypeReserve;
+  const { data: ep } = await supabase
+    .from("endpoints")
+    .select("project_id, endpoint_kind")
+    .eq("id", endpointId)
+    .maybeSingle();
+  if (!ep?.endpoint_kind || !ep.project_id) return cableTypeReserve;
+  const { data: kind } = await supabase
+    .from("endpoint_kinds")
+    .select("default_reserve_m")
+    .eq("project_id", ep.project_id)
+    .eq("code", ep.endpoint_kind)
+    .maybeSingle();
+  if (kind?.default_reserve_m != null) return Number(kind.default_reserve_m);
+  return cableTypeReserve;
+}
+
 async function recomputeOne(supabase: any, cable: any): Promise<number | null> {
-  let reserve = 0;
+  let cableTypeReserve = 0;
   if (cable.cable_type_id) {
     const { data: ct } = await supabase
       .from("cable_types")
       .select("default_reserve_m")
       .eq("id", cable.cable_type_id)
       .maybeSingle();
-    reserve = Number(ct?.default_reserve_m ?? 0);
+    cableTypeReserve = Number(ct?.default_reserve_m ?? 0);
   }
+
+  // Per-side reserves (endpoint kind overrides cable-type reserve)
+  const [reserveFromM, reserveToM] = await Promise.all([
+    resolveEndpointReserve(supabase, cable.from_endpoint_id, cableTypeReserve),
+    resolveEndpointReserve(supabase, cable.to_endpoint_id, cableTypeReserve),
+  ]);
 
   let manualRouteLengthM: number | null = null;
   let routePoints: NormPoint[] = [];
@@ -186,7 +214,8 @@ async function recomputeOne(supabase: any, cable: any): Promise<number | null> {
     routePoints,
     manualRouteLengthM,
     calibration,
-    reserveM: reserve,
+    reserveFromM,
+    reserveToM,
     overrideCableLengthM: cable.override_length_m,
   });
 
@@ -204,7 +233,7 @@ export const recomputeCableLength = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { data: cable, error } = await supabase
       .from("cables")
-      .select("id, cable_type_id, route_id, override_length_m")
+      .select("id, cable_type_id, route_id, override_length_m, from_endpoint_id, to_endpoint_id")
       .eq("id", data.cableId)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -220,7 +249,7 @@ export const recomputeProjectLengths = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { data: cables, error } = await supabase
       .from("cables")
-      .select("id, cable_type_id, route_id, override_length_m")
+      .select("id, cable_type_id, route_id, override_length_m, from_endpoint_id, to_endpoint_id")
       .eq("project_id", data.projectId);
     if (error) throw new Error(error.message);
     let count = 0;
