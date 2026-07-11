@@ -212,7 +212,7 @@ export const getPullModeData = createServerFn({ method: "GET" })
     const { supabase } = context;
     const spoolLen = data.defaultSpoolLengthM;
 
-    const [plansRes, calsRes, endpointsRes, bundlesRes, typesRes, kindsRes, cablesRes] =
+    const [plansRes, calsRes, endpointsRes, bundlesRes, typesRes, kindsRes, cablesRes, panelsRes] =
       await Promise.all([
         supabase
           .from("floor_plans")
@@ -249,9 +249,13 @@ export const getPullModeData = createServerFn({ method: "GET" })
           )
           .eq("project_id", data.projectId)
           .order("code", { ascending: true }),
+        supabase
+          .from("patch_panels")
+          .select("id, code, name, floor_plan_id, port_count")
+          .eq("project_id", data.projectId),
       ]);
 
-    for (const res of [plansRes, calsRes, endpointsRes, bundlesRes, typesRes, kindsRes, cablesRes]) {
+    for (const res of [plansRes, calsRes, endpointsRes, bundlesRes, typesRes, kindsRes, cablesRes, panelsRes]) {
       if (res.error) throw new Error(res.error.message);
     }
 
