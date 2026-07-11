@@ -45,6 +45,7 @@ export const createBundle = createServerFn({ method: "POST" })
         code: z.string().min(1).max(80),
         rackId: z.string().uuid().nullable().optional(),
         points: z.array(PointSchema).min(2),
+        segments: z.array(SegmentSchema).optional(),
         notes: z.string().max(2000).optional(),
       })
       .parse(d),
@@ -59,6 +60,7 @@ export const createBundle = createServerFn({ method: "POST" })
         code: data.code,
         rack_id: data.rackId ?? null,
         points: data.points,
+        segments: data.segments ?? [],
         notes: data.notes ?? null,
         created_by: userId,
       } as never)
