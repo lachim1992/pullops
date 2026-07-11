@@ -267,7 +267,6 @@ function PlanPreview({
       </div>
       <div className="relative aspect-[4/3] max-h-[70vh] w-full bg-muted/30">
         {url ? (
-          
           <img src={url} alt="" className="absolute inset-0 h-full w-full object-contain" />
         ) : (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
@@ -650,7 +649,6 @@ function PhotosSection({ endpointId, projectId }: { endpointId: string; projectI
             className="group relative overflow-hidden rounded-sm border border-border"
           >
             {p.url ? (
-              
               <img src={p.url} alt="" className="aspect-square w-full object-cover" />
             ) : (
               <div className="aspect-square w-full bg-muted" />
