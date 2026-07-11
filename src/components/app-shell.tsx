@@ -101,6 +101,13 @@ export function AppShell({
                 Typy kabelů
               </NavItem>
               <NavItem
+                to="/projects/$projectId/endpoint-kinds"
+                params={{ projectId }}
+                icon={Settings}
+              >
+                Typy endpointů
+              </NavItem>
+              <NavItem
                 to="/projects/$projectId/patch-panels"
                 params={{ projectId }}
                 icon={Wrench}
