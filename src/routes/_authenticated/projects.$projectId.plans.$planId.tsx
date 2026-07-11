@@ -159,9 +159,7 @@ function PlanEditorPage() {
   const [calDistance, setCalDistance] = useState<string>("");
   const [newEpCode, setNewEpCode] = useState("");
   const [newEpLabel, setNewEpLabel] = useState("");
-  const [newEpKind, setNewEpKind] = useState<
-    "WORKSTATION" | "AP" | "CAMERA" | "PATCH" | "OTHER"
-  >("WORKSTATION");
+  const [newEpKind, setNewEpKind] = useState<EndpointKind>("WORKSTATION");
   const [pendingPos, setPendingPos] = useState<NormPoint | null>(null);
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
   const [selectedEndpointId, setSelectedEndpointId] = useState<string | null>(null);
