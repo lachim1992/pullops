@@ -212,7 +212,7 @@ export const getPullModeData = createServerFn({ method: "GET" })
     const { supabase } = context;
     const spoolLen = data.defaultSpoolLengthM;
 
-    const [plansRes, calsRes, endpointsRes, bundlesRes, typesRes, kindsRes, cablesRes, panelsRes] =
+    const [plansRes, calsRes, endpointsRes, bundlesRes, typesRes, kindsRes, cablesRes, panelsRes, dayPlansRes, dayPlanCablesRes] =
       await Promise.all([
         supabase
           .from("floor_plans")
@@ -254,9 +254,19 @@ export const getPullModeData = createServerFn({ method: "GET" })
           .from("patch_panels")
           .select("id, code, name, floor_plan_id, port_count")
           .eq("project_id", data.projectId),
+        supabase
+          .from("pull_day_plans")
+          .select("id, name, sort_order, planned_date, spool_count, spool_length_m, floor_plan_id")
+          .eq("project_id", data.projectId)
+          .order("sort_order", { ascending: true }),
+        supabase
+          .from("pull_day_plan_cables")
+          .select("day_plan_id, cable_id, sort_order")
+          .eq("project_id", data.projectId)
+          .order("sort_order", { ascending: true }),
       ]);
 
-    for (const res of [plansRes, calsRes, endpointsRes, bundlesRes, typesRes, kindsRes, cablesRes, panelsRes]) {
+    for (const res of [plansRes, calsRes, endpointsRes, bundlesRes, typesRes, kindsRes, cablesRes, panelsRes, dayPlansRes, dayPlanCablesRes]) {
       if (res.error) throw new Error(res.error.message);
     }
 
