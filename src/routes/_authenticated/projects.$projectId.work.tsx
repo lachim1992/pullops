@@ -353,18 +353,28 @@ function PullMap({
           if (c.branchPoints.length < 2) return null;
           const selected = c.id === selectedCableId;
           const done = c.status === "PULLED";
+          const points = c.branchPoints.map((p) => `${p.x},${p.y}`).join(" ");
           return (
-            <polyline
-              key={c.id}
-              points={c.branchPoints.map((p) => `${p.x},${p.y}`).join(" ")}
-              fill="none"
-              stroke={selected ? "var(--destructive)" : done ? "var(--muted-foreground)" : "var(--accent)"}
-              strokeOpacity={selected ? 1 : done ? 0.35 : 0.8}
-              strokeWidth={selected ? 0.006 : 0.0035}
-              strokeLinejoin="round"
-              onClick={() => onSelectCable(c.id)}
-              style={{ cursor: "pointer" }}
-            />
+            <g key={c.id} onClick={() => onSelectCable(c.id)} style={{ cursor: "pointer" }}>
+              <polyline
+                points={points}
+                fill="none"
+                stroke="transparent"
+                strokeWidth={0.022}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <polyline
+                points={points}
+                fill="none"
+                stroke={
+                  selected ? "var(--destructive)" : done ? "var(--muted-foreground)" : "var(--accent)"
+                }
+                strokeOpacity={selected ? 1 : done ? 0.35 : 0.8}
+                strokeWidth={selected ? 0.006 : 0.0035}
+                strokeLinejoin="round"
+              />
+            </g>
           );
         })}
 
