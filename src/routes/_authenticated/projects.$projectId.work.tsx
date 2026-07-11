@@ -402,7 +402,9 @@ function PlanWorkspace(props: {
         />
       )}
 
-      {tab === "spools" && <SpoolsTab spools={allSpools} />}
+      {tab === "spools" && (
+        <SpoolsTab spools={allSpools} cables={cables} onToggle={onToggleCable} />
+      )}
     </div>
   );
 }
