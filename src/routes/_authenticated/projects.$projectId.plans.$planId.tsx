@@ -849,15 +849,21 @@ function PlanEditorPage() {
               {/* Draft bundle in progress */}
               {mode === "bundle" && draftBundlePoints.length > 0 && (
                 <>
-                  {draftBundlePoints.length > 1 && (
-                    <polyline
-                      points={draftBundlePoints.map((p) => `${p.x},${p.y}`).join(" ")}
-                      fill="none"
-                      stroke="hsl(var(--accent))"
-                      strokeWidth={0.006 / zoom}
-                      strokeDasharray="0.01 0.005"
-                    />
-                  )}
+                  {draftBundlePoints.length > 1 && draftBundlePoints.slice(0, -1).map((p1, i) => {
+                    const p2 = draftBundlePoints[i + 1];
+                    const seg = draftBundleSegments[i] ?? defaultSegment();
+                    const color = BUNDLE_SEGMENT_TYPES[seg.type].color;
+                    return (
+                      <line
+                        key={`draft-seg-${i}`}
+                        x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y}
+                        stroke={color}
+                        strokeWidth={0.006 / zoom}
+                        strokeDasharray="0.01 0.005"
+                        strokeLinecap="round"
+                      />
+                    );
+                  })}
                   {draftBundlePoints.map((p, i) => (
                     <circle
                       key={i}
@@ -870,6 +876,11 @@ function PlanEditorPage() {
                       onDoubleClick={(e) => {
                         e.stopPropagation();
                         setDraftBundlePoints((pts) => pts.filter((_, j) => j !== i));
+                        setDraftBundleSegments((segs) => {
+                          // segment between i-1 and i disappears when point i removed
+                          const idx = Math.max(0, i - 1);
+                          return segs.filter((_, j) => j !== idx);
+                        });
                       }}
                     />
                   ))}
