@@ -180,6 +180,7 @@ function PlanEditorPage() {
   const [newRackName, setNewRackName] = useState("");
   // Bundle mode
   const [draftBundlePoints, setDraftBundlePoints] = useState<NormPoint[]>([]);
+  const [draftBundleSegments, setDraftBundleSegments] = useState<BundleSegment[]>([]);
   const [newBundleCode, setNewBundleCode] = useState("");
   // Port mode
   const [selectedPortId, setSelectedPortId] = useState<string | null>(null);
