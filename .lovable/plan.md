@@ -1,130 +1,146 @@
-# Audit stávajícího systému rezerv
+## Cíl
 
-**Kde se rezerva dnes používá:**
-- `cable_types.default_reserve_m` — jediný zdroj rezervy
-- `length.ts` → `computeCableLength({ reserveM })` — přičítá `2 × reserveM` (obě strany stejně)
-- `cables.functions.ts` → `recomputeOne` — načte rezervu z `cable_types`
-- `pullTasks.functions.ts` → agregace, také z `cable_types`
+Zprovoznit tři propojené věci: (1) opravit neviditelné vygenerované trasy, (2) postavit plnohodnotný **Režim tahání** pro techniky, (3) přidat **Členové – pozvat emailem** a novou záložku **Úkoly** s přiřazováním na den.
 
-**Problémy:**
-- Neumí rozlišit, že rack má jinou realitu (kratší přebytek) než venkovní kiosek (dlouhý přebytek)
-- Neumí zohlednit vertikální trasy neviditelné ve 2D
-- `endpoint_kind` je jen enum bez data — nelze uživatelsky rozšiřovat
+---
 
-# Cílový model
+## 1. Bugfix — vygenerované trasy nejsou v seznamu
 
-**Rezerva se počítá per strana kabelu podle typu endpointu na dané straně.** Endpoint kind přebíjí rezervu z typu kabelu. Součet obou stran = celková rezerva.
+**Hypotéza (ověřím před opravou):** `autoAssignBundlesForPlan` vytvoří `cable_routes` řádky, ale buď (a) nezaloží `cable_route_points` (trasa bez bodů → filtr `points.length > 0` ji skryje), (b) přiřadí je pod jiný `plan_id`/`floor_plan_id`, nebo (c) `listCableRoutes` filtruje jen ty s ne-null `bundle_id`. Zkontroluji SQL po vygenerování, opravím konkrétní příčinu, přidám vitest.
+
+**Akce:** oprava generátoru + doplnění chybějícího zápisu bodů/plan_id + refetch invalidace `["cable-routes", planId]` po generování.
+
+---
+
+## 2. Režim tahání (Pull Mode)
+
+Nová routa `projects.$projectId.pull.tsx` (dostupná všem členům projektu, ne jen adminům).
+
+**Layout: split-view**
 
 ```text
-cable.length = polyline × meters_per_unit + reserve_from + reserve_to
+┌──────────────────────────┬────────────────────┐
+│                          │  Moje úkoly dnes   │
+│      MAPA plánu          │  ────────────────  │
+│  • kmeny (linie)         │  ☐ Kabel A-01  ✎📷│
+│  • trasy (tenké linie)   │  ☐ Kabel A-02  ✎📷│
+│  • endpointy (klik)      │  ☑ Kabel A-03      │
+│  • patch panely          │  ────────────────  │
+│                          │  Filtr: [dnes ▾]   │
+│                          │  [jen moje ☑]      │
+└──────────────────────────┴────────────────────┘
 ```
 
-## Nová tabulka `endpoint_kinds` (per-projekt)
+**Chování:**
+- Přepínač plánů (pokud jich je víc).
+- Klik na kabel v seznamu → highlight jeho trasy na mapě + zoom.
+- Klik na endpoint na mapě → zobrazí kabely daného endpointu v pravém panelu.
+- Checkbox „hotovo" → `cables.pull_status = 'done'` + `cables.pulled_at = now()` + `pulled_by = auth.uid()`.
+- Tlačítko poznámky/foto na řádku kabelu → dialog: text + upload do `cable-photos` bucketu (nový).
+- Read-only pro editační funkce: nelze mazat kmen, kreslit, měnit typ.
 
-Sloupce: `project_id`, `organization_id`, `code` (string, uniq per projekt), `label` (CS), `default_reserve_m`, `color`, `icon` (Lucide jméno), `sort_order`, `is_system` (bool — systémové nelze smazat, jen editovat rezervu/label).
+---
 
-Vazba: `endpoints.endpoint_kind` zůstane `text`; nově odkazuje na `endpoint_kinds.code` v rámci projektu (bez FK — enum-like, aby migrace nezlomila existující data).
+## 3. Úkoly (Tasks) — nová záložka
 
-**Seed při vytvoření projektu (rozšíření `create_project_tx`):** nasadí systémové typy s výchozími rezervami dle domluvy:
+Routa `projects.$projectId.tasks.tsx` (viditelná project_managerům a adminům pro editaci; technici vidí jen své).
 
-| code | label | reserve (m) |
-|---|---|---|
-| WORKSTATION | Pracoviště / PC | 3 |
-| MONITOR | Monitor | 3 |
-| AP | Wi-Fi AP | 2 |
-| CAMERA | Kamera | 2 |
-| SOCKET | Datová zásuvka | 3 |
-| TRUNK_STRIP | Lišta | 3 |
-| CEILING | Strop | 1 |
-| KITCHEN | Kuchyně | 3 |
-| KIOSK | Kiosek | 5 |
-| OUTDOOR_KIOSK | Venkovní kiosek | 5 |
-| OUTDOOR_CABLE | Venkovní kabel | 5 |
-| PATCH | Patch / rack | 4 |
-| OTHER | Jiné | 3 |
+**Model úkolu (ad-hoc granularita dle odpovědi):**
+- title, description
+- assigned_to (user_id, člen projektu)
+- scheduled_date (den)
+- status: pending / in_progress / done
+- vazba na kabely přes join tabulku `pull_task_cables` (M:N) — vedoucí ručně vybere kabely z registru
+- vazba na plán (volitelně)
 
-Existujícím projektům doplní migrace stejný seed idempotentně.
+**UI vedoucího:**
+- Kalendářový/list view úkolů projektu
+- „Nový úkol" → dialog: title, den, přiřadit členu (select z project_members), vybrat kabely (multi-select s filtrem)
+- Edit/smazat
 
-## Změny v engine
+**UI technika (v Pull Mode):**
+- Filtr „Moje úkoly na [datum]" agreguje kabely ze všech `pull_task_cables` kde `assigned_to = auth.uid() AND scheduled_date = <dnes>`.
 
-`computeCableLength` — nová signatura:
-```ts
-{
-  routePoints, manualRouteLengthM, calibration,
-  reserveFromM: number,   // podle from_endpoint.kind
-  reserveToM: number,     // podle to_endpoint.kind
-  overrideCableLengthM
-}
-```
-`reserveM` (starý parametr) zůstane volitelně jako fallback (pokud jsou obě `reserveFrom/To` nedodány → `2 × reserveM` jako dřív), aby netříštil kompatibilitu testů.
+---
 
-## Změny v resolveru rezerv (server)
+## 4. Členové — pozvat emailem
 
-Nová interní helper `getEndpointReserve(supabase, projectId, endpointId, cableTypeId)`:
-1. načti `endpoints.endpoint_kind`
-2. `select default_reserve_m from endpoint_kinds where project_id=? and code=?`
-3. fallback na `cable_types.default_reserve_m`, pak 0
+**Rozšíření `organizations.$orgId.settings.tsx` a `projects.$projectId.members.tsx`:**
+- Input „Email" + tlačítko „Pozvat"
+- Server function `invite_member_to_org_tx(email, org_id, role)`:
+  - Pokud user existuje → přidat do org rovnou (dnešní chování)
+  - Pokud neexistuje → INSERT do nové tabulky `pending_invitations` (email, org_id, project_id?, role, token, expires_at) + odeslat email přes **Lovable Emails** (auth-email scaffold) s odkazem `/invite?token=…`.
+- Route `/invite`: pokud user není přihlášen → sign-up flow (email předvyplněn); po přihlášení → RPC `accept_invitation_tx(token)` přidá do org/projektu.
 
-Použije se v:
-- `cables.functions.ts` `recomputeOne` — načte from/to endpoint kind → dvě rezervy
-- `pullTasks.functions.ts` `simulateSpools` — dtto (batch: načti `endpoint_kinds` do mapy jednou)
+---
 
-`cable_types.default_reserve_m` **neodstraníme** — slouží jako fallback, když kabel nemá endpoint na dané straně (např. patch↔patch bez endpointu, nebo neuzavřený kabel).
-
-## Nové server funkce
-
-`src/lib/endpointKinds.functions.ts`:
-- `listEndpointKinds({ projectId })`
-- `createEndpointKind({ projectId, code, label, defaultReserveM, color?, icon?, sortOrder? })`
-- `updateEndpointKind({ id, ... })`
-- `deleteEndpointKind({ id })` — jen pokud `is_system=false`
-
-## Změny v UI
-
-**Nová stránka:** `/projects/:id/endpoint-kinds` — tabulka: kód, název, rezerva (m), barva, ikona, systémový. Inline editace rezervy a labelu. Tlačítko „Přidat vlastní typ". Odkaz z Nastavení projektu.
-
-**Aktualizace `src/lib/endpointKinds.ts`:** místo statické konstanty přejde na React hook `useEndpointKinds(projectId)` (načte z DB a cachuje). Fallback ikona/barva pro custom typy. Systémové výchozí (statická konstanta) zůstane jako defaults pro seedovací migraci.
-
-**Editor plánu** (`plans.$planId.tsx`) — select endpoint kind se plní z DB, nikoli konstanty.
-
-**Detail kabelu** — přidat řádek „Rezerva: from X m + to Y m = Z m" pro transparenci.
-
-# Migrace
+## 5. Databázové změny (jedna migrace)
 
 ```sql
--- 1. tabulka
-CREATE TABLE public.endpoint_kinds (
-  id uuid primary key default gen_random_uuid(),
-  project_id uuid not null references public.projects on delete cascade,
-  organization_id uuid not null,
-  code text not null,
-  label text not null,
-  default_reserve_m numeric not null default 3 check (default_reserve_m >= 0),
-  color text,
-  icon text,
-  sort_order int not null default 100,
-  is_system boolean not null default false,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  unique (project_id, code)
+-- Pull mode stav na kabelu
+ALTER TABLE cables
+  ADD COLUMN pull_status text NOT NULL DEFAULT 'pending'
+    CHECK (pull_status IN ('pending','in_progress','done')),
+  ADD COLUMN pulled_at timestamptz,
+  ADD COLUMN pulled_by uuid REFERENCES auth.users(id),
+  ADD COLUMN pull_note text;
+
+-- Foto k pull akci
+CREATE TABLE cable_pull_photos (
+  id uuid PK, project_id, cable_id, storage_path, uploaded_by, created_at
 );
 
--- 2. grants + RLS: read = project member, write = admin/PM na projektu
--- 3. tenant validace + updated_at trigger
--- 4. seed: pro každý existující projekt vlož 13 systémových typů (ON CONFLICT DO NOTHING)
--- 5. rozšířit create_project_tx() aby seedoval při vytvoření
+-- Úkoly
+CREATE TABLE tasks (
+  id, project_id, title, description, assigned_to, scheduled_date,
+  status, created_by, created_at, updated_at
+);
+CREATE TABLE task_cables (
+  task_id, cable_id, PRIMARY KEY (task_id, cable_id)
+);
+
+-- Pozvánky
+CREATE TABLE pending_invitations (
+  id, organization_id, project_id nullable, email, role,
+  token uuid unique, invited_by, expires_at, accepted_at nullable
+);
+
+-- Storage bucket cable-photos (private)
+
+-- RPCs: accept_invitation_tx, invite_member_to_org_tx,
+--       mark_cable_pulled_tx, assign_task_tx
 ```
 
-# Rollout (pořadí commitů)
+Všechny tabulky: GRANT + RLS scoped přes `is_project_member` / `has_project_role`.
 
-1. **Migrace** — tabulka + seed + rozšíření `create_project_tx`.
-2. **Server layer** — `endpointKinds.functions.ts`, helper `getEndpointReserve`, update `length.ts` (nové parametry, backward-compat), update `cables.functions.ts` + `pullTasks.functions.ts`.
-3. **UI** — stránka nastavení typů, hook `useEndpointKinds`, přepis pickerů v editoru plánu.
-4. **Recompute** — tlačítko „Přepočítat všechny kabely" v Nastavení projektu (už existuje? pokud ne, jednorázový server fn).
+---
 
-# Otevřené otázky (mohu rozhodnout sám, ale ptám se)
+## 6. Technické detaily
 
-- **Přepočet existujících kabelů:** spustit ihned po migraci pro všechny projekty, nebo nechat na uživatele (tlačítko)? → navrhuji **automaticky** v samostatné neinvazivní server fn po migraci.
-- **Ikona custom typu:** dovolit uživateli zadat Lucide jméno stringem (validace vůči seznamu), nebo pevný set 6–8 obecných ikon k výběru? → navrhuji **pevný set** (Plug, Wifi, Cctv, Monitor, Server, Warehouse, Utensils, HelpCircle) + color picker.
+- **Pull Mode routa je pod `_authenticated`** ale bez admin gate — každý project_member vidí.
+- **Emaily**: použiju `email_domain--scaffold_auth_email_templates`, přidám nový template `member-invitation.tsx` do transactional scaffoldu.
+- **Bucket `cable-photos`**: private, signed URLs.
+- **Zachování** existující logiky endpointů, kmenů, bundle segmentů — žádné breaking změny.
 
-Pokud souhlasíš, začnu migrací a serverovou vrstvou.
+---
+
+## Pořadí implementace
+
+1. Diagnóza + fix bugu neviditelných tras (+ vitest).
+2. Migrace (schema + RLS + RPCs).
+3. Server functions (`tasks.functions.ts`, `invitations.functions.ts`, `pullMode.functions.ts`).
+4. Routa Pull Mode + Task management UI.
+5. Rozšíření Members o invite email.
+6. Auth-email scaffold + invitation template.
+7. Playwright smoke: přihlásit techniku, otevřít Pull Mode, odškrtnout kabel, ověřit v DB.
+
+---
+
+## Předpokládaný rozsah
+
+~1 migrace, ~6 nových server-fn souborů, ~3 nové routy, ~4 nové komponenty. Doba: velký checkpoint, budu commitovat po fázích.
+
+## Před startem potřebuji odsouhlasit 2 věci
+
+- **Emailová doména**: máš už nastavenou v Lovable Cloud? Pokud ne, spustím setup dialog jako první krok (bez toho pozvánky přes email nefungují — vrátíme se k „přidat existujícího usera").
+- **Role pro pull mode**: stačí, že je uživatel `project_member` (jakákoli role), nebo chceš rozlišovat roli `technician` samostatně (zatím žádný `technician` role v `app_role` enum není)?
