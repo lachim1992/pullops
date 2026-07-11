@@ -1018,7 +1018,7 @@ function PullMap({
   return (
     <div
       ref={containerRef}
-      onWheel={onWheel}
+      
       onMouseDown={onMouseDown}
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}
