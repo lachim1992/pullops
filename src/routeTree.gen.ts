@@ -17,6 +17,7 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
 import { Route as AuthenticatedProjectsProjectIdIndexRouteImport } from './routes/_authenticated/projects.$projectId.index'
 import { Route as AuthenticatedProjectsProjectIdWorkRouteImport } from './routes/_authenticated/projects.$projectId.work'
+import { Route as AuthenticatedProjectsProjectIdSpoolsRouteImport } from './routes/_authenticated/projects.$projectId.spools'
 import { Route as AuthenticatedProjectsProjectIdSettingsRouteImport } from './routes/_authenticated/projects.$projectId.settings'
 import { Route as AuthenticatedProjectsProjectIdPlansRouteImport } from './routes/_authenticated/projects.$projectId.plans'
 import { Route as AuthenticatedProjectsProjectIdPatchPanelsRouteImport } from './routes/_authenticated/projects.$projectId.patch-panels'
@@ -73,6 +74,12 @@ const AuthenticatedProjectsProjectIdWorkRoute =
   AuthenticatedProjectsProjectIdWorkRouteImport.update({
     id: '/projects/$projectId/work',
     path: '/projects/$projectId/work',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedProjectsProjectIdSpoolsRoute =
+  AuthenticatedProjectsProjectIdSpoolsRouteImport.update({
+    id: '/projects/$projectId/spools',
+    path: '/projects/$projectId/spools',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedProjectsProjectIdSettingsRoute =
@@ -188,6 +195,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId/patch-panels': typeof AuthenticatedProjectsProjectIdPatchPanelsRouteWithChildren
   '/projects/$projectId/plans': typeof AuthenticatedProjectsProjectIdPlansRouteWithChildren
   '/projects/$projectId/settings': typeof AuthenticatedProjectsProjectIdSettingsRoute
+  '/projects/$projectId/spools': typeof AuthenticatedProjectsProjectIdSpoolsRoute
   '/projects/$projectId/work': typeof AuthenticatedProjectsProjectIdWorkRoute
   '/projects/$projectId/': typeof AuthenticatedProjectsProjectIdIndexRoute
   '/projects/$projectId/cables/$cableId': typeof AuthenticatedProjectsProjectIdCablesCableIdRoute
@@ -210,6 +218,7 @@ export interface FileRoutesByTo {
   '/projects/$projectId/endpoints': typeof AuthenticatedProjectsProjectIdEndpointsRoute
   '/projects/$projectId/members': typeof AuthenticatedProjectsProjectIdMembersRoute
   '/projects/$projectId/settings': typeof AuthenticatedProjectsProjectIdSettingsRoute
+  '/projects/$projectId/spools': typeof AuthenticatedProjectsProjectIdSpoolsRoute
   '/projects/$projectId/work': typeof AuthenticatedProjectsProjectIdWorkRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdIndexRoute
   '/projects/$projectId/cables/$cableId': typeof AuthenticatedProjectsProjectIdCablesCableIdRoute
@@ -237,6 +246,7 @@ export interface FileRoutesById {
   '/_authenticated/projects/$projectId/patch-panels': typeof AuthenticatedProjectsProjectIdPatchPanelsRouteWithChildren
   '/_authenticated/projects/$projectId/plans': typeof AuthenticatedProjectsProjectIdPlansRouteWithChildren
   '/_authenticated/projects/$projectId/settings': typeof AuthenticatedProjectsProjectIdSettingsRoute
+  '/_authenticated/projects/$projectId/spools': typeof AuthenticatedProjectsProjectIdSpoolsRoute
   '/_authenticated/projects/$projectId/work': typeof AuthenticatedProjectsProjectIdWorkRoute
   '/_authenticated/projects/$projectId/': typeof AuthenticatedProjectsProjectIdIndexRoute
   '/_authenticated/projects/$projectId/cables/$cableId': typeof AuthenticatedProjectsProjectIdCablesCableIdRoute
@@ -264,6 +274,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/patch-panels'
     | '/projects/$projectId/plans'
     | '/projects/$projectId/settings'
+    | '/projects/$projectId/spools'
     | '/projects/$projectId/work'
     | '/projects/$projectId/'
     | '/projects/$projectId/cables/$cableId'
@@ -286,6 +297,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/endpoints'
     | '/projects/$projectId/members'
     | '/projects/$projectId/settings'
+    | '/projects/$projectId/spools'
     | '/projects/$projectId/work'
     | '/projects/$projectId'
     | '/projects/$projectId/cables/$cableId'
@@ -312,6 +324,7 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/$projectId/patch-panels'
     | '/_authenticated/projects/$projectId/plans'
     | '/_authenticated/projects/$projectId/settings'
+    | '/_authenticated/projects/$projectId/spools'
     | '/_authenticated/projects/$projectId/work'
     | '/_authenticated/projects/$projectId/'
     | '/_authenticated/projects/$projectId/cables/$cableId'
@@ -385,6 +398,13 @@ declare module '@tanstack/react-router' {
       path: '/projects/$projectId/work'
       fullPath: '/projects/$projectId/work'
       preLoaderRoute: typeof AuthenticatedProjectsProjectIdWorkRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/projects/$projectId/spools': {
+      id: '/_authenticated/projects/$projectId/spools'
+      path: '/projects/$projectId/spools'
+      fullPath: '/projects/$projectId/spools'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdSpoolsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/projects/$projectId/settings': {
@@ -569,6 +589,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedProjectsProjectIdPatchPanelsRoute: typeof AuthenticatedProjectsProjectIdPatchPanelsRouteWithChildren
   AuthenticatedProjectsProjectIdPlansRoute: typeof AuthenticatedProjectsProjectIdPlansRouteWithChildren
   AuthenticatedProjectsProjectIdSettingsRoute: typeof AuthenticatedProjectsProjectIdSettingsRoute
+  AuthenticatedProjectsProjectIdSpoolsRoute: typeof AuthenticatedProjectsProjectIdSpoolsRoute
   AuthenticatedProjectsProjectIdWorkRoute: typeof AuthenticatedProjectsProjectIdWorkRoute
   AuthenticatedProjectsProjectIdIndexRoute: typeof AuthenticatedProjectsProjectIdIndexRoute
 }
@@ -596,6 +617,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedProjectsProjectIdPlansRouteWithChildren,
   AuthenticatedProjectsProjectIdSettingsRoute:
     AuthenticatedProjectsProjectIdSettingsRoute,
+  AuthenticatedProjectsProjectIdSpoolsRoute:
+    AuthenticatedProjectsProjectIdSpoolsRoute,
   AuthenticatedProjectsProjectIdWorkRoute:
     AuthenticatedProjectsProjectIdWorkRoute,
   AuthenticatedProjectsProjectIdIndexRoute:

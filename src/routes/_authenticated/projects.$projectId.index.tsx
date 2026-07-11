@@ -104,10 +104,17 @@ function ProjectDetailPage() {
               />
               <SectionLink
                 projectId={projectId}
+                to="/projects/$projectId/spools"
+                title="Fyzické spulky"
+                desc="Sklad, QR kódy, metry"
+              />
+              <SectionLink
+                projectId={projectId}
                 to="/projects/$projectId/members"
                 title="Členové"
                 desc="Přístupy a role"
               />
+
             </div>
           </div>
         </>

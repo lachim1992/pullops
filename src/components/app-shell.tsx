@@ -91,9 +91,13 @@ export function AppShell({ children, projectId }: { children: ReactNode; project
               <NavItem to="/projects/$projectId/cables" params={{ projectId }} icon={Cable}>
                 Kabelový registr
               </NavItem>
+              <NavItem to="/projects/$projectId/spools" params={{ projectId }} icon={Cable}>
+                Fyzické spulky
+              </NavItem>
               <NavItem to="/projects/$projectId/work" params={{ projectId }} icon={Wrench}>
                 Režim tahání
               </NavItem>
+
 
               <NavItem
                 to="/projects/$projectId/members"
