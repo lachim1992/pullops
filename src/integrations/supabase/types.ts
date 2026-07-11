@@ -514,6 +514,70 @@ export type Database = {
           },
         ]
       }
+      endpoint_comments: {
+        Row: {
+          author_id: string | null
+          body: string
+          created_at: string
+          endpoint_id: string
+          id: string
+          organization_id: string
+          project_id: string
+          resolved: boolean
+          resolved_at: string | null
+          resolved_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          author_id?: string | null
+          body: string
+          created_at?: string
+          endpoint_id: string
+          id?: string
+          organization_id: string
+          project_id: string
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string | null
+          body?: string
+          created_at?: string
+          endpoint_id?: string
+          id?: string
+          organization_id?: string
+          project_id?: string
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "endpoint_comments_endpoint_id_fkey"
+            columns: ["endpoint_id"]
+            isOneToOne: false
+            referencedRelation: "endpoints"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_comments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_comments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       endpoint_kinds: {
         Row: {
           code: string
@@ -574,11 +638,73 @@ export type Database = {
           },
         ]
       }
+      endpoint_photos: {
+        Row: {
+          caption: string | null
+          created_at: string
+          created_by: string | null
+          endpoint_id: string
+          id: string
+          organization_id: string
+          project_id: string
+          storage_path: string
+          updated_at: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          created_by?: string | null
+          endpoint_id: string
+          id?: string
+          organization_id: string
+          project_id: string
+          storage_path: string
+          updated_at?: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          created_by?: string | null
+          endpoint_id?: string
+          id?: string
+          organization_id?: string
+          project_id?: string
+          storage_path?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "endpoint_photos_endpoint_id_fkey"
+            columns: ["endpoint_id"]
+            isOneToOne: false
+            referencedRelation: "endpoints"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_photos_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "endpoint_photos_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       endpoints: {
         Row: {
           code: string
           created_at: string
+          custom_attrs: Json
+          customer_code: string | null
+          description: string | null
           endpoint_kind: Database["public"]["Enums"]["endpoint_kind"]
+          floor: string | null
           floor_plan_id: string
           id: string
           label: string | null
@@ -587,12 +713,18 @@ export type Database = {
           notes: string | null
           organization_id: string
           project_id: string
+          reference_points: Json
+          room: string | null
           updated_at: string
         }
         Insert: {
           code: string
           created_at?: string
+          custom_attrs?: Json
+          customer_code?: string | null
+          description?: string | null
           endpoint_kind?: Database["public"]["Enums"]["endpoint_kind"]
+          floor?: string | null
           floor_plan_id: string
           id?: string
           label?: string | null
@@ -601,12 +733,18 @@ export type Database = {
           notes?: string | null
           organization_id: string
           project_id: string
+          reference_points?: Json
+          room?: string | null
           updated_at?: string
         }
         Update: {
           code?: string
           created_at?: string
+          custom_attrs?: Json
+          customer_code?: string | null
+          description?: string | null
           endpoint_kind?: Database["public"]["Enums"]["endpoint_kind"]
+          floor?: string | null
           floor_plan_id?: string
           id?: string
           label?: string | null
@@ -615,6 +753,8 @@ export type Database = {
           notes?: string | null
           organization_id?: string
           project_id?: string
+          reference_points?: Json
+          room?: string | null
           updated_at?: string
         }
         Relationships: [

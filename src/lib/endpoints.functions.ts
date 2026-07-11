@@ -30,6 +30,15 @@ const CreateInput = z.object({
   notes: z.string().max(2000).optional(),
 });
 
+const CustomAttr = z.object({
+  key: z.string().min(1).max(80),
+  value: z.string().max(500),
+});
+const ReferencePoint = z.object({
+  label: z.string().min(1).max(80),
+  distanceM: z.number().min(0).max(1000),
+});
+
 const UpdateInput = z.object({
   id: z.string().uuid(),
   floorPlanId: z.string().uuid().optional(),
@@ -39,7 +48,14 @@ const UpdateInput = z.object({
   x: z.number().min(0).max(1).optional(),
   y: z.number().min(0).max(1).optional(),
   notes: z.string().max(2000).nullable().optional(),
+  description: z.string().max(4000).nullable().optional(),
+  customerCode: z.string().max(80).nullable().optional(),
+  room: z.string().max(80).nullable().optional(),
+  floor: z.string().max(40).nullable().optional(),
+  customAttrs: z.array(CustomAttr).max(50).optional(),
+  referencePoints: z.array(ReferencePoint).max(20).optional(),
 });
+
 
 async function orgFor(supabase: any, projectId: string): Promise<string> {
   const { data, error } = await supabase
@@ -113,9 +129,30 @@ export const updateEndpoint = createServerFn({ method: "POST" })
     if (data.x !== undefined) patch.norm_x = data.x;
     if (data.y !== undefined) patch.norm_y = data.y;
     if (data.notes !== undefined) patch.notes = data.notes;
+    if (data.description !== undefined) patch.description = data.description;
+    if (data.customerCode !== undefined) patch.customer_code = data.customerCode;
+    if (data.room !== undefined) patch.room = data.room;
+    if (data.floor !== undefined) patch.floor = data.floor;
+    if (data.customAttrs !== undefined) patch.custom_attrs = data.customAttrs;
+    if (data.referencePoints !== undefined) patch.reference_points = data.referencePoints;
     const { error } = await supabase.from("endpoints").update(patch as never).eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+export const getEndpoint = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: row, error } = await supabase
+      .from("endpoints")
+      .select("id, project_id, floor_plan_id, code, label, endpoint_kind, norm_x, norm_y, notes, description, customer_code, room, floor, custom_attrs, reference_points, updated_at")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!row) throw new Error("endpoint not found");
+    return row;
   });
 
 export const deleteEndpoint = createServerFn({ method: "POST" })
@@ -127,6 +164,7 @@ export const deleteEndpoint = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
 
 const BulkImportInput = z.object({
   projectId: z.string().uuid(),
