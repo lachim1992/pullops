@@ -402,7 +402,9 @@ function PlanWorkspace(props: {
         />
       )}
 
-      {tab === "spools" && <SpoolsTab spools={allSpools} />}
+      {tab === "spools" && (
+        <SpoolsTab spools={allSpools} cables={cables} onToggle={onToggleCable} />
+      )}
     </div>
   );
 }
@@ -653,20 +655,31 @@ function QueueTab({
 
 /* ----------------------------- Spools tab ----------------------------- */
 
+type SpoolRow = {
+  typeCode: string;
+  index: number;
+  used: number;
+  capacity: number;
+  wasted: number;
+  cables: Array<{ id: string; code: string; meters: number }>;
+};
+
 function SpoolsTab({
   spools,
+  cables,
+  onToggle,
 }: {
-  spools: Array<{
-    typeCode: string;
-    index: number;
-    used: number;
-    capacity: number;
-    wasted: number;
-    cables: Array<{ id: string; code: string; meters: number }>;
-  }>;
+  spools: SpoolRow[];
+  cables: PullCable[];
+  onToggle: (c: PullCable, done: boolean) => void;
 }) {
-  // Group by type, then chunk in stacks of max 3
-  const byType = new Map<string, typeof spools>();
+  const cableById = useMemo(() => {
+    const m = new Map<string, PullCable>();
+    for (const c of cables) m.set(c.id, c);
+    return m;
+  }, [cables]);
+
+  const byType = new Map<string, SpoolRow[]>();
   for (const s of spools) {
     const arr = byType.get(s.typeCode) ?? [];
     arr.push(s);
@@ -684,11 +697,14 @@ function SpoolsTab({
   return (
     <div className="space-y-6">
       {Array.from(byType.entries()).map(([typeCode, list]) => {
-        // chunk into stacks of 3
-        const stacks: (typeof list)[] = [];
-        for (let i = 0; i < list.length; i += 3) stacks.push(list.slice(i, i + 3));
-        const totalUsed = list.reduce((s, x) => s + x.used, 0);
-        const totalWaste = list.reduce((s, x) => s + x.wasted, 0);
+        let typePulled = 0;
+        let typePlanned = 0;
+        for (const s of list) {
+          typePlanned += s.used;
+          for (const c of s.cables) {
+            if (cableById.get(c.id)?.status === "PULLED") typePulled += c.meters;
+          }
+        }
         return (
           <section key={typeCode} className="rounded-sm border border-border bg-card">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border p-3">
@@ -696,16 +712,22 @@ function SpoolsTab({
                 <PackageOpen className="h-4 w-4 text-muted-foreground" />
                 <h2 className="font-mono text-sm font-bold uppercase">{typeCode}</h2>
                 <Badge variant="outline" className="font-mono text-[10px]">
-                  {list.length} spulek
+                  {list.length} {list.length === 1 ? "spulka" : list.length < 5 ? "spulky" : "spulek"}
                 </Badge>
               </div>
               <div className="font-mono text-xs text-muted-foreground">
-                {totalUsed.toFixed(1)} m použito · odpad {totalWaste.toFixed(1)} m
+                nataženo {typePulled.toFixed(1)} / plán {typePlanned.toFixed(1)} m ·{" "}
+                zbývá {Math.max(0, typePlanned - typePulled).toFixed(1)} m
               </div>
             </div>
-            <div className="grid gap-6 p-4 md:grid-cols-2 xl:grid-cols-3">
-              {stacks.map((stack, i) => (
-                <SpoolStack key={i} spools={stack} />
+            <div className="grid gap-4 p-4 lg:grid-cols-2">
+              {list.map((spool) => (
+                <SpoolCard
+                  key={`${typeCode}-${spool.index}`}
+                  spool={spool}
+                  cableById={cableById}
+                  onToggle={onToggle}
+                />
               ))}
             </div>
           </section>
@@ -715,110 +737,218 @@ function SpoolsTab({
   );
 }
 
-/** Vertical stack of up to 3 drum visualizations (side-view). */
-function SpoolStack({
-  spools,
+/** One spool card: 3D drum + header + cable table with pull button. */
+function SpoolCard({
+  spool,
+  cableById,
+  onToggle,
 }: {
-  spools: Array<{
-    typeCode: string;
-    index: number;
-    used: number;
-    capacity: number;
-    wasted: number;
-    cables: Array<{ id: string; code: string; meters: number }>;
-  }>;
+  spool: SpoolRow;
+  cableById: Map<string, PullCable>;
+  onToggle: (c: PullCable, done: boolean) => void;
 }) {
+  const pulledMeters = spool.cables.reduce(
+    (a, c) => a + (cableById.get(c.id)?.status === "PULLED" ? c.meters : 0),
+    0,
+  );
+  const remaining = Math.max(0, spool.used - pulledMeters);
+  const pulledPct = spool.used > 0 ? Math.min(1, pulledMeters / spool.used) : 0;
+  const cablesDone = spool.cables.filter((c) => cableById.get(c.id)?.status === "PULLED").length;
+
   return (
-    <div className="rounded-sm border border-border bg-background p-4">
-      <div className="mb-3 flex justify-center gap-4">
-        {spools.map((s) => (
-          <SpoolDrum key={s.index} spool={s} />
-        ))}
+    <div className="rounded-sm border border-border bg-background">
+      {/* Header */}
+      <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border px-3 py-2">
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="font-mono text-[10px]">
+            Spulka #{spool.index}
+          </Badge>
+          <span className="font-mono text-[11px] text-muted-foreground">
+            {spool.typeCode}
+          </span>
+        </div>
+        <div className="font-mono text-[11px] text-muted-foreground">
+          {pulledMeters.toFixed(1)} / {spool.used.toFixed(1)} m ·{" "}
+          zbývá <span className="text-foreground">{remaining.toFixed(1)} m</span> ·{" "}
+          {Math.round(pulledPct * 100)}%
+        </div>
       </div>
-      <div className="space-y-2">
-        {spools.map((s) => {
-          const pct = s.capacity > 0 ? (s.used / s.capacity) * 100 : 0;
-          return (
-            <div key={s.index} className="rounded-sm border border-border p-2">
-              <div className="mb-1 flex items-center justify-between">
-                <Badge variant="outline" className="font-mono text-[10px]">
-                  Spulka #{s.index}
-                </Badge>
-                <span className="font-mono text-[10px] text-muted-foreground">
-                  {s.used.toFixed(1)}/{s.capacity.toFixed(0)} m · {pct.toFixed(0)}%
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {s.cables.map((c) => (
-                  <Badge key={c.id} variant="secondary" className="font-mono text-[9px]">
-                    {c.code} · {c.meters.toFixed(1)}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          );
-        })}
+
+      {/* Drum + progress */}
+      <div className="flex items-center gap-3 border-b border-border px-3 py-3">
+        <SpoolDrum pulledPct={pulledPct} />
+        <div className="flex-1 space-y-1">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full bg-primary transition-[width] duration-500"
+              style={{ width: `${pulledPct * 100}%` }}
+            />
+          </div>
+          <div className="flex justify-between font-mono text-[10px] text-muted-foreground">
+            <span>{cablesDone}/{spool.cables.length} kabelů</span>
+            <span>kapacita {spool.capacity.toFixed(0)} m · odpad {spool.wasted.toFixed(1)} m</span>
+          </div>
+        </div>
       </div>
+
+      {/* Cable table */}
+      <table className="w-full text-xs">
+        <thead>
+          <tr className="border-b border-border bg-muted/40 text-left font-mono text-[10px] uppercase text-muted-foreground">
+            <th className="px-3 py-1.5">Kabel</th>
+            <th className="px-3 py-1.5 text-right">Metry</th>
+            <th className="px-3 py-1.5">Stav</th>
+            <th className="px-3 py-1.5 text-right">Akce</th>
+          </tr>
+        </thead>
+        <tbody>
+          {spool.cables.map((c) => {
+            const full = cableById.get(c.id);
+            const done = full?.status === "PULLED";
+            return (
+              <tr
+                key={c.id}
+                className={`border-b border-border/60 last:border-b-0 ${done ? "bg-muted/30 text-muted-foreground line-through" : ""}`}
+              >
+                <td className="px-3 py-1.5 font-mono">{c.code}</td>
+                <td className="px-3 py-1.5 text-right font-mono">{c.meters.toFixed(1)}</td>
+                <td className="px-3 py-1.5">
+                  {done ? (
+                    <Badge variant="secondary" className="font-mono text-[9px]">
+                      Nataženo
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="font-mono text-[9px]">
+                      Plán
+                    </Badge>
+                  )}
+                </td>
+                <td className="px-3 py-1.5 text-right">
+                  {full ? (
+                    <Button
+                      size="sm"
+                      variant={done ? "outline" : "default"}
+                      className="h-6 px-2 font-mono text-[10px]"
+                      onClick={() => onToggle(full, !done)}
+                    >
+                      {done ? "Vrátit" : "Nataženo"}
+                    </Button>
+                  ) : null}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
 
-/** SVG side-view of a cable drum: outer flange + concentric rings from used cable segments. */
-function SpoolDrum({
-  spool,
-}: {
-  spool: {
-    used: number;
-    capacity: number;
-    cables: Array<{ id: string; code: string; meters: number }>;
-  };
-}) {
-  const size = 110;
-  const cx = size / 2;
-  const cy = size / 2;
-  const rOuter = 48;
-  const rHub = 14;
-  const usedRatio = spool.capacity > 0 ? Math.min(1, spool.used / spool.capacity) : 0;
-  // radial fill from hub outward
-  const rFill = rHub + (rOuter - rHub) * usedRatio;
+/** 3D-perspective side view of a cable drum. Winding radius shrinks as pulledPct grows. */
+function SpoolDrum({ pulledPct }: { pulledPct: number }) {
+  const w = 200;
+  const h = 130;
+  const cxL = 42;
+  const cxR = w - 26;
+  const cy = h / 2;
+  const flangeR = 52;
+  const hubR = 12;
+  const rxDepth = 9;
+  const outerR = hubR + (flangeR - hubR) * (1 - Math.min(1, Math.max(0, pulledPct)));
 
-  // color bands per cable (proportional angular slice on the front face)
-  const palette = ["#f97316", "#22d3ee", "#a3e635", "#f472b6", "#fbbf24", "#8b5cf6", "#34d399"];
-  const total = spool.cables.reduce((s, c) => s + c.meters, 0) || 1;
-
-  // draw concentric arcs from center outward, each cable a ring segment
-  let acc = rHub;
-  const rings: Array<{ r0: number; r1: number; color: string }> = [];
-  spool.cables.forEach((c, i) => {
-    const thick = ((c.meters / total) * (rFill - rHub));
-    rings.push({ r0: acc, r1: acc + thick, color: palette[i % palette.length] });
-    acc += thick;
-  });
+  const stripes = 10;
 
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="drop-shadow">
-      {/* outer flange */}
-      <circle cx={cx} cy={cy} r={rOuter} fill="var(--muted)" stroke="var(--border)" strokeWidth={1.5} />
-      {/* empty core (unused capacity ring) */}
-      <circle cx={cx} cy={cy} r={rFill} fill="var(--background)" />
-      {/* cable rings */}
-      {rings.map((ring, i) => (
-        <circle
-          key={i}
-          cx={cx}
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="shrink-0 drop-shadow-sm">
+      <defs>
+        <linearGradient id="spool-cable-body" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.55" />
+          <stop offset="50%" stopColor="var(--primary)" stopOpacity="0.9" />
+          <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.55" />
+        </linearGradient>
+        <linearGradient id="spool-flange" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="var(--muted)" />
+          <stop offset="100%" stopColor="var(--border)" />
+        </linearGradient>
+      </defs>
+
+      {/* Back flange (right side, partially hidden) */}
+      <ellipse cx={cxR} cy={cy} rx={rxDepth} ry={flangeR} fill="url(#spool-flange)" stroke="var(--border)" strokeWidth={1} />
+
+      {/* Cable body between flanges (only when there's winding left) */}
+      {outerR > hubR + 0.5 && (
+        <>
+          <rect
+            x={cxL}
+            y={cy - outerR}
+            width={cxR - cxL}
+            height={2 * outerR}
+            fill="url(#spool-cable-body)"
+          />
+          {/* Winding stripes */}
+          {Array.from({ length: stripes }).map((_, i) => {
+            const y = cy - outerR + (i / (stripes - 1)) * 2 * outerR;
+            return (
+              <line
+                key={i}
+                x1={cxL}
+                y1={y}
+                x2={cxR}
+                y2={y}
+                stroke="var(--foreground)"
+                strokeOpacity={0.12}
+                strokeWidth={0.5}
+              />
+            );
+          })}
+          {/* Right end cap of winding (perspective) */}
+          <ellipse cx={cxR} cy={cy} rx={rxDepth * 0.75} ry={outerR} fill="var(--primary)" fillOpacity={0.35} />
+        </>
+      )}
+
+      {/* Hub cylinder */}
+      <rect x={cxL} y={cy - hubR} width={cxR - cxL} height={2 * hubR} fill="var(--card)" stroke="var(--border)" strokeWidth={0.5} />
+      <ellipse cx={cxR} cy={cy} rx={rxDepth * 0.75} ry={hubR} fill="var(--card)" stroke="var(--border)" strokeWidth={0.5} />
+
+      {/* Front flange (left, fully visible) */}
+      <ellipse cx={cxL} cy={cy} rx={rxDepth} ry={flangeR} fill="url(#spool-flange)" stroke="var(--border)" strokeWidth={1.2} />
+      {/* Front cap of winding */}
+      {outerR > hubR + 0.5 && (
+        <ellipse
+          cx={cxL}
           cy={cy}
-          r={(ring.r0 + ring.r1) / 2}
-          fill="none"
-          stroke={ring.color}
-          strokeWidth={Math.max(1, ring.r1 - ring.r0)}
+          rx={rxDepth * 0.55}
+          ry={outerR}
+          fill="var(--primary)"
+          fillOpacity={0.22}
+          stroke="var(--primary)"
+          strokeOpacity={0.5}
+          strokeWidth={0.8}
         />
-      ))}
-      {/* hub */}
-      <circle cx={cx} cy={cy} r={rHub} fill="var(--card)" stroke="var(--border)" strokeWidth={1.5} />
-      <circle cx={cx} cy={cy} r={2.5} fill="var(--foreground)" />
+      )}
+      {/* Front cap of hub */}
+      <ellipse cx={cxL} cy={cy} rx={rxDepth * 0.55} ry={hubR} fill="var(--card)" stroke="var(--border)" strokeWidth={0.8} />
+      {/* Axle */}
+      <circle cx={cxL} cy={cy} r={2.5} fill="var(--foreground)" />
+
+      {/* Loose unwound strand — visible once anything is pulled */}
+      {pulledPct > 0.001 && (
+        <path
+          d={`M ${cxL - rxDepth * 0.55} ${cy}
+              C ${cxL - 22} ${cy + 10 + pulledPct * 20},
+                ${cxL - 34} ${h - 20},
+                ${cxL - 30} ${h - 6}`}
+          stroke="var(--primary)"
+          strokeWidth={1.8}
+          fill="none"
+          strokeLinecap="round"
+        />
+      )}
     </svg>
   );
 }
+
+
 
 /* ----------------------------- Map ----------------------------- */
 
