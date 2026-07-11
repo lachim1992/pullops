@@ -1406,8 +1406,64 @@ function PlanEditorPage() {
               </div>
               <div className="mt-2 flex gap-2">
                 <Button size="sm" className="flex-1" onClick={saveBundle}>Uložit kmen</Button>
-                <Button size="sm" variant="outline" onClick={() => setDraftBundlePoints([])}>Vymazat</Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setDraftBundlePoints([]);
+                    setDraftBundleSegments([]);
+                  }}
+                >
+                  Vymazat
+                </Button>
               </div>
+
+              {draftBundlePoints.length >= 2 && (
+                <div className="mt-3">
+                  <div className="mb-1 text-[11px] font-semibold uppercase text-muted-foreground">
+                    Typ trasy pro každý úsek
+                  </div>
+                  <div className="max-h-56 space-y-1 overflow-y-auto rounded-sm border border-border p-2">
+                    {draftBundlePoints.slice(0, -1).map((_, i) => {
+                      const seg = draftBundleSegments[i] ?? defaultSegment();
+                      return (
+                        <div key={i} className="flex items-center gap-2">
+                          <span
+                            className="inline-block h-3 w-3 rounded-sm border border-border"
+                            style={{ background: BUNDLE_SEGMENT_TYPES[seg.type].color }}
+                          />
+                          <span className="font-mono text-[11px] text-muted-foreground">
+                            #{i + 1}
+                          </span>
+                          <select
+                            className="flex-1 rounded-sm border border-input bg-background px-1.5 py-1 text-xs"
+                            value={seg.type}
+                            onChange={(e) => {
+                              const t = e.target.value as BundleSegmentType;
+                              setDraftBundleSegments((prev) => {
+                                const next = draftBundlePoints.slice(0, -1).map((_, j) =>
+                                  prev[j] ?? defaultSegment(),
+                                );
+                                next[i] = { type: t, extra_pct: BUNDLE_SEGMENT_TYPES[t].extra_pct };
+                                return next;
+                              });
+                            }}
+                          >
+                            {(Object.keys(BUNDLE_SEGMENT_TYPES) as BundleSegmentType[]).map((k) => (
+                              <option key={k} value={k}>
+                                {BUNDLE_SEGMENT_TYPES[k].label}
+                                {BUNDLE_SEGMENT_TYPES[k].extra_pct > 0
+                                  ? ` (+${BUNDLE_SEGMENT_TYPES[k].extra_pct}%)`
+                                  : ""}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               <div className="mt-3 max-h-48 divide-y divide-border overflow-y-auto rounded-sm border border-border">
                 {(bundles.data ?? []).map((b) => (
                   <div key={b.id} className="flex items-center gap-2 p-2">
