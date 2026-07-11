@@ -79,6 +79,7 @@ export const updateBundle = createServerFn({ method: "POST" })
         code: z.string().min(1).max(80).optional(),
         rackId: z.string().uuid().nullable().optional(),
         points: z.array(PointSchema).min(2).optional(),
+        segments: z.array(SegmentSchema).optional(),
         notes: z.string().max(2000).nullable().optional(),
       })
       .parse(d),
@@ -89,6 +90,7 @@ export const updateBundle = createServerFn({ method: "POST" })
     if (data.code !== undefined) patch.code = data.code;
     if (data.rackId !== undefined) patch.rack_id = data.rackId;
     if (data.points !== undefined) patch.points = data.points;
+    if (data.segments !== undefined) patch.segments = data.segments;
     if (data.notes !== undefined) patch.notes = data.notes;
     const { error } = await supabase
       .from("cable_bundles")
