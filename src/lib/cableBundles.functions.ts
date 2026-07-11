@@ -25,7 +25,7 @@ export const listBundles = createServerFn({ method: "GET" })
     const { supabase } = context;
     let q = supabase
       .from("cable_bundles")
-      .select("id, code, floor_plan_id, rack_id, points, notes, is_primary, updated_at")
+      .select("id, code, floor_plan_id, rack_id, points, segments, notes, is_primary, updated_at")
       .eq("project_id", data.projectId)
       .order("code");
     if (data.floorPlanId) q = q.eq("floor_plan_id", data.floorPlanId);
