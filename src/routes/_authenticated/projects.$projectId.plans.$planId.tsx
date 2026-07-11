@@ -1263,6 +1263,80 @@ function PlanEditorPage() {
             </div>
           )}
 
+          {mode === "publish" && (
+            <div className="rounded-sm border border-border p-3 text-sm">
+              <div className="mb-2 font-semibold">Zadat plán do režimu tahání</div>
+              <div className="mb-3 text-xs text-muted-foreground">
+                Publikováním se plán zpřístupní v <b>Režimu tahání</b> pro montážní tým.
+                Editace zůstane možná v tomto editoru; publikace pouze rozhoduje o viditelnosti v poli.
+              </div>
+              <div className="mb-3 rounded-sm border border-border bg-muted/40 p-2 font-mono text-xs">
+                {plan.data?.plan.published_to_pull ? (
+                  <>
+                    <div className="text-emerald-600 dark:text-emerald-400">● Publikováno</div>
+                    {plan.data.plan.published_at && (
+                      <div className="text-muted-foreground">
+                        {new Date(plan.data.plan.published_at as string).toLocaleString("cs-CZ")}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-muted-foreground">○ Nepublikováno</div>
+                )}
+              </div>
+              <div className="mb-3 grid grid-cols-2 gap-2 text-xs">
+                <div className="rounded-sm border border-border p-2">
+                  <div className="text-muted-foreground">Endpointů</div>
+                  <div className="font-mono text-sm">{endpoints.data?.length ?? 0}</div>
+                </div>
+                <div className="rounded-sm border border-border p-2">
+                  <div className="text-muted-foreground">Kmeny</div>
+                  <div className="font-mono text-sm">{bundles.data?.length ?? 0}</div>
+                </div>
+                <div className="rounded-sm border border-border p-2">
+                  <div className="text-muted-foreground">Racky</div>
+                  <div className="font-mono text-sm">{racks.data?.length ?? 0}</div>
+                </div>
+                <div className="rounded-sm border border-border p-2">
+                  <div className="text-muted-foreground">Trasy</div>
+                  <div className="font-mono text-sm">{branches.data?.length ?? 0}</div>
+                </div>
+              </div>
+              {!calibration && (
+                <div className="mb-3 rounded-sm border border-destructive/50 bg-destructive/10 p-2 text-xs text-destructive">
+                  Plán není zkalibrován — délky kabelů nebudou spočítány.
+                </div>
+              )}
+              <Button
+                size="sm"
+                className="w-full"
+                variant={plan.data?.plan.published_to_pull ? "outline" : "default"}
+                onClick={async () => {
+                  try {
+                    await publishPlanFn({
+                      data: {
+                        id: planId,
+                        published: !plan.data?.plan.published_to_pull,
+                      },
+                    });
+                    await queryClient.invalidateQueries({ queryKey: ["floor-plan", planId] });
+                    toast.success(
+                      plan.data?.plan.published_to_pull
+                        ? "Plán stažen z režimu tahání"
+                        : "Plán publikován do režimu tahání",
+                    );
+                  } catch (e) {
+                    toast.error((e as Error).message);
+                  }
+                }}
+              >
+                {plan.data?.plan.published_to_pull ? "Stáhnout z režimu tahání" : "Publikovat do režimu tahání"}
+              </Button>
+            </div>
+          )}
+
+
+
           {mode === "endpoint" && (
             <div className="rounded-sm border border-border p-3 text-sm">
               <div className="mb-2 font-semibold">Nový endpoint</div>
