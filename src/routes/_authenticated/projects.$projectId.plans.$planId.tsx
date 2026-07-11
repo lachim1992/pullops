@@ -45,7 +45,6 @@ import { createRack, listRacks, deleteRack, updateRack } from "@/lib/racks.funct
 import { createBundle, listBundles, deleteBundle, updateBundle } from "@/lib/cableBundles.functions";
 import {
   autoAssignBundlesForPlan,
-  autoAssignBundlesForProject,
   createCableFromPort,
   listFreePorts,
   listPlanBranches,
@@ -121,7 +120,6 @@ function PlanEditorPage() {
   const createCableFromPortFn = useServerFn(createCableFromPort);
   const listPlanBranchesFn = useServerFn(listPlanBranches);
   const autoAssignBundlesFn = useServerFn(autoAssignBundlesForPlan);
-  const autoAssignProjectFn = useServerFn(autoAssignBundlesForProject);
   const qc = useQueryClient();
 
 
