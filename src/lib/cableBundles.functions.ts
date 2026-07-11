@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { dbErrorMessage } from "@/lib/dbErrors";
 
 const PointSchema = z.object({ x: z.number(), y: z.number() });
 const SegmentTypeSchema = z.enum(["DIRECT", "TRAY", "WALL", "CEILING"]);
@@ -29,7 +30,7 @@ export const listBundles = createServerFn({ method: "GET" })
       .order("code");
     if (data.floorPlanId) q = q.eq("floor_plan_id", data.floorPlanId);
     const { data: rows, error } = await q;
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return rows ?? [];
   });
 
@@ -64,7 +65,7 @@ export const createBundle = createServerFn({ method: "POST" })
       } as never)
       .select("id")
       .single();
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { id: (row as { id: string }).id };
   });
 
@@ -94,7 +95,7 @@ export const updateBundle = createServerFn({ method: "POST" })
       .from("cable_bundles")
       .update(patch as never)
       .eq("id", data.id);
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { ok: true };
   });
 
@@ -104,7 +105,7 @@ export const deleteBundle = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { error } = await supabase.from("cable_bundles").delete().eq("id", data.id);
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { ok: true };
   });
 
@@ -121,7 +122,7 @@ export const setPrimaryBundle = createServerFn({ method: "POST" })
         .select("floor_plan_id")
         .eq("id", data.bundleId)
         .maybeSingle();
-      if (berr) throw new Error(berr.message);
+      if (berr) throw new Error(dbErrorMessage(berr));
       if (!b) throw new Error("bundle not found");
       // unset other primary bundles on the same plan first
       const { error: e1 } = await supabase
@@ -135,6 +136,6 @@ export const setPrimaryBundle = createServerFn({ method: "POST" })
       .from("cable_bundles")
       .update({ is_primary: data.isPrimary } as never)
       .eq("id", data.bundleId);
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { ok: true };
   });

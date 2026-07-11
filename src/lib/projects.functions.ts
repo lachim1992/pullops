@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { dbErrorMessage } from "@/lib/dbErrors";
 
 const ProjectStatus = z.enum(["planning", "active", "on_hold", "completed", "archived"]);
 
@@ -69,7 +70,7 @@ export const listMyProjects = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false });
     if (data.organizationId) q = q.eq("organization_id", data.organizationId);
     const { data: rows, error } = await q;
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return rows ?? [];
   });
 
@@ -83,7 +84,7 @@ export const getProject = createServerFn({ method: "GET" })
       .select("*")
       .eq("id", data.id)
       .maybeSingle();
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     if (!row) throw new Error("Projekt nenalezen");
     return row;
   });
@@ -107,7 +108,7 @@ export const createProject = createServerFn({ method: "POST" })
       p_timezone: data.timezone,
       p_is_demo: data.is_demo,
     });
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { id: id as string };
   });
 
@@ -135,7 +136,7 @@ export const updateProject = createServerFn({ method: "POST" })
       p_use_compound_panel_port_ids: data.use_compound_panel_port_ids,
       p_is_demo: data.is_demo,
     });
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { ok: true };
   });
 
@@ -148,7 +149,7 @@ export const listProjectMembers = createServerFn({ method: "GET" })
       .from("project_members")
       .select("user_id, joined_at")
       .eq("project_id", data.projectId);
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     const userIds = (rows ?? []).map((r) => r.user_id);
     const profilesById = new Map<string, string>();
     if (userIds.length > 0) {
@@ -156,14 +157,14 @@ export const listProjectMembers = createServerFn({ method: "GET" })
         .from("profiles")
         .select("id, full_name")
         .in("id", userIds);
-      if (perr) throw new Error(perr.message);
+      if (perr) throw new Error(dbErrorMessage(perr));
       for (const p of profiles ?? []) profilesById.set(p.id, p.full_name ?? "");
     }
     const { data: roles, error: rerr } = await supabase
       .from("user_roles")
       .select("user_id, role")
       .eq("project_id", data.projectId);
-    if (rerr) throw new Error(rerr.message);
+    if (rerr) throw new Error(dbErrorMessage(rerr));
     const rolesByUser = new Map<string, string[]>();
     for (const r of roles ?? []) {
       const arr = rolesByUser.get(r.user_id) ?? [];
@@ -188,7 +189,7 @@ export const addProjectMember = createServerFn({ method: "POST" })
       p_user_id: data.userId,
       p_role: data.role,
     });
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { ok: true };
   });
 
@@ -201,7 +202,7 @@ export const removeProjectMember = createServerFn({ method: "POST" })
       p_project_id: data.projectId,
       p_user_id: data.userId,
     });
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { ok: true };
   });
 
@@ -216,6 +217,6 @@ export const setProjectRole = createServerFn({ method: "POST" })
       p_role: data.role,
       p_grant: data.grant,
     });
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { ok: true };
   });

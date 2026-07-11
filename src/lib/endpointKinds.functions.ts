@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { dbErrorMessage } from "@/lib/dbErrors";
 
 const CreateInput = z.object({
   projectId: z.string().uuid(),
@@ -32,7 +33,7 @@ async function orgFor(supabase: any, projectId: string): Promise<string> {
     .select("organization_id")
     .eq("id", projectId)
     .maybeSingle();
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(dbErrorMessage(error));
   if (!data) throw new Error("project not found");
   return data.organization_id as string;
 }
@@ -48,7 +49,7 @@ export const listEndpointKinds = createServerFn({ method: "GET" })
       .eq("project_id", data.projectId)
       .order("sort_order", { ascending: true })
       .order("label", { ascending: true });
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return rows ?? [];
   });
 
@@ -73,7 +74,7 @@ export const createEndpointKind = createServerFn({ method: "POST" })
       })
       .select("id")
       .single();
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { id: row.id as string };
   });
 
@@ -92,7 +93,7 @@ export const updateEndpointKind = createServerFn({ method: "POST" })
       .from("endpoint_kinds")
       .update(patch as never)
       .eq("id", data.id);
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { ok: true };
   });
 
@@ -106,9 +107,9 @@ export const deleteEndpointKind = createServerFn({ method: "POST" })
       .select("is_system")
       .eq("id", data.id)
       .maybeSingle();
-    if (readErr) throw new Error(readErr.message);
+    if (readErr) throw new Error(dbErrorMessage(readErr));
     if (row?.is_system) throw new Error("Systémový typ nelze smazat");
     const { error } = await supabase.from("endpoint_kinds").delete().eq("id", data.id);
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { ok: true };
   });

@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { computeCableLength, type NormPoint } from "@/lib/length";
+import { dbErrorMessage } from "@/lib/dbErrors";
 
 const CableStatus = z.enum(["PLANNED", "PULLED", "TERMINATED", "TESTED", "CANCELLED"]);
 
@@ -38,7 +39,7 @@ async function orgFor(supabase: any, projectId: string): Promise<string> {
     .select("organization_id")
     .eq("id", projectId)
     .maybeSingle();
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(dbErrorMessage(error));
   if (!data) throw new Error("project not found");
   return data.organization_id as string;
 }
@@ -55,7 +56,7 @@ export const listCables = createServerFn({ method: "GET" })
       )
       .eq("project_id", data.projectId)
       .order("code", { ascending: true });
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return rows ?? [];
   });
 
@@ -69,7 +70,7 @@ export const getCable = createServerFn({ method: "GET" })
       .select("*")
       .eq("id", data.id)
       .maybeSingle();
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return row;
   });
 
@@ -97,7 +98,7 @@ export const createCable = createServerFn({ method: "POST" })
       .select("id")
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { id: row.id as string };
   });
 
@@ -122,7 +123,7 @@ export const updateCable = createServerFn({ method: "POST" })
       .update(patch as never)
       .eq("id", data.id);
 
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { ok: true };
   });
 
@@ -132,7 +133,7 @@ export const deleteCable = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { error } = await supabase.from("cables").delete().eq("id", data.id);
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { ok: true };
   });
 
@@ -233,7 +234,7 @@ export const recomputeCableLength = createServerFn({ method: "POST" })
       .select("id, cable_type_id, route_id, override_length_m, from_endpoint_id, to_endpoint_id")
       .eq("id", data.cableId)
       .maybeSingle();
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     if (!cable) throw new Error("cable not found");
     const meters = await recomputeOne(supabase, cable);
     return { meters };
@@ -248,7 +249,7 @@ export const recomputeProjectLengths = createServerFn({ method: "POST" })
       .from("cables")
       .select("id, cable_type_id, route_id, override_length_m, from_endpoint_id, to_endpoint_id")
       .eq("project_id", data.projectId);
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     let count = 0;
     for (const c of cables ?? []) {
       await recomputeOne(supabase, c);

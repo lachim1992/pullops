@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { dbErrorMessage } from "@/lib/dbErrors";
 
 const CreateInput = z.object({
   projectId: z.string().uuid(),
@@ -31,7 +32,7 @@ async function orgFor(supabase: any, projectId: string): Promise<string> {
     .select("organization_id")
     .eq("id", projectId)
     .maybeSingle();
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(dbErrorMessage(error));
   if (!data) throw new Error("project not found");
   return data.organization_id as string;
 }
@@ -46,7 +47,7 @@ export const listPatchPanels = createServerFn({ method: "GET" })
       .select("id, code, name, port_count, floor_plan_id, rack_id, notes, updated_at")
       .eq("project_id", data.projectId)
       .order("code");
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return rows ?? [];
   });
 
@@ -60,7 +61,7 @@ export const getPatchPanel = createServerFn({ method: "GET" })
       .select("*")
       .eq("id", data.id)
       .maybeSingle();
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     if (!panel) throw new Error("panel not found");
     const { data: ports, error: err2 } = await supabase
       .from("patch_ports")
@@ -114,7 +115,7 @@ export const createPatchPanel = createServerFn({ method: "POST" })
       })
       .select("id")
       .single();
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { id: row.id as string };
   });
 
@@ -132,7 +133,7 @@ export const updatePatchPanel = createServerFn({ method: "POST" })
       .from("patch_panels")
       .update(patch as never)
       .eq("id", data.id);
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { ok: true };
   });
 
@@ -142,7 +143,7 @@ export const deletePatchPanel = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { error } = await supabase.from("patch_panels").delete().eq("id", data.id);
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { ok: true };
   });
 
@@ -157,7 +158,7 @@ export const updatePatchPort = createServerFn({ method: "POST" })
       .from("patch_ports")
       .update(patch as never)
       .eq("id", data.id);
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { ok: true };
   });
 
@@ -171,7 +172,7 @@ export const listProjectPatchPorts = createServerFn({ method: "GET" })
       .select("id, panel_id, port_number, label, patch_panels!inner(code, project_id)")
       .eq("patch_panels.project_id", data.projectId)
       .order("port_number");
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return (rows ?? []) as Array<{
       id: string;
       panel_id: string;

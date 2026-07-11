@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { dbErrorMessage } from "@/lib/dbErrors";
 
 const EndpointKind = z.enum([
   "WORKSTATION",
@@ -62,7 +63,7 @@ async function orgFor(supabase: any, projectId: string): Promise<string> {
     .select("organization_id")
     .eq("id", projectId)
     .maybeSingle();
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(dbErrorMessage(error));
   if (!data) throw new Error("project not found");
   return data.organization_id as string;
 }
@@ -86,7 +87,7 @@ export const listEndpoints = createServerFn({ method: "GET" })
       .order("code", { ascending: true });
     if (data.floorPlanId) q = q.eq("floor_plan_id", data.floorPlanId);
     const { data: rows, error } = await q;
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return rows ?? [];
   });
 
@@ -115,7 +116,7 @@ export const createEndpoint = createServerFn({ method: "POST" })
       if ((error as { code?: string }).code === "23505") {
         throw new Error(`Kód "${data.code}" už v tomto projektu existuje. Zvolte jiný.`);
       }
-      throw new Error(error.message);
+      throw new Error(dbErrorMessage(error));
     }
 
     return { id: row.id as string };
@@ -144,7 +145,7 @@ export const updateEndpoint = createServerFn({ method: "POST" })
       .from("endpoints")
       .update(patch as never)
       .eq("id", data.id);
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { ok: true };
   });
 
@@ -160,7 +161,7 @@ export const getEndpoint = createServerFn({ method: "GET" })
       )
       .eq("id", data.id)
       .maybeSingle();
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     if (!row) throw new Error("endpoint not found");
     return row;
   });
@@ -171,7 +172,7 @@ export const deleteEndpoint = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase } = context;
     const { error } = await supabase.from("endpoints").delete().eq("id", data.id);
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { ok: true };
   });
 
@@ -209,6 +210,6 @@ export const bulkImportEndpoints = createServerFn({ method: "POST" })
       norm_y: r.y,
     }));
     const { error, count } = await supabase.from("endpoints").insert(payload, { count: "exact" });
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(dbErrorMessage(error));
     return { inserted: count ?? payload.length };
   });
