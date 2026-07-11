@@ -1145,13 +1145,15 @@ function PlanEditorPage() {
                     <select
                       className="w-full rounded-sm border border-input bg-background px-3 py-1.5 text-sm"
                       value={newEpKind}
-                      onChange={(e) => setNewEpKind(e.target.value as typeof newEpKind)}
+                      onChange={(e) => setNewEpKind(e.target.value as EndpointKind)}
                     >
-                      <option value="WORKSTATION">Zásuvka</option>
-                      <option value="AP">AP</option>
-                      <option value="CAMERA">Kamera</option>
-                      <option value="PATCH">Patch</option>
-                      <option value="OTHER">Jiné</option>
+                      {ENDPOINT_KIND_GROUPS.map((g) => (
+                        <optgroup key={g.id} label={g.label}>
+                          {g.kinds.map((k) => (
+                            <option key={k.value} value={k.value}>{k.label}</option>
+                          ))}
+                        </optgroup>
+                      ))}
                     </select>
                   </div>
                   <div className="flex gap-2">
