@@ -2346,3 +2346,174 @@ function EndpointOperationalPanel({
     </div>
   );
 }
+
+type DayPlanRow = {
+  id: string;
+  name: string;
+  sortOrder: number;
+  plannedDate: string | null;
+  spoolCount: number;
+  spoolLengthM: number;
+  notes: string | null;
+  floorPlanId: string | null;
+};
+type DayPlanAssignment = { day_plan_id: string; cable_id: string; sort_order: number };
+type BranchRow = { id: string; code: string };
+
+function DayPlanEditor(props: {
+  projectId: string;
+  planId: string;
+  dayPlans: DayPlanRow[];
+  assignments: DayPlanAssignment[];
+  branches: BranchRow[];
+  onCreate: () => Promise<void> | void;
+  onUpdate: (patch: {
+    id: string;
+    name: string;
+    sortOrder: number;
+    spoolCount: number;
+    spoolLengthM: number;
+    plannedDate?: string | null;
+  }) => Promise<void> | void;
+  onDelete: (id: string) => Promise<void> | void;
+  onAssign: (cableId: string, dayPlanId: string | null) => Promise<void> | void;
+}) {
+  const { dayPlans, assignments, branches, onCreate, onUpdate, onDelete, onAssign } = props;
+  const assignedIds = new Set(assignments.map((a) => a.cable_id));
+  const unassigned = branches.filter((b) => !assignedIds.has(b.id));
+  const byPlan = new Map<string, BranchRow[]>();
+  for (const a of assignments) {
+    const row = branches.find((b) => b.id === a.cable_id);
+    if (!row) continue;
+    if (!byPlan.has(a.day_plan_id)) byPlan.set(a.day_plan_id, []);
+    byPlan.get(a.day_plan_id)!.push(row);
+  }
+  return (
+    <div className="rounded-sm border border-border p-3 text-sm">
+      <div className="mb-2 flex items-center justify-between">
+        <div className="font-semibold">Plánovač tažení</div>
+        <Button size="sm" variant="outline" onClick={() => onCreate()} className="h-7 text-xs">
+          + Den
+        </Button>
+      </div>
+      <div className="mb-2 text-xs text-muted-foreground">
+        Rozděl kabely do dní / směn a nastav kapacitu cívek. Publikace zpřístupní tyto bloky v Režimu tahání.
+      </div>
+      {dayPlans.length === 0 && (
+        <div className="rounded-sm border border-dashed border-border p-3 text-center text-xs text-muted-foreground">
+          Zatím žádný blok. Klikni „+ Den".
+        </div>
+      )}
+      <div className="space-y-3">
+        {dayPlans.map((dp) => {
+          const cables = byPlan.get(dp.id) ?? [];
+          const capacity = dp.spoolCount * dp.spoolLengthM;
+          return (
+            <div key={dp.id} className="rounded-sm border border-border p-2">
+              <div className="mb-2 grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+                <Input
+                  value={dp.name}
+                  onChange={(e) =>
+                    onUpdate({
+                      id: dp.id,
+                      name: e.target.value,
+                      sortOrder: dp.sortOrder,
+                      spoolCount: dp.spoolCount,
+                      spoolLengthM: dp.spoolLengthM,
+                    })
+                  }
+                  className="h-7 text-xs"
+                />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => onDelete(dp.id)}
+                  className="h-7 text-xs text-destructive"
+                >
+                  ×
+                </Button>
+              </div>
+              <div className="mb-2 grid grid-cols-2 gap-2">
+                <label className="text-[10px] text-muted-foreground">
+                  Cívek
+                  <Input
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={dp.spoolCount}
+                    onChange={(e) =>
+                      onUpdate({
+                        id: dp.id,
+                        name: dp.name,
+                        sortOrder: dp.sortOrder,
+                        spoolCount: Math.max(1, Number(e.target.value) || 1),
+                        spoolLengthM: dp.spoolLengthM,
+                      })
+                    }
+                    className="h-7 text-xs font-mono"
+                  />
+                </label>
+                <label className="text-[10px] text-muted-foreground">
+                  Metry/cívka
+                  <Input
+                    type="number"
+                    min={1}
+                    value={dp.spoolLengthM}
+                    onChange={(e) =>
+                      onUpdate({
+                        id: dp.id,
+                        name: dp.name,
+                        sortOrder: dp.sortOrder,
+                        spoolCount: dp.spoolCount,
+                        spoolLengthM: Math.max(1, Number(e.target.value) || 1),
+                      })
+                    }
+                    className="h-7 text-xs font-mono"
+                  />
+                </label>
+              </div>
+              <div className="mb-2 text-[10px] font-mono text-muted-foreground">
+                Kapacita: {capacity.toLocaleString("cs-CZ")} m · Kabelů: {cables.length}
+              </div>
+              <div className="mb-2 flex flex-wrap gap-1">
+                {cables.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => onAssign(c.id, null)}
+                    title="Odebrat z bloku"
+                    className="rounded-sm border border-border bg-muted/40 px-2 py-0.5 font-mono text-[10px] hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    {c.code} ×
+                  </button>
+                ))}
+                {cables.length === 0 && (
+                  <span className="text-[10px] text-muted-foreground">Žádný kabel.</span>
+                )}
+              </div>
+              <select
+                value=""
+                onChange={(e) => {
+                  if (e.target.value) onAssign(e.target.value, dp.id);
+                }}
+                className="w-full rounded-sm border border-border bg-background px-2 py-1 text-xs"
+              >
+                <option value="">+ přidat kabel…</option>
+                {unassigned.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.code}
+                  </option>
+                ))}
+              </select>
+            </div>
+          );
+        })}
+      </div>
+      {unassigned.length > 0 && (
+        <div className="mt-3 text-[10px] text-muted-foreground">
+          Nezařazeno: <span className="font-mono">{unassigned.length}</span> kabelů
+        </div>
+      )}
+    </div>
+  );
+}
