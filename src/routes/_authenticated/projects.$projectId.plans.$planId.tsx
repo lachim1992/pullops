@@ -327,6 +327,17 @@ function PlanEditorPage() {
       }
     } else if (mode === "endpoint") {
       setPendingPos(pos);
+      if (!newEpCode.trim()) {
+        const codes = new Set((endpoints.data ?? []).map((e) => e.code));
+        let n = codes.size + 1;
+        let candidate = `EP${String(n).padStart(3, "0")}`;
+        while (codes.has(candidate)) {
+          n += 1;
+          candidate = `EP${String(n).padStart(3, "0")}`;
+        }
+        setNewEpCode(candidate);
+      }
+
     } else if (mode === "route") {
       if (!selectedRouteId) {
         toast.error("Nejprve vyberte nebo vytvořte trasu");

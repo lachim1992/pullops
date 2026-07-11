@@ -112,7 +112,13 @@ export const createEndpoint = createServerFn({ method: "POST" })
       })
       .select("id")
       .single();
-    if (error) throw new Error(error.message);
+    if (error) {
+      if ((error as { code?: string }).code === "23505") {
+        throw new Error(`Kód "${data.code}" už v tomto projektu existuje. Zvolte jiný.`);
+      }
+      throw new Error(error.message);
+    }
+
     return { id: row.id as string };
   });
 
