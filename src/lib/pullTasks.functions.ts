@@ -212,7 +212,7 @@ export const getPullModeData = createServerFn({ method: "GET" })
     const { supabase } = context;
     const spoolLen = data.defaultSpoolLengthM;
 
-    const [plansRes, calsRes, endpointsRes, bundlesRes, typesRes, kindsRes, cablesRes, panelsRes] =
+    const [plansRes, calsRes, endpointsRes, bundlesRes, typesRes, kindsRes, cablesRes, panelsRes, dayPlansRes, dayPlanCablesRes] =
       await Promise.all([
         supabase
           .from("floor_plans")
@@ -254,9 +254,19 @@ export const getPullModeData = createServerFn({ method: "GET" })
           .from("patch_panels")
           .select("id, code, name, floor_plan_id, port_count")
           .eq("project_id", data.projectId),
+        supabase
+          .from("pull_day_plans")
+          .select("id, name, sort_order, planned_date, spool_count, spool_length_m, floor_plan_id")
+          .eq("project_id", data.projectId)
+          .order("sort_order", { ascending: true }),
+        supabase
+          .from("pull_day_plan_cables")
+          .select("day_plan_id, cable_id, sort_order")
+          .eq("project_id", data.projectId)
+          .order("sort_order", { ascending: true }),
       ]);
 
-    for (const res of [plansRes, calsRes, endpointsRes, bundlesRes, typesRes, kindsRes, cablesRes, panelsRes]) {
+    for (const res of [plansRes, calsRes, endpointsRes, bundlesRes, typesRes, kindsRes, cablesRes, panelsRes, dayPlansRes, dayPlanCablesRes]) {
       if (res.error) throw new Error(res.error.message);
     }
 
@@ -401,6 +411,7 @@ export const getPullModeData = createServerFn({ method: "GET" })
       });
     }
 
+    type CableEntry = { id: string; code: string; meters: number; typeCode: string };
     type Spool = {
       index: number;
       typeCode: string;
@@ -408,15 +419,122 @@ export const getPullModeData = createServerFn({ method: "GET" })
       capacity: number;
       cables: Array<{ id: string; code: string; meters: number }>;
     };
-    const byType = new Map<string, Array<{ id: string; code: string; meters: number }>>();
+
+    const cableEntryById = new Map<string, CableEntry>();
     for (const c of cableRows) {
       if (c.meters == null) continue;
-      const arr = byType.get(c.typeCode) ?? [];
+      cableEntryById.set(c.id, { id: c.id, code: c.code, meters: c.meters, typeCode: c.typeCode });
+    }
+
+    // Group day-plan assignments by day plan id (ordered by sort_order already).
+    const assignmentsByDayPlan = new Map<string, string[]>();
+    for (const a of dayPlanCablesRes.data ?? []) {
+      const pid = a.day_plan_id as string;
+      const cid = a.cable_id as string;
+      if (!assignmentsByDayPlan.has(pid)) assignmentsByDayPlan.set(pid, []);
+      assignmentsByDayPlan.get(pid)!.push(cid);
+    }
+
+    /** Pack a list of cable entries into a fixed number of spools of given length using FFD. */
+    function packBlock(
+      entries: CableEntry[],
+      spoolCount: number,
+      spoolLen: number,
+    ): Spool[] {
+      const byType = new Map<string, CableEntry[]>();
+      for (const e of entries) {
+        const arr = byType.get(e.typeCode) ?? [];
+        arr.push(e);
+        byType.set(e.typeCode, arr);
+      }
+      const spools: Spool[] = [];
+      let globalIdx = 1;
+      for (const [tc, list] of byType) {
+        list.sort((a, b) => b.meters - a.meters);
+        const local: Spool[] = [];
+        for (const cable of list) {
+          if (cable.meters > spoolLen) {
+            local.push({
+              index: globalIdx++,
+              typeCode: tc,
+              used: cable.meters,
+              capacity: cable.meters,
+              cables: [cable],
+            });
+            continue;
+          }
+          const fit = local.find((s) => s.capacity === spoolLen && s.used + cable.meters <= spoolLen);
+          if (fit) {
+            fit.used += cable.meters;
+            fit.cables.push(cable);
+          } else {
+            local.push({
+              index: globalIdx++,
+              typeCode: tc,
+              used: cable.meters,
+              capacity: spoolLen,
+              cables: [cable],
+            });
+          }
+        }
+        spools.push(...local);
+      }
+      // Pad with empty spools if fewer than requested
+      const first = entries[0]?.typeCode ?? "—";
+      while (spools.length < spoolCount) {
+        spools.push({
+          index: globalIdx++,
+          typeCode: first,
+          used: 0,
+          capacity: spoolLen,
+          cables: [],
+        });
+      }
+      return spools;
+    }
+
+    // Build day-plan blocks
+    const assignedCableIds = new Set<string>();
+    const dayBlocks = (dayPlansRes.data ?? []).map((p) => {
+      const cableIds = assignmentsByDayPlan.get(p.id as string) ?? [];
+      const entries: CableEntry[] = [];
+      for (const cid of cableIds) {
+        const e = cableEntryById.get(cid);
+        if (e) {
+          entries.push(e);
+          assignedCableIds.add(cid);
+        }
+      }
+      const spoolCount = Math.max(1, Number(p.spool_count ?? 3));
+      const spoolLenBlock = Math.max(1, Number(p.spool_length_m ?? spoolLen));
+      const blockSpools = packBlock(entries, spoolCount, spoolLenBlock);
+      const totalUsed = blockSpools.reduce((a, s) => a + s.used, 0);
+      const totalCapacity = spoolCount * spoolLenBlock;
+      return {
+        id: p.id as string,
+        name: p.name as string,
+        sortOrder: Number(p.sort_order ?? 0),
+        plannedDate: (p.planned_date as string | null) ?? null,
+        floorPlanId: (p.floor_plan_id as string | null) ?? null,
+        spoolCount,
+        spoolLengthM: spoolLenBlock,
+        totalUsed,
+        totalCapacity,
+        spools: blockSpools.map((s) => ({ ...s, wasted: Math.max(0, s.capacity - s.used) })),
+      };
+    });
+
+    // Unassigned cables → global fallback packing per type
+    const unassignedByType = new Map<string, Array<{ id: string; code: string; meters: number }>>();
+    for (const c of cableRows) {
+      if (c.meters == null) continue;
+      if (assignedCableIds.has(c.id)) continue;
+      const arr = unassignedByType.get(c.typeCode) ?? [];
       arr.push({ id: c.id, code: c.code, meters: c.meters });
-      byType.set(c.typeCode, arr);
+      unassignedByType.set(c.typeCode, arr);
     }
     const spools: Spool[] = [];
-    for (const [typeCode, list] of byType) {
+    for (const [typeCode, list] of unassignedByType) {
       list.sort((a, b) => b.meters - a.meters);
       let index = 1;
       const local: Spool[] = [];
@@ -436,6 +554,13 @@ export const getPullModeData = createServerFn({ method: "GET" })
       spools.push(...local);
     }
 
+    const byType = new Map<string, Array<{ id: string; code: string; meters: number }>>();
+    for (const c of cableRows) {
+      if (c.meters == null) continue;
+      const arr = byType.get(c.typeCode) ?? [];
+      arr.push({ id: c.id, code: c.code, meters: c.meters });
+      byType.set(c.typeCode, arr);
+    }
     const hoursByType = Array.from(byType.entries()).map(([typeCode, list]) => {
       const meters = list.reduce((sum, cable) => sum + cable.meters, 0);
       const mph = Array.from(typeMap.values()).find((t) => t.code === typeCode)?.mph ?? null;
@@ -469,6 +594,7 @@ export const getPullModeData = createServerFn({ method: "GET" })
         ...s,
         wasted: Math.max(0, s.capacity - s.used),
       })),
+      dayBlocks,
       hoursByType,
     };
   });
