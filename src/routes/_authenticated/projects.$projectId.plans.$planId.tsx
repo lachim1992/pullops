@@ -521,15 +521,21 @@ function PlanEditorPage() {
     if (draftBundlePoints.length < 2) return toast.error("Alespoň 2 body");
     if (!newBundleCode.trim()) return toast.error("Zadejte kód kmenu");
     try {
+      const needed = Math.max(0, draftBundlePoints.length - 1);
+      const segs: BundleSegment[] = Array.from({ length: needed }, (_, i) =>
+        draftBundleSegments[i] ?? defaultSegment(),
+      );
       await createBundleFn({
         data: {
           projectId,
           floorPlanId: planId,
           code: newBundleCode.trim(),
           points: draftBundlePoints,
+          segments: segs,
         },
       });
       setDraftBundlePoints([]);
+      setDraftBundleSegments([]);
       setNewBundleCode("");
       qc.invalidateQueries({ queryKey: ["bundles", projectId, planId] });
       toast.success("Kmen uložen");
