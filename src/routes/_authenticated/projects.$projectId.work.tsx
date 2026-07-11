@@ -268,6 +268,7 @@ function PlanWorkspace(props: {
     wasted: number;
     cables: Array<{ id: string; code: string; meters: number }>;
   }>;
+  allDayBlocks: DayBlock[];
   tab: Tab;
   setTab: (t: Tab) => void;
   selectedCableId: string | null;
@@ -281,7 +282,7 @@ function PlanWorkspace(props: {
   onToggleCable: (c: PullCable, done: boolean) => void;
 }) {
   const {
-    plan, bundles, endpoints, patchPanels, cables, allSpools,
+    plan, bundles, endpoints, patchPanels, cables, allSpools, allDayBlocks,
     tab, setTab, selectedCableId, setSelectedCableId,
     selectedEndpointId, setSelectedEndpointId,
     onlyTodo, setOnlyTodo, note, setNote, onToggleCable,
