@@ -167,6 +167,15 @@ function PlanEditorPage() {
     queryFn: () => listPlanBranchesFn({ data: { projectId, floorPlanId: planId } }),
   });
 
+  const listDayPlansFn = useServerFn(listDayPlans);
+  const upsertDayPlanFn = useServerFn(upsertDayPlan);
+  const deleteDayPlanFn = useServerFn(deleteDayPlan);
+  const assignCableFn = useServerFn(assignCableToDayPlan);
+  const dayPlansQuery = useQuery({
+    queryKey: ["day-plans", projectId, planId],
+    queryFn: () => listDayPlansFn({ data: { projectId, floorPlanId: planId } }),
+  });
+
   async function changeBackgroundDoc(documentId: string | null) {
     try {
       await updatePlanFn({ data: { id: planId, documentId } });
