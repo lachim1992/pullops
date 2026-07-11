@@ -909,27 +909,21 @@ function PlanEditorPage() {
                   strokeDasharray="0.01 0.005"
                 />
               )}
-              {(endpoints.data ?? []).map((ep) => {
+              {showEndpoints && (endpoints.data ?? []).map((ep) => {
+                const kindInfo = endpointKindInfo(ep.endpoint_kind);
                 const isPatch = ep.endpoint_kind === "PATCH";
-                const isRouteEnd =
-                  mode === "route" &&
-                  (ep.id === currentRoute?.from_endpoint_id ||
-                    ep.id === currentRoute?.to_endpoint_id ||
-                    ep.id === currentRoute?.rack_endpoint_id);
                 const isSelected = ep.id === selectedEndpointId;
-                const fill = isRouteEnd
-                  ? "hsl(var(--accent))"
-                  : isSelected
-                    ? "hsl(var(--destructive))"
-                    : isPatch
-                      ? "hsl(var(--foreground))"
-                      : "hsl(var(--primary))";
+                const fill = isSelected
+                  ? "hsl(var(--destructive))"
+                  : kindInfo.color;
                 const isDragging = dragTarget?.kind === "endpoint" && dragTarget.id === ep.id && dragPos;
                 const cx = isDragging ? dragPos!.x : Number(ep.norm_x);
                 const cy = isDragging ? dragPos!.y : Number(ep.norm_y);
                 const r = 0.012 / zoom;
                 const sw = 0.002 / zoom;
+                const opacity = endpointsGhost ? 0.55 : 1;
                 const onHandleDown = (e: React.MouseEvent) => {
+                  if (!endpointsInteractive) return;
                   e.stopPropagation();
                   dragMovedRef.current = false;
                   setDragTarget({ kind: "endpoint", id: ep.id });
@@ -938,7 +932,8 @@ function PlanEditorPage() {
                 return (
                   <g
                     key={ep.id}
-                    style={{ cursor: "grab" }}
+                    opacity={opacity}
+                    style={{ cursor: endpointsInteractive ? "grab" : "pointer" }}
                     onClick={(e) => {
                       e.stopPropagation();
                       if (dragMovedRef.current) return;
@@ -979,6 +974,7 @@ function PlanEditorPage() {
                   </g>
                 );
               })}
+
               {mode === "route" && draftPoints.length > 1 && (
                 <polyline
                   points={draftPoints.map((p) => `${p.x},${p.y}`).join(" ")}
