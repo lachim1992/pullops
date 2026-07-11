@@ -56,6 +56,16 @@ export const addCablesToEndpoint = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase } = context;
+    const { data: endpoint, error: endpointError } = await supabase
+      .from("endpoints")
+      .select("id, project_id")
+      .eq("id", data.endpointId)
+      .maybeSingle();
+    if (endpointError) throw new Error(endpointError.message);
+    if (!endpoint || endpoint.project_id !== data.projectId) {
+      throw new Error("endpoint nepatří do projektu");
+    }
+
     const { data: existing } = await supabase
       .from("endpoint_cable_groups")
       .select("sequence")
@@ -71,6 +81,19 @@ export const addCablesToEndpoint = createServerFn({ method: "POST" })
     }));
     const { error } = await supabase.from("endpoint_cable_groups").insert(payload);
     if (error) throw new Error(error.message);
+
+    const { error: cableError } = await supabase
+      .from("cables")
+      .update({
+        to_endpoint_id: data.endpointId,
+        route_id: null,
+        bundle_id: null,
+        branch_points: null,
+      } as never)
+      .eq("project_id", data.projectId)
+      .in("id", data.cableIds);
+    if (cableError) throw new Error(cableError.message);
+
     return { ok: true };
   });
 
@@ -87,6 +110,26 @@ export const removeCableFromEndpoint = createServerFn({ method: "POST" })
       .eq("endpoint_id", data.endpointId)
       .eq("cable_id", data.cableId);
     if (error) throw new Error(error.message);
+
+    const { data: remaining, error: remainingError } = await supabase
+      .from("endpoint_cable_groups")
+      .select("endpoint_id")
+      .eq("cable_id", data.cableId)
+      .limit(1);
+    if (remainingError) throw new Error(remainingError.message);
+
+    const nextEndpointId = remaining?.[0]?.endpoint_id ?? null;
+    const { error: cableError } = await supabase
+      .from("cables")
+      .update({
+        to_endpoint_id: nextEndpointId,
+        route_id: null,
+        bundle_id: null,
+        branch_points: null,
+      } as never)
+      .eq("id", data.cableId);
+    if (cableError) throw new Error(cableError.message);
+
     return { ok: true };
   });
 
