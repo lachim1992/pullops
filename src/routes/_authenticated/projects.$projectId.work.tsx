@@ -480,14 +480,16 @@ function CableDetail({
 }
 
 function EndpointDetail({
-  endpoint, cables, patchPanels, onSelectCable, onToggle,
+  endpoint, cables, patchPanels, onSelectCable, onToggle, onHoverCable,
 }: {
   endpoint: Endpoint;
   cables: PullCable[];
   patchPanels: PatchPanel[];
   onSelectCable: (id: string) => void;
   onToggle: (c: PullCable, done: boolean) => void;
+  onHoverCable?: (id: string | null) => void;
 }) {
+
   const info = endpointKindInfo(endpoint.kind);
   const done = cables.filter((c) => c.status === "PULLED").length;
   return (
