@@ -82,7 +82,9 @@ export const getFloorPlan = createServerFn({ method: "GET" })
     const { supabase } = context;
     const { data: row, error } = await supabase
       .from("floor_plans")
-      .select("id, project_id, name, level, display_order, document_id")
+      .select(
+        "id, project_id, name, level, display_order, document_id, published_to_pull, published_at, published_by",
+      )
       .eq("id", data.id)
       .maybeSingle();
     if (error) throw new Error(dbErrorMessage(error));
