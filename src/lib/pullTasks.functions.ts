@@ -42,11 +42,23 @@ export const simulateSpools = createServerFn({ method: "GET" })
 
     const { data: endpoints } = await supabase
       .from("endpoints")
-      .select("id, floor_plan_id")
+      .select("id, floor_plan_id, endpoint_kind")
       .eq("project_id", data.projectId);
     const epPlan = new Map<string, string>();
+    const epKind = new Map<string, string>();
     for (const e of endpoints ?? []) {
       if (e.floor_plan_id) epPlan.set(e.id as string, e.floor_plan_id as string);
+      if (e.endpoint_kind) epKind.set(e.id as string, e.endpoint_kind as string);
+    }
+
+    // Per-project endpoint kind → reserve map
+    const { data: kinds } = await supabase
+      .from("endpoint_kinds")
+      .select("code, default_reserve_m")
+      .eq("project_id", data.projectId);
+    const reserveByKind = new Map<string, number>();
+    for (const k of kinds ?? []) {
+      reserveByKind.set(k.code as string, Number(k.default_reserve_m ?? 0));
     }
 
     const { data: types } = await supabase
@@ -65,9 +77,17 @@ export const simulateSpools = createServerFn({ method: "GET" })
       });
     }
 
+    const resolveReserve = (endpointId: string | null | undefined, fallback: number) => {
+      if (!endpointId) return fallback;
+      const kind = epKind.get(endpointId);
+      if (!kind) return fallback;
+      const r = reserveByKind.get(kind);
+      return r != null ? r : fallback;
+    };
+
     const { data: cables } = await supabase
       .from("cables")
-      .select("id, code, cable_type_id, override_length_m, branch_points, to_endpoint_id")
+      .select("id, code, cable_type_id, override_length_m, branch_points, from_endpoint_id, to_endpoint_id")
       .eq("project_id", data.projectId);
 
     type Row = { id: string; code: string; typeId: string | null; typeCode: string; meters: number };
@@ -76,14 +96,18 @@ export const simulateSpools = createServerFn({ method: "GET" })
     let missing = 0;
     for (const c of cables ?? []) {
       const t = c.cable_type_id ? typeMap.get(c.cable_type_id as string) : undefined;
+      const ctReserve = t?.reserve ?? 0;
       const epId = c.to_endpoint_id as string | null;
       const plan = epId ? epPlan.get(epId) : undefined;
       const cal = plan ? calByPlan.get(plan) : undefined;
+      const reserveFromM = resolveReserve(c.from_endpoint_id as string | null, ctReserve);
+      const reserveToM = resolveReserve(c.to_endpoint_id as string | null, ctReserve);
       const r = computeCableLength({
         routePoints: (c.branch_points as unknown as NormPoint[]) ?? [],
         manualRouteLengthM: null,
         calibration: cal ?? null,
-        reserveM: t?.reserve ?? 0,
+        reserveFromM,
+        reserveToM,
         overrideCableLengthM: (c.override_length_m as number | null) ?? null,
       });
       const meters = r.meters;
