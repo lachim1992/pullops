@@ -798,15 +798,23 @@ function PlanEditorPage() {
                     : p,
                 );
                 const opacity = bundlesGhost ? 0.35 : 0.9;
+                const savedSegs = (b as unknown as { segments?: BundleSegment[] }).segments ?? [];
                 return (
                   <g key={b.id} opacity={opacity}>
-                    <polyline
-                      points={pts.map((p) => `${p.x},${p.y}`).join(" ")}
-                      fill="none"
-                      stroke="hsl(var(--primary))"
-                      strokeWidth={0.014 / zoom}
-                      strokeLinejoin="round"
-                    />
+                    {pts.length > 1 && pts.slice(0, -1).map((p1, i) => {
+                      const p2 = pts[i + 1];
+                      const seg = savedSegs[i];
+                      const color = seg ? BUNDLE_SEGMENT_TYPES[seg.type]?.color ?? "hsl(var(--primary))" : "hsl(var(--primary))";
+                      return (
+                        <line
+                          key={`seg-${i}`}
+                          x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y}
+                          stroke={color}
+                          strokeWidth={0.014 / zoom}
+                          strokeLinecap="round"
+                        />
+                      );
+                    })}
                     {bundlePointsInteractive && pts.map((p, i) => (
                       <circle
                         key={i}
