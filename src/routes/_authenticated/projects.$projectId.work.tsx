@@ -285,6 +285,8 @@ function PlanWorkspace(props: {
     selectedEndpointId, setSelectedEndpointId,
     onlyTodo, setOnlyTodo, note, setNote, onToggleCable,
   } = props;
+  const [hoveredCableId, setHoveredCableId] = useState<string | null>(null);
+
 
   const filteredCables = useMemo(
     () => (onlyTodo ? cables.filter((c) => c.status !== "PULLED") : cables),
