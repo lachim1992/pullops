@@ -1,0 +1,112 @@
+{
+  "audit_date": "2026-07-11T08:04:00+00:00",
+  "commit": "7a3dbd9d5f61b105de0b2d7d91e1bb8a8547a495",
+  "branch": "edit/edt-9c2615a8-0792-430c-a281-af215255797a",
+  "working_tree": "clean",
+  "product_stage": "B_internal_alpha",
+  "overall_score": 5,
+  "module_scores": {
+    "auth": 8,
+    "multi_tenancy": 8,
+    "documents": 7,
+    "plan_editor": 5,
+    "calibration": 8,
+    "endpoints": 7,
+    "racks": 7,
+    "cables": 7,
+    "routing": 6,
+    "length_engine": 7,
+    "pull_mode": 2,
+    "visual_station": 0,
+    "offline": 0,
+    "security": 7,
+    "testing": 2
+  },
+  "working_features": [
+    "auth_supabase",
+    "organizations_create_via_tx",
+    "org_members_add_remove",
+    "user_roles_org_and_project",
+    "projects_create_update_via_tx",
+    "project_members",
+    "audit_events_append_only",
+    "documents_upload_signed_url",
+    "pdf_render_pdfjs",
+    "floor_plans_calibration",
+    "endpoints_crud_drag",
+    "endpoint_kinds_seed_and_editor",
+    "racks_crud_drag",
+    "patch_panels_with_autofill_ports",
+    "cable_types_per_project",
+    "cables_crud_with_length",
+    "endpoint_cable_groups_m_to_n",
+    "cable_bundles_with_segments",
+    "cable_routes_with_points",
+    "auto_assign_bundles_for_project",
+    "endpoint_photos_signed_url",
+    "endpoint_comments_with_resolved",
+    "length_engine_deterministic_tested",
+    "demo_seed"
+  ],
+  "partial_features": [
+    "audit_log_ui_no_filters_no_restore",
+    "reserve_rules_kind_over_type_no_ui_override",
+    "work_mode_simulate_only_no_task_crud",
+    "spool_estimation_readonly",
+    "bundle_segments_type_stored_but_not_used_in_length_calc",
+    "route_branching_per_cable_branch_points_only_no_shared_tree"
+  ],
+  "ui_only_or_stub": [
+    "pull_tasks_table_without_ui",
+    "spools_as_concept_only"
+  ],
+  "broken_features": [],
+  "not_implemented": [
+    "visual_pull_station",
+    "qr_scanning",
+    "offline_mode",
+    "csv_export",
+    "pdf_export",
+    "as_built_report",
+    "cable_testing",
+    "issues_module",
+    "undo_redo_editor",
+    "autosave_editor",
+    "history_and_versioning_ui",
+    "user_defined_rules_engine",
+    "multi_page_pdf_navigation",
+    "editor_filters_and_search",
+    "rls_smoke_tests"
+  ],
+  "p0_issues": [
+    "revoke_execute_from_public_on_security_definer",
+    "no_autosave_risks_losing_draft_bundles_and_routes"
+  ],
+  "p1_issues": [
+    "unique_conflict_handling_missing_for_bundles_racks_patch_panels",
+    "bundle_segments_extra_pct_not_applied_to_length",
+    "vertical_allowance_and_handling_factor_pipeline_not_verified",
+    "no_pull_mode_crud_blocks_pilot",
+    "no_csv_pdf_export_blocks_estimator",
+    "editor_ux_not_ready_for_100_300_endpoints"
+  ],
+  "p2_issues": [
+    "no_undo_redo",
+    "no_multi_page_pdf",
+    "label_overlap_on_dense_plans",
+    "length_source_of_truth_ambiguity",
+    "no_rls_smoke_tests"
+  ],
+  "recommended_strategy": "STRATEGY_1_editor_and_estimation_as_first_product",
+  "recommended_next_checkpoint": "CP-01_length_engine_truly_correct",
+  "tests_summary": {
+    "typecheck": "PASS",
+    "unit_tests_files": 1,
+    "unit_tests_total": 9,
+    "unit_tests_passed": 9,
+    "unit_tests_failed": 0,
+    "rls_tests": "not_present",
+    "integration_tests": "not_present",
+    "e2e_tests": "not_present"
+  }
+}
