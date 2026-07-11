@@ -4,6 +4,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   Cable,
+  Camera,
+  CheckSquare,
   ClipboardList,
   FolderKanban,
   LayoutDashboard,
@@ -11,12 +13,20 @@ import {
   Route as RouteIcon,
   ScrollText,
   Settings,
+  ShieldCheck,
   Wrench,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { getMyProfile } from "@/lib/orgs.functions";
+import { getMyCapabilities, getMyProjectCapabilities } from "@/lib/capabilities.functions";
 import { Button } from "@/components/ui/button";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
 
 export function AppShell({ children, projectId }: { children: ReactNode; projectId?: string }) {
@@ -24,10 +34,19 @@ export function AppShell({ children, projectId }: { children: ReactNode; project
   const router = useRouter();
   const queryClient = useQueryClient();
   const fetchProfile = useServerFn(getMyProfile);
-  const profile = useQuery({
-    queryKey: ["me"],
-    queryFn: () => fetchProfile(),
+  const fetchCaps = useServerFn(getMyCapabilities);
+  const fetchProjectCaps = useServerFn(getMyProjectCapabilities);
+
+  const profile = useQuery({ queryKey: ["me"], queryFn: () => fetchProfile() });
+  const caps = useQuery({ queryKey: ["me", "caps"], queryFn: () => fetchCaps() });
+  const projectCaps = useQuery({
+    queryKey: ["me", "project-caps", projectId ?? ""],
+    queryFn: () => fetchProjectCaps({ data: { projectId: projectId! } }),
+    enabled: !!projectId,
   });
+
+  const canManage = projectCaps.data?.canManage ?? false;
+  const isOrgAdmin = caps.data?.isOrgAdminAnywhere ?? false;
 
   async function signOut() {
     await queryClient.cancelQueries();
@@ -39,7 +58,7 @@ export function AppShell({ children, projectId }: { children: ReactNode; project
 
   return (
     <div className="flex min-h-screen bg-background">
-      <aside className="hidden w-56 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
+      <aside className="hidden w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
         <div className="flex items-center gap-2 border-b border-sidebar-border px-4 py-4">
           <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-sidebar-primary text-sidebar-primary-foreground">
             <Cable className="h-4 w-4" />
@@ -50,66 +69,131 @@ export function AppShell({ children, projectId }: { children: ReactNode; project
         <nav className="flex-1 overflow-y-auto p-2 text-sm">
           <NavGroup label="Přehled">
             <NavItem to="/dashboard" icon={LayoutDashboard}>
-              Přehled
+              Projekty
             </NavItem>
-            <NavItem to="/audit" icon={ScrollText}>
-              Audit
-            </NavItem>
+            {isOrgAdmin && (
+              <NavItem to="/audit" icon={ScrollText}>
+                Audit
+              </NavItem>
+            )}
           </NavGroup>
 
           {projectId && (
-            <NavGroup label="Projekt">
+            <div className="mb-4">
+              <div className="mb-1 px-2 font-mono text-[10px] uppercase tracking-widest text-sidebar-foreground/50">
+                Projekt
+              </div>
               <NavItem to="/projects/$projectId" params={{ projectId }} icon={FolderKanban}>
                 Přehled projektu
               </NavItem>
-              <NavItem
-                to="/projects/$projectId/documents"
-                params={{ projectId }}
-                icon={ClipboardList}
-              >
-                Dokumenty
-              </NavItem>
-              <NavItem to="/projects/$projectId/plans" params={{ projectId }} icon={RouteIcon}>
-                Plány
-              </NavItem>
-              <NavItem to="/projects/$projectId/endpoints" params={{ projectId }} icon={Wrench}>
-                Endpointy
-              </NavItem>
-              <NavItem to="/projects/$projectId/cable-types" params={{ projectId }} icon={Cable}>
-                Typy kabelů
-              </NavItem>
-              <NavItem
-                to="/projects/$projectId/endpoint-kinds"
-                params={{ projectId }}
-                icon={Settings}
-              >
-                Typy endpointů
-              </NavItem>
-              <NavItem to="/projects/$projectId/patch-panels" params={{ projectId }} icon={Wrench}>
-                Patch panely
-              </NavItem>
-              <NavItem to="/projects/$projectId/cables" params={{ projectId }} icon={Cable}>
-                Kabelový registr
-              </NavItem>
-              <NavItem to="/projects/$projectId/spools" params={{ projectId }} icon={Cable}>
-                Fyzické spulky
-              </NavItem>
-              <NavItem to="/projects/$projectId/work" params={{ projectId }} icon={Wrench}>
-                Režim tahání
-              </NavItem>
 
-
-              <NavItem
-                to="/projects/$projectId/members"
-                params={{ projectId }}
-                icon={ClipboardList}
+              <Accordion
+                type="multiple"
+                defaultValue={canManage ? ["manage", "lobby", "pull", "completion"] : ["lobby", "pull", "completion"]}
+                className="mt-2"
               >
-                Členové
-              </NavItem>
-              <NavItem to="/projects/$projectId/settings" params={{ projectId }} icon={Settings}>
-                Nastavení
-              </NavItem>
-            </NavGroup>
+                {canManage && (
+                  <BranchItem value="manage" label="Správa zakázky" icon={<ShieldCheck className="h-3.5 w-3.5" />}>
+                    <NavItem
+                      to="/projects/$projectId/documents"
+                      params={{ projectId }}
+                      icon={ClipboardList}
+                    >
+                      Dokumenty
+                    </NavItem>
+                    <NavItem
+                      to="/projects/$projectId/plans"
+                      params={{ projectId }}
+                      icon={RouteIcon}
+                    >
+                      Plány
+                    </NavItem>
+                    <NavItem
+                      to="/projects/$projectId/endpoints"
+                      params={{ projectId }}
+                      icon={Wrench}
+                    >
+                      Endpointy
+                    </NavItem>
+                    <NavItem
+                      to="/projects/$projectId/cable-types"
+                      params={{ projectId }}
+                      icon={Cable}
+                    >
+                      Typy kabelů
+                    </NavItem>
+                    <NavItem
+                      to="/projects/$projectId/endpoint-kinds"
+                      params={{ projectId }}
+                      icon={Settings}
+                    >
+                      Typy endpointů
+                    </NavItem>
+                    <NavItem
+                      to="/projects/$projectId/patch-panels"
+                      params={{ projectId }}
+                      icon={Wrench}
+                    >
+                      Patch panely
+                    </NavItem>
+                    <NavItem
+                      to="/projects/$projectId/cables"
+                      params={{ projectId }}
+                      icon={Cable}
+                    >
+                      Kabelový registr
+                    </NavItem>
+                    <NavItem
+                      to="/projects/$projectId/spools"
+                      params={{ projectId }}
+                      icon={Cable}
+                    >
+                      Fyzické spulky
+                    </NavItem>
+                    <NavItem
+                      to="/projects/$projectId/members"
+                      params={{ projectId }}
+                      icon={ClipboardList}
+                    >
+                      Členové
+                    </NavItem>
+                    <NavItem
+                      to="/projects/$projectId/settings"
+                      params={{ projectId }}
+                      icon={Settings}
+                    >
+                      Nastavení
+                    </NavItem>
+                  </BranchItem>
+                )}
+
+                <BranchItem value="lobby" label="Lobby" icon={<Camera className="h-3.5 w-3.5" />}>
+                  <NavItem to="/projects/$projectId/lobby" params={{ projectId }} icon={ClipboardList}>
+                    Chat, úkoly, fotky
+                  </NavItem>
+                </BranchItem>
+
+                <BranchItem value="pull" label="Režim tahání" icon={<Cable className="h-3.5 w-3.5" />}>
+                  <NavItem to="/projects/$projectId/work" params={{ projectId }} icon={Wrench}>
+                    Tahání
+                  </NavItem>
+                </BranchItem>
+
+                <BranchItem
+                  value="completion"
+                  label="Režim kompletace"
+                  icon={<CheckSquare className="h-3.5 w-3.5" />}
+                >
+                  <NavItem
+                    to="/projects/$projectId/completion"
+                    params={{ projectId }}
+                    icon={CheckSquare}
+                  >
+                    Zakončení & test
+                  </NavItem>
+                </BranchItem>
+              </Accordion>
+            </div>
           )}
 
           {!projectId && (
@@ -155,6 +239,38 @@ function NavGroup({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+function BranchItem({
+  value,
+  label,
+  icon,
+  children,
+}: {
+  value: string;
+  label: string;
+  icon: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <AccordionItem value={value} className="border-b-0">
+      <AccordionTrigger
+        className={cn(
+          "rounded-sm px-2 py-1.5 font-mono text-[11px] uppercase tracking-widest text-sidebar-foreground/60",
+          "hover:bg-sidebar-accent/40 hover:text-sidebar-foreground hover:no-underline",
+          "[&[data-state=open]]:text-sidebar-foreground",
+        )}
+      >
+        <span className="flex items-center gap-2">
+          {icon}
+          {label}
+        </span>
+      </AccordionTrigger>
+      <AccordionContent className="pb-1 pt-1">
+        <div className="ml-1 space-y-0.5 border-l border-sidebar-border/50 pl-2">{children}</div>
+      </AccordionContent>
+    </AccordionItem>
+  );
+}
+
 type NavItemProps = {
   to: string;
   params?: Record<string, string>;
@@ -168,8 +284,8 @@ function NavItem({ to, params, icon: Icon, children }: NavItemProps) {
       to={to as never}
       params={params as never}
       className={cn(
-        "flex items-center gap-2 rounded-sm px-2 py-1.5 text-sidebar-foreground/80 transition-colors",
-        "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+        "flex items-center gap-2 rounded-sm px-2 py-1.5 text-sidebar-foreground/80 transition-all duration-150",
+        "hover:translate-x-0.5 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
       )}
       activeProps={{
         className: "bg-sidebar-accent text-sidebar-accent-foreground font-medium",
