@@ -49,12 +49,15 @@ function EndpointsPage() {
 
   const [selectedPlanId, setSelectedPlanId] = useState<string | "ALL">("ALL");
   const [selectedEndpointId, setSelectedEndpointId] = useState<string | null>(null);
-  const { kinds } = useEndpointKinds(projectId);
+  const kindsQuery = useEndpointKinds(projectId);
   const kindMap = useMemo(() => {
     const m = new Map<string, { label: string; color: string }>();
-    kinds.forEach((k) => m.set(k.code, { label: k.label, color: k.color }));
+    (kindsQuery.data ?? []).forEach((k) =>
+      m.set(k.code, { label: k.label, color: k.color ?? "hsl(0 0% 40%)" }),
+    );
     return m;
-  }, [kinds]);
+  }, [kindsQuery.data]);
+
 
   const plans = useQuery({
     queryKey: ["plans", projectId],
