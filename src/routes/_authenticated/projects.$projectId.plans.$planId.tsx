@@ -1350,6 +1350,44 @@ function PlanEditorPage() {
             </div>
           )}
 
+          {mode === "publish" && (
+            <DayPlanEditor
+              projectId={projectId}
+              planId={planId}
+              dayPlans={dayPlansQuery.data?.plans ?? []}
+              assignments={dayPlansQuery.data?.assignments ?? []}
+              branches={branches.data ?? []}
+              onCreate={async () => {
+                const nextOrder = (dayPlansQuery.data?.plans.length ?? 0);
+                await upsertDayPlanFn({
+                  data: {
+                    projectId,
+                    floorPlanId: planId,
+                    name: `Den ${nextOrder + 1}`,
+                    sortOrder: nextOrder,
+                    spoolCount: 3,
+                    spoolLengthM: 305,
+                  },
+                });
+                qc.invalidateQueries({ queryKey: ["day-plans", projectId, planId] });
+              }}
+              onUpdate={async (patch) => {
+                await upsertDayPlanFn({ data: { ...patch, projectId, floorPlanId: planId } });
+                qc.invalidateQueries({ queryKey: ["day-plans", projectId, planId] });
+              }}
+              onDelete={async (id) => {
+                await deleteDayPlanFn({ data: { id } });
+                qc.invalidateQueries({ queryKey: ["day-plans", projectId, planId] });
+              }}
+              onAssign={async (cableId, dayPlanId) => {
+                await assignCableFn({ data: { projectId, cableId, dayPlanId, sortOrder: 0 } });
+                qc.invalidateQueries({ queryKey: ["day-plans", projectId, planId] });
+              }}
+            />
+          )}
+
+
+
 
 
           {mode === "endpoint" && (
