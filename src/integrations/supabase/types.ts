@@ -1275,6 +1275,118 @@ export type Database = {
           },
         ]
       }
+      pull_day_plan_cables: {
+        Row: {
+          cable_id: string
+          created_at: string
+          day_plan_id: string
+          id: string
+          project_id: string
+          sort_order: number
+        }
+        Insert: {
+          cable_id: string
+          created_at?: string
+          day_plan_id: string
+          id?: string
+          project_id: string
+          sort_order?: number
+        }
+        Update: {
+          cable_id?: string
+          created_at?: string
+          day_plan_id?: string
+          id?: string
+          project_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pull_day_plan_cables_cable_id_fkey"
+            columns: ["cable_id"]
+            isOneToOne: true
+            referencedRelation: "cables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pull_day_plan_cables_day_plan_id_fkey"
+            columns: ["day_plan_id"]
+            isOneToOne: false
+            referencedRelation: "pull_day_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pull_day_plan_cables_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pull_day_plans: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          floor_plan_id: string | null
+          id: string
+          name: string
+          notes: string | null
+          organization_id: string
+          planned_date: string | null
+          project_id: string
+          sort_order: number
+          spool_count: number
+          spool_length_m: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          floor_plan_id?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          organization_id: string
+          planned_date?: string | null
+          project_id: string
+          sort_order?: number
+          spool_count?: number
+          spool_length_m?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          floor_plan_id?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          organization_id?: string
+          planned_date?: string | null
+          project_id?: string
+          sort_order?: number
+          spool_count?: number
+          spool_length_m?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pull_day_plans_floor_plan_id_fkey"
+            columns: ["floor_plan_id"]
+            isOneToOne: false
+            referencedRelation: "floor_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pull_day_plans_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pull_tasks: {
         Row: {
           cable_id: string
