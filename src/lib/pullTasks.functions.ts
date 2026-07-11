@@ -594,6 +594,7 @@ export const getPullModeData = createServerFn({ method: "GET" })
         ...s,
         wasted: Math.max(0, s.capacity - s.used),
       })),
+      dayBlocks,
       hoursByType,
     };
   });
