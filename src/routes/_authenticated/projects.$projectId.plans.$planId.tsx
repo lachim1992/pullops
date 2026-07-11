@@ -72,6 +72,20 @@ export const Route = createFileRoute(
 
 type Mode = "calibrate" | "endpoint" | "route" | "rack" | "bundle" | "port";
 
+type BundleSegmentType = "DIRECT" | "TRAY" | "WALL" | "CEILING";
+type BundleSegment = { type: BundleSegmentType; extra_pct: number };
+
+const BUNDLE_SEGMENT_TYPES: Record<BundleSegmentType, { label: string; color: string; extra_pct: number }> = {
+  DIRECT:  { label: "Přímá",           color: "hsl(var(--accent))",       extra_pct: 0 },
+  TRAY:    { label: "Žlab / lišta",     color: "hsl(210 80% 50%)",         extra_pct: 0 },
+  WALL:    { label: "Výsek / trubka",   color: "hsl(15 80% 55%)",          extra_pct: 10 },
+  CEILING: { label: "Podhled",          color: "hsl(280 55% 55%)",         extra_pct: 15 },
+};
+
+function defaultSegment(): BundleSegment {
+  return { type: "DIRECT", extra_pct: BUNDLE_SEGMENT_TYPES.DIRECT.extra_pct };
+}
+
 function PlanEditorPage() {
   const { projectId, planId } = useParams({
     from: "/_authenticated/projects/$projectId/plans/$planId",
