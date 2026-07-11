@@ -980,18 +980,25 @@ function PullMap({
   const [view, setView] = useState({ tx: 0, ty: 0, s: 1 });
   const panRef = useRef<{ startX: number; startY: number; tx0: number; ty0: number } | null>(null);
 
-  const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
-    const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
-    setView((v) => {
-      const ns = Math.min(8, Math.max(0.5, v.s * factor));
-      const k = ns / v.s;
-      return { tx: mx - k * (mx - v.tx), ty: my - k * (my - v.ty), s: ns };
-    });
-  };
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const handler = (e: WheelEvent) => {
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+      setView((v) => {
+        const ns = Math.min(8, Math.max(0.5, v.s * factor));
+        const k = ns / v.s;
+        return { tx: mx - k * (mx - v.tx), ty: my - k * (my - v.ty), s: ns };
+      });
+    };
+    el.addEventListener("wheel", handler, { passive: false });
+    return () => el.removeEventListener("wheel", handler);
+  }, []);
+
 
   const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.button !== 0 && e.button !== 1) return;
