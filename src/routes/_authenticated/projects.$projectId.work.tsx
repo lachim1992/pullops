@@ -431,7 +431,14 @@ function PlanWorkspace(props: {
       )}
 
       {tab === "spools" && (
-        <SpoolsTab spools={allSpools} cables={cables} onToggle={onToggleCable} />
+        <SpoolsTab
+          spools={allSpools}
+          dayBlocks={allDayBlocks.filter(
+            (b) => b.floorPlanId == null || b.floorPlanId === plan?.id,
+          )}
+          cables={cables}
+          onToggle={onToggleCable}
+        />
       )}
     </div>
   );
