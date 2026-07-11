@@ -58,6 +58,7 @@ import {
   type Calibration,
   type NormPoint,
 } from "@/lib/length";
+import { endpointKindInfo, ENDPOINT_KIND_GROUPS, type EndpointKind } from "@/lib/endpointKinds";
 
 export const Route = createFileRoute(
   "/_authenticated/projects/$projectId/plans/$planId",
