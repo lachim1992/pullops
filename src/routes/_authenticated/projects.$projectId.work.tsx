@@ -329,7 +329,7 @@ function PlanWorkspace(props: {
       </div>
 
       {tab === "map" && (
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
           <section className="overflow-hidden rounded-sm border border-border bg-card">
             <PullMap
               plan={plan}
@@ -834,7 +834,7 @@ function PullMap({
   onSelectEndpoint: (id: string) => void;
 }) {
   return (
-    <div className="relative h-[640px] min-h-[480px] bg-muted">
+    <div className="relative h-[calc(100vh-220px)] min-h-[560px] w-full overflow-hidden bg-muted">
       {plan?.documentUrl ? (
         plan.mimeType === "application/pdf" ? (
           <PdfPlanBackground url={plan.documentUrl} title={plan.name} />
