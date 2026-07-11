@@ -690,21 +690,14 @@ function QueueTab({
 
 /* ----------------------------- Spools tab ----------------------------- */
 
-type SpoolRow = {
-  typeCode: string;
-  index: number;
-  used: number;
-  capacity: number;
-  wasted: number;
-  cables: Array<{ id: string; code: string; meters: number }>;
-};
-
 function SpoolsTab({
   spools,
+  dayBlocks,
   cables,
   onToggle,
 }: {
   spools: SpoolRow[];
+  dayBlocks: DayBlock[];
   cables: PullCable[];
   onToggle: (c: PullCable, done: boolean) => void;
 }) {
