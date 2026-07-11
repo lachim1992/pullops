@@ -450,6 +450,13 @@ export const getPullModeData = createServerFn({ method: "GET" })
         floorPlanId: b.floor_plan_id as string,
         points: (b.points as unknown as NormPoint[]) ?? [],
       })),
+      patchPanels: (panelsRes.data ?? []).map((p) => ({
+        id: p.id as string,
+        code: p.code as string,
+        name: (p.name as string | null) ?? null,
+        floorPlanId: (p.floor_plan_id as string | null) ?? null,
+        portCount: Number(p.port_count ?? 0),
+      })),
       cables: cableRows,
       totalCables: cableRows.length,
       routedCables: cableRows.filter((c) => c.branchPoints.length >= 2).length,
