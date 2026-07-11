@@ -45,6 +45,7 @@ import { createRack, listRacks, deleteRack, updateRack } from "@/lib/racks.funct
 import { createBundle, listBundles, deleteBundle, updateBundle } from "@/lib/cableBundles.functions";
 import {
   autoAssignBundlesForPlan,
+  autoAssignBundlesForProject,
   createCableFromPort,
   listFreePorts,
   listPlanBranches,
