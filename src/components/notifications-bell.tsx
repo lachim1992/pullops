@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Bell, Check } from "lucide-react";
+import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -59,8 +60,15 @@ export function NotificationsBell() {
         .on(
           "postgres_changes",
           { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${uid}` },
-          () => {
+          (payload) => {
             qc.invalidateQueries({ queryKey: ["notifications"] });
+            const n = payload.new as { title?: string; body?: string | null; link_path?: string | null };
+            toast(n.title ?? "Nové oznámení", {
+              description: n.body ?? undefined,
+              action: n.link_path
+                ? { label: "Otevřít", onClick: () => { window.location.href = n.link_path as string; } }
+                : undefined,
+            });
           },
         )
         .subscribe();

@@ -215,6 +215,9 @@ export const upsertTask = createServerFn({ method: "POST" })
         priority: z.enum(["LOW", "NORMAL", "HIGH", "URGENT"]).default("NORMAL"),
         labels: z.array(z.string().max(40)).max(10).optional(),
         sortOrder: z.number().int().optional(),
+        sourceType: z.enum(["defect", "endpoint", "photo", "chat", "cable"]).nullable().optional(),
+        sourceId: z.string().nullable().optional(),
+        defectId: uuid.nullable().optional(),
       })
       .parse(d),
   )
@@ -231,6 +234,9 @@ export const upsertTask = createServerFn({ method: "POST" })
       status: data.status,
       priority: data.priority,
       labels: data.labels ?? [],
+      source_type: data.sourceType ?? null,
+      source_id: data.sourceId ?? null,
+      defect_id: data.defectId ?? null,
     };
     if (typeof data.sortOrder === "number") patch.sort_order = data.sortOrder;
     if (data.id) {
