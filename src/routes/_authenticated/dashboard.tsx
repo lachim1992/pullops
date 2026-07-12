@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { z } from "zod";
-import { FolderKanban, Loader2, Plus, Settings, Sparkles } from "lucide-react";
+import { AlertTriangle, FolderKanban, Loader2, Plus, Settings, Sparkles, Wrench } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
@@ -20,8 +20,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { listMyOrganizations } from "@/lib/orgs.functions";
-import { createProject, listMyProjects } from "@/lib/projects.functions";
+import { createProject } from "@/lib/projects.functions";
+import { getMyDashboardSummary } from "@/lib/metrics.functions";
 import { seedCeskeBudejoviceDemo } from "@/lib/demoSeed.functions";
 import { registerDocument } from "@/lib/documents.functions";
 import { updateFloorPlan } from "@/lib/floorPlans.functions";
