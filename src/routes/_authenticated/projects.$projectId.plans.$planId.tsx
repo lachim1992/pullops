@@ -24,8 +24,22 @@ import {
   deleteDayPlan,
   listDayPlans,
   upsertDayPlan,
+  listDayPlanPhotos,
+  addDayPlanPhoto,
+  deleteDayPlanPhoto,
 } from "@/lib/pullDayPlans.functions";
 import { runOptimizer } from "@/lib/pullOptimizer.functions";
+import { listProjectMembersLite } from "@/lib/defects.functions";
+import { supabase } from "@/integrations/supabase/client";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ChevronDown, ChevronRight, Camera, Trash2, X } from "lucide-react";
 
 import {
   createEndpoint,
@@ -2421,6 +2435,10 @@ type DayPlanRow = {
   spoolLengthM: number;
   notes: string | null;
   floorPlanId: string | null;
+  assignedTo: string | null;
+  priority: string;
+  status: string;
+  photoCount: number;
 };
 type DayPlanAssignment = { day_plan_id: string; cable_id: string; sort_order: number };
 type BranchRow = { id: string; code: string };
