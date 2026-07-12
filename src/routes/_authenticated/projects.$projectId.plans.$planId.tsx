@@ -224,48 +224,115 @@ function PlanEditorPage() {
   // Zoom & pan state
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
   const viewportRef = useRef<HTMLDivElement>(null);
   const panStateRef = useRef<{ startX: number; startY: number; ox: number; oy: number } | null>(
     null,
   );
+  const spaceDownRef = useRef(false);
+  const zoomRef = useRef(1);
+  const panRef = useRef({ x: 0, y: 0 });
+  useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
+  useEffect(() => {
+    panRef.current = pan;
+  }, [pan]);
 
   function clampZoom(z: number) {
-    return Math.max(0.5, Math.min(8, z));
+    return Math.max(0.25, Math.min(12, z));
   }
   function zoomAt(clientX: number, clientY: number, factor: number) {
     const rect = viewportRef.current?.getBoundingClientRect();
     if (!rect) return;
     const px = clientX - rect.left;
     const py = clientY - rect.top;
-    setZoom((z) => {
-      const nz = clampZoom(z * factor);
-      const real = nz / z;
-      setPan((p) => ({ x: px - (px - p.x) * real, y: py - (py - p.y) * real }));
-      return nz;
-    });
+    const z = zoomRef.current;
+    const nz = clampZoom(z * factor);
+    if (nz === z) return;
+    const real = nz / z;
+    const p = panRef.current;
+    const newPan = { x: px - (px - p.x) * real, y: py - (py - p.y) * real };
+    zoomRef.current = nz;
+    panRef.current = newPan;
+    setZoom(nz);
+    setPan(newPan);
   }
-  function handleWheel(e: React.WheelEvent) {
-    if (!e.ctrlKey && !e.metaKey && Math.abs(e.deltaY) < 1) return;
-    e.preventDefault();
-    const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
-    zoomAt(e.clientX, e.clientY, factor);
-  }
-  function handleViewportMouseDown(e: React.MouseEvent) {
-    // middle mouse or space+left, or right button → pan
-    if (e.button === 1 || e.button === 2 || (e.button === 0 && e.altKey)) {
+
+  // Native non-passive wheel listener → smooth zoom without page scroll
+  useEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      panStateRef.current = { startX: e.clientX, startY: e.clientY, ox: pan.x, oy: pan.y };
+      const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+      const factor = Math.exp(-dy * 0.0018);
+      zoomAt(e.clientX, e.clientY, factor);
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
+
+  // Global pan handlers so drag doesn't get stuck when leaving the viewport
+  useEffect(() => {
+    if (!isPanning) return;
+    const onMove = (e: MouseEvent) => {
+      const st = panStateRef.current;
+      if (!st) return;
+      const np = { x: st.ox + (e.clientX - st.startX), y: st.oy + (e.clientY - st.startY) };
+      panRef.current = np;
+      setPan(np);
+    };
+    const onUp = () => {
+      panStateRef.current = null;
+      setIsPanning(false);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [isPanning]);
+
+  // Space bar → hold to pan with left mouse
+  useEffect(() => {
+    const onDown = (e: KeyboardEvent) => {
+      if (e.code !== "Space") return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      spaceDownRef.current = true;
+    };
+    const onUp = (e: KeyboardEvent) => {
+      if (e.code === "Space") spaceDownRef.current = false;
+    };
+    window.addEventListener("keydown", onDown);
+    window.addEventListener("keyup", onUp);
+    return () => {
+      window.removeEventListener("keydown", onDown);
+      window.removeEventListener("keyup", onUp);
+    };
+  }, []);
+
+  function handleViewportMouseDown(e: React.MouseEvent) {
+    if (
+      e.button === 1 ||
+      e.button === 2 ||
+      (e.button === 0 && (e.altKey || spaceDownRef.current))
+    ) {
+      e.preventDefault();
+      panStateRef.current = {
+        startX: e.clientX,
+        startY: e.clientY,
+        ox: panRef.current.x,
+        oy: panRef.current.y,
+      };
+      setIsPanning(true);
     }
   }
-  function handleViewportMouseMove(e: React.MouseEvent) {
-    const st = panStateRef.current;
-    if (!st) return;
-    setPan({ x: st.ox + (e.clientX - st.startX), y: st.oy + (e.clientY - st.startY) });
-  }
-  function endPan() {
-    panStateRef.current = null;
-  }
   function resetView() {
+    zoomRef.current = 1;
+    panRef.current = { x: 0, y: 0 };
     setZoom(1);
     setPan({ x: 0, y: 0 });
   }
@@ -726,11 +793,8 @@ function PlanEditorPage() {
         <div
           ref={viewportRef}
           className="relative h-[calc(100vh-220px)] min-h-[560px] w-full overflow-hidden rounded-sm border border-border bg-muted"
-          onWheel={handleWheel}
+          style={{ cursor: isPanning ? "grabbing" : spaceDownRef.current ? "grab" : "default", touchAction: "none" }}
           onMouseDown={handleViewportMouseDown}
-          onMouseMove={handleViewportMouseMove}
-          onMouseUp={endPan}
-          onMouseLeave={endPan}
           onContextMenu={(e) => e.preventDefault()}
         >
           {/* Zoom controls */}
@@ -773,7 +837,7 @@ function PlanEditorPage() {
             </div>
           </div>
           <div className="absolute left-2 top-2 z-10 rounded-sm bg-background/80 px-2 py-1 font-mono text-[10px] text-muted-foreground">
-            Kolečko = zoom · Alt/prostřední tlač. = posun
+            Kolečko = zoom · Space/Alt/střední tlač. + tažení = posun
           </div>
 
           <div
