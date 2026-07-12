@@ -35,9 +35,12 @@ import { Route as AuthenticatedProjectsProjectIdCableTypesRouteImport } from './
 import { Route as AuthenticatedOrganizationsOrgIdSettingsRouteImport } from './routes/_authenticated/organizations.$orgId.settings'
 import { Route as AuthenticatedProjectsProjectIdPlansIndexRouteImport } from './routes/_authenticated/projects.$projectId.plans.index'
 import { Route as AuthenticatedProjectsProjectIdPatchPanelsIndexRouteImport } from './routes/_authenticated/projects.$projectId.patch-panels.index'
+import { Route as AuthenticatedProjectsProjectIdCompletionIndexRouteImport } from './routes/_authenticated/projects.$projectId.completion.index'
 import { Route as AuthenticatedProjectsProjectIdCablesIndexRouteImport } from './routes/_authenticated/projects.$projectId.cables.index'
 import { Route as AuthenticatedProjectsProjectIdPlansPlanIdRouteImport } from './routes/_authenticated/projects.$projectId.plans.$planId'
 import { Route as AuthenticatedProjectsProjectIdPatchPanelsPanelIdRouteImport } from './routes/_authenticated/projects.$projectId.patch-panels.$panelId'
+import { Route as AuthenticatedProjectsProjectIdCompletionKanbanRouteImport } from './routes/_authenticated/projects.$projectId.completion.kanban'
+import { Route as AuthenticatedProjectsProjectIdCompletionPlanIdRouteImport } from './routes/_authenticated/projects.$projectId.completion.$planId'
 import { Route as AuthenticatedProjectsProjectIdCablesCableIdRouteImport } from './routes/_authenticated/projects.$projectId.cables.$cableId'
 
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -187,6 +190,12 @@ const AuthenticatedProjectsProjectIdPatchPanelsIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedProjectsProjectIdPatchPanelsRoute,
   } as any)
+const AuthenticatedProjectsProjectIdCompletionIndexRoute =
+  AuthenticatedProjectsProjectIdCompletionIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedProjectsProjectIdCompletionRoute,
+  } as any)
 const AuthenticatedProjectsProjectIdCablesIndexRoute =
   AuthenticatedProjectsProjectIdCablesIndexRouteImport.update({
     id: '/',
@@ -204,6 +213,18 @@ const AuthenticatedProjectsProjectIdPatchPanelsPanelIdRoute =
     id: '/$panelId',
     path: '/$panelId',
     getParentRoute: () => AuthenticatedProjectsProjectIdPatchPanelsRoute,
+  } as any)
+const AuthenticatedProjectsProjectIdCompletionKanbanRoute =
+  AuthenticatedProjectsProjectIdCompletionKanbanRouteImport.update({
+    id: '/kanban',
+    path: '/kanban',
+    getParentRoute: () => AuthenticatedProjectsProjectIdCompletionRoute,
+  } as any)
+const AuthenticatedProjectsProjectIdCompletionPlanIdRoute =
+  AuthenticatedProjectsProjectIdCompletionPlanIdRouteImport.update({
+    id: '/$planId',
+    path: '/$planId',
+    getParentRoute: () => AuthenticatedProjectsProjectIdCompletionRoute,
   } as any)
 const AuthenticatedProjectsProjectIdCablesCableIdRoute =
   AuthenticatedProjectsProjectIdCablesCableIdRouteImport.update({
@@ -223,7 +244,7 @@ export interface FileRoutesByFullPath {
   '/organizations/$orgId/settings': typeof AuthenticatedOrganizationsOrgIdSettingsRoute
   '/projects/$projectId/cable-types': typeof AuthenticatedProjectsProjectIdCableTypesRoute
   '/projects/$projectId/cables': typeof AuthenticatedProjectsProjectIdCablesRouteWithChildren
-  '/projects/$projectId/completion': typeof AuthenticatedProjectsProjectIdCompletionRoute
+  '/projects/$projectId/completion': typeof AuthenticatedProjectsProjectIdCompletionRouteWithChildren
   '/projects/$projectId/defects': typeof AuthenticatedProjectsProjectIdDefectsRoute
   '/projects/$projectId/documents': typeof AuthenticatedProjectsProjectIdDocumentsRoute
   '/projects/$projectId/endpoint-kinds': typeof AuthenticatedProjectsProjectIdEndpointKindsRoute
@@ -237,9 +258,12 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId/work': typeof AuthenticatedProjectsProjectIdWorkRoute
   '/projects/$projectId/': typeof AuthenticatedProjectsProjectIdIndexRoute
   '/projects/$projectId/cables/$cableId': typeof AuthenticatedProjectsProjectIdCablesCableIdRoute
+  '/projects/$projectId/completion/$planId': typeof AuthenticatedProjectsProjectIdCompletionPlanIdRoute
+  '/projects/$projectId/completion/kanban': typeof AuthenticatedProjectsProjectIdCompletionKanbanRoute
   '/projects/$projectId/patch-panels/$panelId': typeof AuthenticatedProjectsProjectIdPatchPanelsPanelIdRoute
   '/projects/$projectId/plans/$planId': typeof AuthenticatedProjectsProjectIdPlansPlanIdRoute
   '/projects/$projectId/cables/': typeof AuthenticatedProjectsProjectIdCablesIndexRoute
+  '/projects/$projectId/completion/': typeof AuthenticatedProjectsProjectIdCompletionIndexRoute
   '/projects/$projectId/patch-panels/': typeof AuthenticatedProjectsProjectIdPatchPanelsIndexRoute
   '/projects/$projectId/plans/': typeof AuthenticatedProjectsProjectIdPlansIndexRoute
 }
@@ -253,7 +277,6 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/organizations/$orgId/settings': typeof AuthenticatedOrganizationsOrgIdSettingsRoute
   '/projects/$projectId/cable-types': typeof AuthenticatedProjectsProjectIdCableTypesRoute
-  '/projects/$projectId/completion': typeof AuthenticatedProjectsProjectIdCompletionRoute
   '/projects/$projectId/defects': typeof AuthenticatedProjectsProjectIdDefectsRoute
   '/projects/$projectId/documents': typeof AuthenticatedProjectsProjectIdDocumentsRoute
   '/projects/$projectId/endpoint-kinds': typeof AuthenticatedProjectsProjectIdEndpointKindsRoute
@@ -265,9 +288,12 @@ export interface FileRoutesByTo {
   '/projects/$projectId/work': typeof AuthenticatedProjectsProjectIdWorkRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdIndexRoute
   '/projects/$projectId/cables/$cableId': typeof AuthenticatedProjectsProjectIdCablesCableIdRoute
+  '/projects/$projectId/completion/$planId': typeof AuthenticatedProjectsProjectIdCompletionPlanIdRoute
+  '/projects/$projectId/completion/kanban': typeof AuthenticatedProjectsProjectIdCompletionKanbanRoute
   '/projects/$projectId/patch-panels/$panelId': typeof AuthenticatedProjectsProjectIdPatchPanelsPanelIdRoute
   '/projects/$projectId/plans/$planId': typeof AuthenticatedProjectsProjectIdPlansPlanIdRoute
   '/projects/$projectId/cables': typeof AuthenticatedProjectsProjectIdCablesIndexRoute
+  '/projects/$projectId/completion': typeof AuthenticatedProjectsProjectIdCompletionIndexRoute
   '/projects/$projectId/patch-panels': typeof AuthenticatedProjectsProjectIdPatchPanelsIndexRoute
   '/projects/$projectId/plans': typeof AuthenticatedProjectsProjectIdPlansIndexRoute
 }
@@ -284,7 +310,7 @@ export interface FileRoutesById {
   '/_authenticated/organizations/$orgId/settings': typeof AuthenticatedOrganizationsOrgIdSettingsRoute
   '/_authenticated/projects/$projectId/cable-types': typeof AuthenticatedProjectsProjectIdCableTypesRoute
   '/_authenticated/projects/$projectId/cables': typeof AuthenticatedProjectsProjectIdCablesRouteWithChildren
-  '/_authenticated/projects/$projectId/completion': typeof AuthenticatedProjectsProjectIdCompletionRoute
+  '/_authenticated/projects/$projectId/completion': typeof AuthenticatedProjectsProjectIdCompletionRouteWithChildren
   '/_authenticated/projects/$projectId/defects': typeof AuthenticatedProjectsProjectIdDefectsRoute
   '/_authenticated/projects/$projectId/documents': typeof AuthenticatedProjectsProjectIdDocumentsRoute
   '/_authenticated/projects/$projectId/endpoint-kinds': typeof AuthenticatedProjectsProjectIdEndpointKindsRoute
@@ -298,9 +324,12 @@ export interface FileRoutesById {
   '/_authenticated/projects/$projectId/work': typeof AuthenticatedProjectsProjectIdWorkRoute
   '/_authenticated/projects/$projectId/': typeof AuthenticatedProjectsProjectIdIndexRoute
   '/_authenticated/projects/$projectId/cables/$cableId': typeof AuthenticatedProjectsProjectIdCablesCableIdRoute
+  '/_authenticated/projects/$projectId/completion/$planId': typeof AuthenticatedProjectsProjectIdCompletionPlanIdRoute
+  '/_authenticated/projects/$projectId/completion/kanban': typeof AuthenticatedProjectsProjectIdCompletionKanbanRoute
   '/_authenticated/projects/$projectId/patch-panels/$panelId': typeof AuthenticatedProjectsProjectIdPatchPanelsPanelIdRoute
   '/_authenticated/projects/$projectId/plans/$planId': typeof AuthenticatedProjectsProjectIdPlansPlanIdRoute
   '/_authenticated/projects/$projectId/cables/': typeof AuthenticatedProjectsProjectIdCablesIndexRoute
+  '/_authenticated/projects/$projectId/completion/': typeof AuthenticatedProjectsProjectIdCompletionIndexRoute
   '/_authenticated/projects/$projectId/patch-panels/': typeof AuthenticatedProjectsProjectIdPatchPanelsIndexRoute
   '/_authenticated/projects/$projectId/plans/': typeof AuthenticatedProjectsProjectIdPlansIndexRoute
 }
@@ -331,9 +360,12 @@ export interface FileRouteTypes {
     | '/projects/$projectId/work'
     | '/projects/$projectId/'
     | '/projects/$projectId/cables/$cableId'
+    | '/projects/$projectId/completion/$planId'
+    | '/projects/$projectId/completion/kanban'
     | '/projects/$projectId/patch-panels/$panelId'
     | '/projects/$projectId/plans/$planId'
     | '/projects/$projectId/cables/'
+    | '/projects/$projectId/completion/'
     | '/projects/$projectId/patch-panels/'
     | '/projects/$projectId/plans/'
   fileRoutesByTo: FileRoutesByTo
@@ -347,7 +379,6 @@ export interface FileRouteTypes {
     | '/settings'
     | '/organizations/$orgId/settings'
     | '/projects/$projectId/cable-types'
-    | '/projects/$projectId/completion'
     | '/projects/$projectId/defects'
     | '/projects/$projectId/documents'
     | '/projects/$projectId/endpoint-kinds'
@@ -359,9 +390,12 @@ export interface FileRouteTypes {
     | '/projects/$projectId/work'
     | '/projects/$projectId'
     | '/projects/$projectId/cables/$cableId'
+    | '/projects/$projectId/completion/$planId'
+    | '/projects/$projectId/completion/kanban'
     | '/projects/$projectId/patch-panels/$panelId'
     | '/projects/$projectId/plans/$planId'
     | '/projects/$projectId/cables'
+    | '/projects/$projectId/completion'
     | '/projects/$projectId/patch-panels'
     | '/projects/$projectId/plans'
   id:
@@ -391,9 +425,12 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/$projectId/work'
     | '/_authenticated/projects/$projectId/'
     | '/_authenticated/projects/$projectId/cables/$cableId'
+    | '/_authenticated/projects/$projectId/completion/$planId'
+    | '/_authenticated/projects/$projectId/completion/kanban'
     | '/_authenticated/projects/$projectId/patch-panels/$panelId'
     | '/_authenticated/projects/$projectId/plans/$planId'
     | '/_authenticated/projects/$projectId/cables/'
+    | '/_authenticated/projects/$projectId/completion/'
     | '/_authenticated/projects/$projectId/patch-panels/'
     | '/_authenticated/projects/$projectId/plans/'
   fileRoutesById: FileRoutesById
@@ -589,6 +626,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectIdPatchPanelsIndexRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectIdPatchPanelsRoute
     }
+    '/_authenticated/projects/$projectId/completion/': {
+      id: '/_authenticated/projects/$projectId/completion/'
+      path: '/'
+      fullPath: '/projects/$projectId/completion/'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdCompletionIndexRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdCompletionRoute
+    }
     '/_authenticated/projects/$projectId/cables/': {
       id: '/_authenticated/projects/$projectId/cables/'
       path: '/'
@@ -609,6 +653,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/projects/$projectId/patch-panels/$panelId'
       preLoaderRoute: typeof AuthenticatedProjectsProjectIdPatchPanelsPanelIdRouteImport
       parentRoute: typeof AuthenticatedProjectsProjectIdPatchPanelsRoute
+    }
+    '/_authenticated/projects/$projectId/completion/kanban': {
+      id: '/_authenticated/projects/$projectId/completion/kanban'
+      path: '/kanban'
+      fullPath: '/projects/$projectId/completion/kanban'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdCompletionKanbanRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdCompletionRoute
+    }
+    '/_authenticated/projects/$projectId/completion/$planId': {
+      id: '/_authenticated/projects/$projectId/completion/$planId'
+      path: '/$planId'
+      fullPath: '/projects/$projectId/completion/$planId'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdCompletionPlanIdRouteImport
+      parentRoute: typeof AuthenticatedProjectsProjectIdCompletionRoute
     }
     '/_authenticated/projects/$projectId/cables/$cableId': {
       id: '/_authenticated/projects/$projectId/cables/$cableId'
@@ -636,6 +694,27 @@ const AuthenticatedProjectsProjectIdCablesRouteChildren: AuthenticatedProjectsPr
 const AuthenticatedProjectsProjectIdCablesRouteWithChildren =
   AuthenticatedProjectsProjectIdCablesRoute._addFileChildren(
     AuthenticatedProjectsProjectIdCablesRouteChildren,
+  )
+
+interface AuthenticatedProjectsProjectIdCompletionRouteChildren {
+  AuthenticatedProjectsProjectIdCompletionPlanIdRoute: typeof AuthenticatedProjectsProjectIdCompletionPlanIdRoute
+  AuthenticatedProjectsProjectIdCompletionKanbanRoute: typeof AuthenticatedProjectsProjectIdCompletionKanbanRoute
+  AuthenticatedProjectsProjectIdCompletionIndexRoute: typeof AuthenticatedProjectsProjectIdCompletionIndexRoute
+}
+
+const AuthenticatedProjectsProjectIdCompletionRouteChildren: AuthenticatedProjectsProjectIdCompletionRouteChildren =
+  {
+    AuthenticatedProjectsProjectIdCompletionPlanIdRoute:
+      AuthenticatedProjectsProjectIdCompletionPlanIdRoute,
+    AuthenticatedProjectsProjectIdCompletionKanbanRoute:
+      AuthenticatedProjectsProjectIdCompletionKanbanRoute,
+    AuthenticatedProjectsProjectIdCompletionIndexRoute:
+      AuthenticatedProjectsProjectIdCompletionIndexRoute,
+  }
+
+const AuthenticatedProjectsProjectIdCompletionRouteWithChildren =
+  AuthenticatedProjectsProjectIdCompletionRoute._addFileChildren(
+    AuthenticatedProjectsProjectIdCompletionRouteChildren,
   )
 
 interface AuthenticatedProjectsProjectIdPatchPanelsRouteChildren {
@@ -682,7 +761,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedOrganizationsOrgIdSettingsRoute: typeof AuthenticatedOrganizationsOrgIdSettingsRoute
   AuthenticatedProjectsProjectIdCableTypesRoute: typeof AuthenticatedProjectsProjectIdCableTypesRoute
   AuthenticatedProjectsProjectIdCablesRoute: typeof AuthenticatedProjectsProjectIdCablesRouteWithChildren
-  AuthenticatedProjectsProjectIdCompletionRoute: typeof AuthenticatedProjectsProjectIdCompletionRoute
+  AuthenticatedProjectsProjectIdCompletionRoute: typeof AuthenticatedProjectsProjectIdCompletionRouteWithChildren
   AuthenticatedProjectsProjectIdDefectsRoute: typeof AuthenticatedProjectsProjectIdDefectsRoute
   AuthenticatedProjectsProjectIdDocumentsRoute: typeof AuthenticatedProjectsProjectIdDocumentsRoute
   AuthenticatedProjectsProjectIdEndpointKindsRoute: typeof AuthenticatedProjectsProjectIdEndpointKindsRoute
@@ -709,7 +788,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedProjectsProjectIdCablesRoute:
     AuthenticatedProjectsProjectIdCablesRouteWithChildren,
   AuthenticatedProjectsProjectIdCompletionRoute:
-    AuthenticatedProjectsProjectIdCompletionRoute,
+    AuthenticatedProjectsProjectIdCompletionRouteWithChildren,
   AuthenticatedProjectsProjectIdDefectsRoute:
     AuthenticatedProjectsProjectIdDefectsRoute,
   AuthenticatedProjectsProjectIdDocumentsRoute:

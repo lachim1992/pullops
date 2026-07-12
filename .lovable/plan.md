@@ -1,57 +1,72 @@
-Rozdělím na 3 části. Beru odpovědi z předchozích otázek jako závazné.
 
-## 1) Půlené endpoint markery v Pull Mode (mapa)
+## Cíl
 
-- Endpoint kolečko rozdělím svisle: **levá polovina = barva typu endpointu** (jako dnes), **pravá polovina = zelená/červená** podle stavu tažení.
-- Zelená, pokud jsou všechny kabely připojené k endpointu ve stavu `PULLED`. Červená, pokud aspoň jeden zbývá.
-- Endpoint bez kabelů → pravá půlka šedá (neutrální).
-- Implementace: v `PullMap` (v `projects.$projectId.work.tsx`) místo `<circle>` vykreslit dvě `<path>` půlkruhy s příslušnými barvami + tenký obrys.
+Postavit Režim kompletace jako plán-per-plán editor (stejná struktura jako Pull Mode). Když správce v Pull Mode potvrdí, že plán je nataženo, objeví se v kompletaci. Tam se odškrtávají stavy na endpointech (agregovaně) a na patch panelech (per panel).
 
-## 2) Interaktivní editor v Pull Mode (read-only)
+## 1) DB (migrace)
 
-- Zoom kolečkem (na kurzor) + pan drag pozadí. Same UX jako plán-editor (viewBox transform).
-- Klik na kabel / endpoint → detail v pravém panelu (už existuje, zachovat).
-- Hover na řádek kabelu v seznamu (Fronta/detail) → zvýraznit trasu na mapě (silnější stroke + glow).
-- Žádné úpravy geometrie — pouze prohlížení a odškrtávání.
-- Reset zoomu tlačítkem „1:1".
+**`pull_day_plans`** — nová pole:
+- `completion_ready boolean not null default false`
+- `completion_ready_at timestamptz`
+- `completion_ready_by uuid`
 
-## 3) Plánovač tažení (Plán editor, tab „5 · Zadat plán")
+**`endpoints`** — completion pipeline:
+- `completion_status text not null default 'PENDING'`
+  hodnoty: `PENDING | PULLED | TERMINATED | TESTED | DONE`
+- `completion_updated_at timestamptz`
 
-Rozšířím stávající tab. Vlevo mapa (read-only), vpravo panel plánovače:
+**`patch_panels`** — completion pipeline:
+- `completion_status text not null default 'PENDING'`
+  hodnoty: `PENDING | WIRED | LABELED | MEASURED | DONE`
+- `completion_updated_at timestamptz`
 
-- **Bloky (dny/směny)** — správce přidá blok (`+ nový den`), pojmenuje ho (např. „Den 1 – patro 1"), nastaví datum (volitelné).
-- **Kapacita per blok**: v bloku nastaví `N spulek × M metrů` (výchozí z projektu 305 m). To udává max metry, které v bloku plán unese.
-- **Přiřazení kabelů do bloků**: v panelu seznam nepřiřazených kabelů (filtr podle typu/patra), tlačítkem přesun do zvoleného bloku. Alternativně klik na kabel na mapě → menu „Přiřadit do bloku…".
-- **Souhrn bloku**: součet metrů vs. kapacita, barevný indikátor (zelená < 90 %, oranžová 90–100 %, červená > 100 %).
-- **Publikace**: existující přepínač `published_to_pull` na plánu zůstává. Publikace = zpřístupní bloky v Pull Mode.
+RLS na endpointech / panelech už existuje (member projektu čte, PM/installer píše) — zachovávám. Pro `mark_plan_ready_for_completion` a `set_patch_panel_completion_status` přidám SECURITY DEFINER RPC `mark_plan_ready_for_completion_tx(p_plan_id)` a `set_panel_completion_status_tx(p_panel_id, p_status)`, které kontrolují `has_project_role` PM/installer/admin.
 
-**DB — nové tabulky:**
+## 2) Server functions — `src/lib/completion.functions.ts` (rozšíření)
 
-```text
-pull_day_plans
-  id, project_id, floor_plan_id, name, sort_order, planned_date?, created_by, created/updated_at
-  kapacita: spool_count int, spool_length_m numeric
+Přidám vedle stávajícího kanban API:
 
-pull_day_plan_cables  (M:N kabel ↔ blok, pořadí)
-  id, project_id, day_plan_id, cable_id UNIQUE, sort_order
-```
+- `listCompletionPlans(projectId)` — pull_day_plans kde `completion_ready=true`, s progressem (počet endpointů v DONE / celkem).
+- `listPlansReadyToMark(projectId)` — plans které mají 100 % kabelů `PULLED` a `completion_ready=false`. Používá se pro CTA v Pull Mode.
+- `markPlanReadyForCompletion(planId)` — RPC výše.
+- `getCompletionPlan(planId)` — vrací plan, floor_plan (id, name, level), calibraci, endpointy s kabely (pro agregaci), patch panely na patře. Podklad pro editor.
+- `setEndpointCompletionStatus(endpointId, status)` — server-side ověří že všechny příchozí kabely na endpoint jsou v aspoň zvoleném stavu (agregovaný postup).
+- `setPatchPanelCompletionStatus(panelId, status)` — přes RPC.
 
-- RLS: čtení = člen projektu; zápis = admin/PM (přes `has_project_role`).
-- GRANTy pro `authenticated` + `service_role`.
-- Validační trigger tenant-integrity (project_id konzistence).
-- `pull_tasks` (už existuje z předchozího CP) nechávám na později — tato iterace neřeší přiřazení lidem, jen bloky a kapacitu.
+Stávající kabelový kanban (`listCompletionTasks`, `setCompletionStatus`) zůstává — použije se uvnitř `getCompletionPlan` jako zdroj stavu kabelů.
 
-**Pull Mode napojení:**
+## 3) UI — nová route sekce `/projects/$projectId/completion`
 
-- V Pull Mode záložka **Spulky** už neagreguje globálně, ale ukazuje **bloky v pořadí** správce; každý blok = jedna sekce s N cívkami × M metry a přiřazenými kabely.
-- Ostatní záložky (Mapa/Fronta) zůstávají projektové (všechny publikované kabely).
+**`completion.index.tsx`** — dashboard:
+- Karta na horní pásce: „Připraveno k převzetí z tahání" — plans s ready-to-mark (100 % PULLED), tlačítko **Poslat do kompletace** (PM/admin).
+- Grid karet plánů co jsou v kompletaci (stejný vzhled jako Pull Mode výběr plánu na screenu). Progress bar = % endpointů v DONE.
+- Sekundární taby stránky: **Plány** (výchozí), **Racky** (přehled patch panelů napříč celým projektem s filtrem podle stavu).
 
-## Pořadí implementace (jeden commit každé)
+**`completion.$planId.tsx`** — plán editor (stejné rozvržení jako work editor):
+- Levá polovina: mapa patra (read-only, zoom/pan). Endpointy jako půlené markery — levá půlka barva typu endpointu, pravá půlka barva stavu completion: šedá PENDING, žlutá PULLED, oranžová TERMINATED, modrá TESTED, zelená DONE. Kabely v plánu se vykreslují ztlumeně.
+- Pravý panel s taby:
+  1. **Endpointy** — seznam endpointů v plánu, per endpoint tlačítka postupu (PULLED → TERMINATED → TESTED → DONE). Server ověří, že všechny kabely endpointu jsou v aspoň stejném stavu; při klikání na krok se zobrazí i seznam kabelů toho endpointu.
+  2. **Racky** — patch panely na patře plánu, per panel stavy WIRED / LABELED / MEASURED / DONE, dostupné jen technikům a PM.
 
-1. Půlené markery + zoom/pan/hover v Pull Mode (jen frontend, žádná DB).
-2. DB migrace: `pull_day_plans`, `pull_day_plan_cables` + RLS + GRANT + triggery.
-3. Server fn: `listDayPlans`, `upsertDayPlan`, `deleteDayPlan`, `assignCableToDayPlan`, `removeCableFromDayPlan`, `reorderDayPlans`.
-4. UI plánovače v tab „5 · Zadat plán".
-5. Pull Mode záložka Spulky → renderovat podle bloků místo FFD agregace (fallback na FFD, když projekt nemá žádný blok).
+**`completion.tsx`** wrapper s `<Outlet />`.
 
-Potvrď, prosím, a pustím se do kroku 1.
+## 4) Pull Mode — CTA „Poslat do kompletace"
+
+V editoru plánu tahání (`projects.$projectId.work.$planId` nebo obdobná stránka výběru plánů) přidat pás nahoře, pokud je plán 100 % PULLED a `completion_ready=false`: tlačítko **Označit jako nataženo → kompletace** (PM/admin). Po kliknutí volá `markPlanReadyForCompletion`, přesměruje do `/completion/$planId`.
+
+Existující `completion` stránka (kanban kabelů) zůstává jako submenu / redirect na nový index — aby se nezlomily hluboké odkazy, přesouvám ji na `/completion/kanban`.
+
+## 5) i18n / a11y
+
+Všechny texty česky, monospace hlavičky (design system). Barvy stavů čerpám z tokenů (žlutá = warning, zelená = success, modrá = info).
+
+## Pořadí commitů
+
+1. Migrace (pull_day_plans flagy + completion_status na endpoints/patch_panels + RPCs).
+2. Server functions rozšířené.
+3. `completion.index.tsx` + přesun kanbanu na `/completion/kanban`.
+4. `completion.$planId.tsx` editor (mapa + endpoint panel).
+5. Rack tab (patch panel completion).
+6. CTA „Poslat do kompletace" v Pull Mode.
+
+Potvrď a jdu na migraci.
