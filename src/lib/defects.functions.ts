@@ -47,6 +47,17 @@ async function notify(
     entity_type: args.entityType ?? null,
     entity_id: args.entityId ?? null,
   } as never);
+  try {
+    const { sendPushToUsers } = await import("@/lib/push.server");
+    await sendPushToUsers([args.userId], {
+      title: args.title,
+      body: args.body ?? undefined,
+      url: args.linkPath ?? `/projects/${args.projectId}`,
+      tag: `${args.kind}:${args.entityId ?? args.projectId}`,
+    });
+  } catch (err) {
+    console.error("push send failed", err);
+  }
 }
 
 export const listDefects = createServerFn({ method: "GET" })
