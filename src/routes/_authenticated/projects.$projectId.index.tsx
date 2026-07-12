@@ -3,8 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
 import {
+  AlertTriangle,
   Cable,
   Camera,
+  CheckCircle2,
   CheckSquare,
   ClipboardList,
   FolderKanban,
@@ -12,12 +14,15 @@ import {
   Route as RouteIcon,
   Users,
   Wrench,
+  Zap,
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { getProject } from "@/lib/projects.functions";
 import { getMyProjectCapabilities } from "@/lib/capabilities.functions";
+import { getProjectProgress } from "@/lib/metrics.functions";
 import { useT } from "@/i18n";
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/")({
@@ -34,6 +39,7 @@ function ProjectDetailPage() {
   const { t } = useT();
   const fetchProject = useServerFn(getProject);
   const fetchCaps = useServerFn(getMyProjectCapabilities);
+  const fetchProgress = useServerFn(getProjectProgress);
   const project = useQuery({
     queryKey: ["project", projectId],
     queryFn: () => fetchProject({ data: { id: projectId } }),
@@ -41,6 +47,10 @@ function ProjectDetailPage() {
   const caps = useQuery({
     queryKey: ["me", "project-caps", projectId],
     queryFn: () => fetchCaps({ data: { projectId } }),
+  });
+  const progress = useQuery({
+    queryKey: ["project-progress", projectId],
+    queryFn: () => fetchProgress({ data: { projectId } }),
   });
   const canManage = caps.data?.canManage ?? false;
 
