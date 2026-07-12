@@ -1,0 +1,1 @@
+ALTER TYPE cable_status ADD VALUE IF NOT EXISTS 'DONE';

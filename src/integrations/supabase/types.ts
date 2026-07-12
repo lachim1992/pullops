@@ -2397,7 +2397,13 @@ export type Database = {
         | "rack_technician"
         | "test_technician"
         | "viewer"
-      cable_status: "PLANNED" | "PULLED" | "TERMINATED" | "TESTED" | "CANCELLED"
+      cable_status:
+        | "PLANNED"
+        | "PULLED"
+        | "TERMINATED"
+        | "TESTED"
+        | "CANCELLED"
+        | "DONE"
       dispenser_slot_status: "EMPTY" | "LOADED" | "OUT_OF_SERVICE"
       document_kind: "FLOOR_PLAN" | "SCHEMATIC" | "OTHER"
       endpoint_kind:
@@ -2564,7 +2570,14 @@ export const Constants = {
         "test_technician",
         "viewer",
       ],
-      cable_status: ["PLANNED", "PULLED", "TERMINATED", "TESTED", "CANCELLED"],
+      cable_status: [
+        "PLANNED",
+        "PULLED",
+        "TERMINATED",
+        "TESTED",
+        "CANCELLED",
+        "DONE",
+      ],
       dispenser_slot_status: ["EMPTY", "LOADED", "OUT_OF_SERVICE"],
       document_kind: ["FLOOR_PLAN", "SCHEMATIC", "OTHER"],
       endpoint_kind: [
