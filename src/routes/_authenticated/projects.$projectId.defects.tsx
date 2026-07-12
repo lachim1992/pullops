@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Circle,
   Clock,
+  FileDown,
   Flag,
   Info,
   Loader2,
