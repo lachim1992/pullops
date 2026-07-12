@@ -21,6 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getMyProfile } from "@/lib/orgs.functions";
 import { getMyCapabilities, getMyProjectCapabilities } from "@/lib/capabilities.functions";
 import { Button } from "@/components/ui/button";
+import { LanguageToggle } from "@/components/language-toggle";
 import {
   Accordion,
   AccordionContent,
@@ -28,11 +29,13 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
+import { useT } from "@/i18n";
 
 export function AppShell({ children, projectId }: { children: ReactNode; projectId?: string }) {
   const navigate = useNavigate();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { t } = useT();
   const fetchProfile = useServerFn(getMyProfile);
   const fetchCaps = useServerFn(getMyCapabilities);
   const fetchProjectCaps = useServerFn(getMyProjectCapabilities);
@@ -57,34 +60,35 @@ export function AppShell({ children, projectId }: { children: ReactNode; project
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <aside className="hidden w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
-        <div className="flex items-center gap-2 border-b border-sidebar-border px-4 py-4">
-          <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-sidebar-primary text-sidebar-primary-foreground">
+    <div className="relative flex min-h-screen bg-background">
+      <div className="glow-gold pointer-events-none absolute inset-0 -z-10 opacity-60" />
+      <aside className="hidden w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
+        <div className="flex items-center gap-2.5 border-b border-sidebar-border px-4 py-4">
+          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-gradient-to-br from-[color:var(--gold-soft)] to-[color:var(--accent)] text-primary-foreground shadow-[0_0_18px_-6px_var(--accent)]">
             <Cable className="h-4 w-4" />
           </div>
-          <span className="font-mono text-sm font-semibold">PullOps</span>
+          <span className="font-display text-base font-semibold tracking-tight">PullOps</span>
         </div>
 
         <nav className="flex-1 overflow-y-auto p-2 text-sm">
-          <NavGroup label="Přehled">
+          <NavGroup label={t("nav.overview")}>
             <NavItem to="/dashboard" icon={LayoutDashboard}>
-              Projekty
+              {t("nav.projects")}
             </NavItem>
             {isOrgAdmin && (
               <NavItem to="/audit" icon={ScrollText}>
-                Audit
+                {t("nav.audit")}
               </NavItem>
             )}
           </NavGroup>
 
           {projectId && (
             <div className="mb-4">
-              <div className="mb-1 px-2 font-mono text-[10px] uppercase tracking-widest text-sidebar-foreground/50">
-                Projekt
+              <div className="mb-1 px-2 font-mono text-[10px] uppercase tracking-[0.24em] text-sidebar-foreground/50">
+                {t("nav.project")}
               </div>
               <NavItem to="/projects/$projectId" params={{ projectId }} icon={FolderKanban}>
-                Přehled projektu
+                {t("nav.projectOverview")}
               </NavItem>
 
               <Accordion
@@ -93,103 +97,55 @@ export function AppShell({ children, projectId }: { children: ReactNode; project
                 className="mt-2"
               >
                 {canManage && (
-                  <BranchItem value="manage" label="Správa zakázky" icon={<ShieldCheck className="h-3.5 w-3.5" />}>
-                    <NavItem
-                      to="/projects/$projectId/documents"
-                      params={{ projectId }}
-                      icon={ClipboardList}
-                    >
-                      Dokumenty
+                  <BranchItem value="manage" label={t("nav.manage")} icon={<ShieldCheck className="h-3.5 w-3.5" />}>
+                    <NavItem to="/projects/$projectId/documents" params={{ projectId }} icon={ClipboardList}>
+                      {t("nav.documents")}
                     </NavItem>
-                    <NavItem
-                      to="/projects/$projectId/plans"
-                      params={{ projectId }}
-                      icon={RouteIcon}
-                    >
-                      Plány
+                    <NavItem to="/projects/$projectId/plans" params={{ projectId }} icon={RouteIcon}>
+                      {t("nav.plans")}
                     </NavItem>
-                    <NavItem
-                      to="/projects/$projectId/endpoints"
-                      params={{ projectId }}
-                      icon={Wrench}
-                    >
-                      Endpointy
+                    <NavItem to="/projects/$projectId/endpoints" params={{ projectId }} icon={Wrench}>
+                      {t("nav.endpoints")}
                     </NavItem>
-                    <NavItem
-                      to="/projects/$projectId/cable-types"
-                      params={{ projectId }}
-                      icon={Cable}
-                    >
-                      Typy kabelů
+                    <NavItem to="/projects/$projectId/cable-types" params={{ projectId }} icon={Cable}>
+                      {t("nav.cableTypes")}
                     </NavItem>
-                    <NavItem
-                      to="/projects/$projectId/endpoint-kinds"
-                      params={{ projectId }}
-                      icon={Settings}
-                    >
-                      Typy endpointů
+                    <NavItem to="/projects/$projectId/endpoint-kinds" params={{ projectId }} icon={Settings}>
+                      {t("nav.endpointKinds")}
                     </NavItem>
-                    <NavItem
-                      to="/projects/$projectId/patch-panels"
-                      params={{ projectId }}
-                      icon={Wrench}
-                    >
-                      Patch panely
+                    <NavItem to="/projects/$projectId/patch-panels" params={{ projectId }} icon={Wrench}>
+                      {t("nav.patchPanels")}
                     </NavItem>
-                    <NavItem
-                      to="/projects/$projectId/cables"
-                      params={{ projectId }}
-                      icon={Cable}
-                    >
-                      Kabelový registr
+                    <NavItem to="/projects/$projectId/cables" params={{ projectId }} icon={Cable}>
+                      {t("nav.cables")}
                     </NavItem>
-                    <NavItem
-                      to="/projects/$projectId/spools"
-                      params={{ projectId }}
-                      icon={Cable}
-                    >
-                      Fyzické spulky
+                    <NavItem to="/projects/$projectId/spools" params={{ projectId }} icon={Cable}>
+                      {t("nav.spools")}
                     </NavItem>
-                    <NavItem
-                      to="/projects/$projectId/members"
-                      params={{ projectId }}
-                      icon={ClipboardList}
-                    >
-                      Členové
+                    <NavItem to="/projects/$projectId/members" params={{ projectId }} icon={ClipboardList}>
+                      {t("nav.members")}
                     </NavItem>
-                    <NavItem
-                      to="/projects/$projectId/settings"
-                      params={{ projectId }}
-                      icon={Settings}
-                    >
-                      Nastavení
+                    <NavItem to="/projects/$projectId/settings" params={{ projectId }} icon={Settings}>
+                      {t("nav.settings")}
                     </NavItem>
                   </BranchItem>
                 )}
 
-                <BranchItem value="lobby" label="Lobby" icon={<Camera className="h-3.5 w-3.5" />}>
+                <BranchItem value="lobby" label={t("nav.lobby")} icon={<Camera className="h-3.5 w-3.5" />}>
                   <NavItem to="/projects/$projectId/lobby" params={{ projectId }} icon={ClipboardList}>
-                    Chat, úkoly, fotky
+                    {t("nav.lobbyDesc")}
                   </NavItem>
                 </BranchItem>
 
-                <BranchItem value="pull" label="Režim tahání" icon={<Cable className="h-3.5 w-3.5" />}>
+                <BranchItem value="pull" label={t("nav.pullMode")} icon={<Cable className="h-3.5 w-3.5" />}>
                   <NavItem to="/projects/$projectId/work" params={{ projectId }} icon={Wrench}>
-                    Tahání
+                    {t("nav.pulling")}
                   </NavItem>
                 </BranchItem>
 
-                <BranchItem
-                  value="completion"
-                  label="Režim kompletace"
-                  icon={<CheckSquare className="h-3.5 w-3.5" />}
-                >
-                  <NavItem
-                    to="/projects/$projectId/completion"
-                    params={{ projectId }}
-                    icon={CheckSquare}
-                  >
-                    Zakončení & test
+                <BranchItem value="completion" label={t("nav.completionMode")} icon={<CheckSquare className="h-3.5 w-3.5" />}>
+                  <NavItem to="/projects/$projectId/completion" params={{ projectId }} icon={CheckSquare}>
+                    {t("nav.completion")}
                   </NavItem>
                 </BranchItem>
               </Accordion>
@@ -197,17 +153,18 @@ export function AppShell({ children, projectId }: { children: ReactNode; project
           )}
 
           {!projectId && (
-            <NavGroup label="Projekt">
-              <div className="px-2 py-1 text-xs text-sidebar-foreground/50">
-                Vyberte projekt na Přehledu
-              </div>
+            <NavGroup label={t("nav.project")}>
+              <div className="px-2 py-1 text-xs text-sidebar-foreground/50">{t("nav.pickProject")}</div>
             </NavGroup>
           )}
         </nav>
 
         <div className="border-t border-sidebar-border p-3 text-xs">
-          <div className="mb-2 truncate text-sidebar-foreground/70">
-            {profile.data?.full_name || profile.data?.email || "…"}
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <div className="min-w-0 flex-1 truncate text-sidebar-foreground/70">
+              {profile.data?.full_name || profile.data?.email || "…"}
+            </div>
+            <LanguageToggle compact />
           </div>
           <Button
             variant="ghost"
@@ -216,7 +173,7 @@ export function AppShell({ children, projectId }: { children: ReactNode; project
             onClick={signOut}
           >
             <LogOut className="mr-2 h-4 w-4" />
-            Odhlásit
+            {t("common.signOut")}
           </Button>
         </div>
       </aside>
@@ -231,7 +188,7 @@ export function AppShell({ children, projectId }: { children: ReactNode; project
 function NavGroup({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="mb-4">
-      <div className="mb-1 px-2 font-mono text-[10px] uppercase tracking-widest text-sidebar-foreground/50">
+      <div className="mb-1 px-2 font-mono text-[10px] uppercase tracking-[0.24em] text-sidebar-foreground/50">
         {label}
       </div>
       <div className="space-y-0.5">{children}</div>
@@ -254,7 +211,7 @@ function BranchItem({
     <AccordionItem value={value} className="border-b-0">
       <AccordionTrigger
         className={cn(
-          "rounded-sm px-2 py-1.5 font-mono text-[11px] uppercase tracking-widest text-sidebar-foreground/60",
+          "rounded-md px-2 py-1.5 font-mono text-[11px] uppercase tracking-[0.22em] text-sidebar-foreground/60",
           "hover:bg-sidebar-accent/40 hover:text-sidebar-foreground hover:no-underline",
           "[&[data-state=open]]:text-sidebar-foreground",
         )}
@@ -284,7 +241,7 @@ function NavItem({ to, params, icon: Icon, children }: NavItemProps) {
       to={to as never}
       params={params as never}
       className={cn(
-        "flex items-center gap-2 rounded-sm px-2 py-1.5 text-sidebar-foreground/80 transition-all duration-150",
+        "flex items-center gap-2 rounded-md px-2 py-1.5 text-sidebar-foreground/80 transition-all duration-150",
         "hover:translate-x-0.5 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
       )}
       activeProps={{

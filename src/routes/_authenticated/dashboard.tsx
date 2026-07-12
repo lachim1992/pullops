@@ -2,6 +2,7 @@ import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { z } from "zod";
 import { FolderKanban, Loader2, Plus, Settings, Sparkles } from "lucide-react";
@@ -25,13 +26,14 @@ import { seedCeskeBudejoviceDemo } from "@/lib/demoSeed.functions";
 import { registerDocument } from "@/lib/documents.functions";
 import { updateFloorPlan } from "@/lib/floorPlans.functions";
 import { supabase } from "@/integrations/supabase/client";
+import { useT } from "@/i18n";
 
 const searchSchema = z.object({ org: z.string().uuid().optional() });
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   validateSearch: searchSchema,
   head: () => ({
-    meta: [{ title: "Přehled · PullOps" }, { name: "robots", content: "noindex" }],
+    meta: [{ title: "Overview · PullOps" }, { name: "robots", content: "noindex" }],
   }),
   component: DashboardPage,
 });
@@ -39,6 +41,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 function DashboardPage() {
   const search = Route.useSearch();
   const navigate = useNavigate();
+  const { t } = useT();
   const listOrgs = useServerFn(listMyOrganizations);
   const listProjects = useServerFn(listMyProjects);
 
@@ -56,7 +59,7 @@ function DashboardPage() {
       <AppShell>
         <div className="flex items-center gap-2 text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Načítám…
+          {t("common.loading")}
         </div>
       </AppShell>
     );
@@ -72,14 +75,19 @@ function DashboardPage() {
 
   return (
     <AppShell>
-      <header className="mb-8 flex items-center justify-between">
+      <motion.header
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="mb-10 flex flex-wrap items-end justify-between gap-4"
+      >
         <div>
-          <div className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
-            Organizace
+          <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-accent">
+            {t("dashboard.organizationLabel")}
           </div>
-          <div className="mt-1 flex items-center gap-2">
+          <div className="mt-2 flex items-center gap-2">
             <select
-              className="rounded-sm border border-input bg-background px-3 py-1.5 text-sm"
+              className="rounded-md border border-border bg-card px-3 py-2 font-display text-lg font-semibold tracking-tight focus:border-accent/60 focus:outline-none focus:ring-2 focus:ring-ring/40"
               value={activeOrgId}
               onChange={(e) => navigate({ to: "/dashboard", search: { org: e.target.value } })}
             >
@@ -93,7 +101,7 @@ function DashboardPage() {
               <Button variant="ghost" size="sm" asChild>
                 <Link to="/organizations/$orgId/settings" params={{ orgId: activeOrgId }}>
                   <Settings className="mr-1 h-4 w-4" />
-                  Nastavení
+                  {t("dashboard.orgSettings")}
                 </Link>
               </Button>
             )}
@@ -103,48 +111,74 @@ function DashboardPage() {
           {activeOrgId && <SeedDemoButton organizationId={activeOrgId} />}
           {activeOrgId && <NewProjectDialog organizationId={activeOrgId} />}
         </div>
-      </header>
+      </motion.header>
 
       <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-          Projekty
-        </h2>
+        <div className="mb-4 flex items-center gap-3">
+          <h2 className="font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
+            {t("dashboard.projectsTitle")}
+          </h2>
+          <div className="hairline-gold h-px flex-1" />
+        </div>
+
         {projects.isLoading ? (
           <div className="flex items-center gap-2 text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Načítám…
+            {t("common.loading")}
           </div>
         ) : !projects.data || projects.data.length === 0 ? (
-          <div className="rounded-sm border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-            Zatím žádný projekt. Vytvořte první.
+          <div className="rounded-xl border border-dashed border-border/70 bg-card/30 p-12 text-center text-sm text-muted-foreground">
+            {t("dashboard.noProjects")}
           </div>
         ) : (
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+          <motion.div
+            initial="hidden"
+            animate="show"
+            variants={{
+              hidden: {},
+              show: { transition: { staggerChildren: 0.05 } },
+            }}
+            className="grid gap-3 md:grid-cols-2 lg:grid-cols-3"
+          >
             {projects.data.map((p) => (
-              <Link
+              <motion.div
                 key={p.id}
-                to="/projects/$projectId"
-                params={{ projectId: p.id }}
-                className="rounded-sm border border-border bg-card p-4 transition-colors hover:border-accent"
+                variants={{
+                  hidden: { opacity: 0, y: 10 },
+                  show: { opacity: 1, y: 0 },
+                }}
               >
-                <div className="flex items-start justify-between">
-                  <FolderKanban className="h-5 w-5 text-accent" />
-                  <div className="flex gap-1">
-                    {p.is_demo && (
-                      <Badge variant="outline" className="font-mono text-[10px]">
-                        DEMO
+                <Link
+                  to="/projects/$projectId"
+                  params={{ projectId: p.id }}
+                  className="group relative block overflow-hidden rounded-xl border border-border/60 bg-card/60 p-5 backdrop-blur transition-all hover:-translate-y-0.5 hover:border-[color:var(--accent)]/50 hover:shadow-[0_20px_50px_-30px_var(--accent)]"
+                >
+                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[color:var(--accent)]/60 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+                  <div className="flex items-start justify-between">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-md border border-[color:var(--accent)]/30 bg-[color:var(--accent)]/10 text-accent">
+                      <FolderKanban className="h-5 w-5" />
+                    </div>
+                    <div className="flex gap-1">
+                      {p.is_demo && (
+                        <Badge variant="outline" className="border-[color:var(--accent)]/40 font-mono text-[10px] text-accent">
+                          DEMO
+                        </Badge>
+                      )}
+                      <Badge variant="secondary" className="font-mono text-[10px]">
+                        {p.status}
                       </Badge>
-                    )}
-                    <Badge variant="secondary" className="font-mono text-[10px]">
-                      {p.status}
-                    </Badge>
+                    </div>
                   </div>
-                </div>
-                <div className="mt-3 font-mono text-xs text-muted-foreground">{p.code}</div>
-                <div className="mt-1 font-semibold">{p.name}</div>
-              </Link>
+                  <div className="mt-4 font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
+                    {p.code}
+                  </div>
+                  <div className="mt-1 font-display text-lg font-semibold tracking-tight">
+                    {p.name}
+                  </div>
+                </Link>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         )}
       </section>
     </AppShell>
@@ -152,14 +186,15 @@ function DashboardPage() {
 }
 
 function EmptyOrgs() {
+  const { t } = useT();
   return (
-    <div className="mx-auto max-w-md py-16 text-center">
-      <h1 className="text-xl font-semibold">Nejste v žádné organizaci</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Vytvořte první organizaci a začněte s projekty.
-      </p>
-      <Button asChild className="mt-6">
-        <Link to="/onboarding">Vytvořit organizaci</Link>
+    <div className="mx-auto max-w-md py-24 text-center">
+      <h1 className="font-display text-2xl font-semibold tracking-tight">
+        {t("dashboard.noOrgsTitle")}
+      </h1>
+      <p className="mt-2 text-sm text-muted-foreground">{t("dashboard.noOrgsBody")}</p>
+      <Button asChild className="mt-6 rounded-full">
+        <Link to="/onboarding">{t("dashboard.createOrg")}</Link>
       </Button>
     </div>
   );
@@ -170,6 +205,7 @@ function NewProjectDialog({ organizationId }: { organizationId: string }) {
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const { t } = useT();
   const create = useServerFn(createProject);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -182,13 +218,13 @@ function NewProjectDialog({ organizationId }: { organizationId: string }) {
         data: { organizationId, code, name, timezone: "Europe/Prague", is_demo: false },
       });
       await queryClient.invalidateQueries({ queryKey: ["projects"] });
-      toast.success("Projekt vytvořen");
+      toast.success(t("dashboard.projectCreated"));
       setOpen(false);
       setCode("");
       setName("");
       navigate({ to: "/projects/$projectId", params: { projectId: id } });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Chyba při vytváření");
+      toast.error(err instanceof Error ? err.message : t("dashboard.createError"));
     } finally {
       setSubmitting(false);
     }
@@ -197,42 +233,42 @@ function NewProjectDialog({ organizationId }: { organizationId: string }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
+        <Button className="rounded-full">
           <Plus className="mr-1 h-4 w-4" />
-          Nový projekt
+          {t("dashboard.newProject")}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Nový projekt</DialogTitle>
+          <DialogTitle className="font-display">{t("dashboard.newProject")}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleCreate} className="space-y-3">
           <div className="space-y-1.5">
-            <Label htmlFor="code">Kód projektu</Label>
+            <Label htmlFor="code">{t("dashboard.projectCode")}</Label>
             <Input
               id="code"
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              placeholder="např. CB2"
+              placeholder={t("dashboard.projectCodePh")}
               required
               maxLength={64}
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="name">Název</Label>
+            <Label htmlFor="name">{t("dashboard.projectName")}</Label>
             <Input
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="např. McDonald's České Budějovice II"
+              placeholder={t("dashboard.projectNamePh")}
               required
               maxLength={200}
             />
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={submitting}>
+            <Button type="submit" disabled={submitting} className="rounded-full">
               {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Vytvořit
+              {t("common.create")}
             </Button>
           </DialogFooter>
         </form>
@@ -244,6 +280,7 @@ function NewProjectDialog({ organizationId }: { organizationId: string }) {
 function SeedDemoButton({ organizationId }: { organizationId: string }) {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
+  const { t } = useT();
   const seed = useServerFn(seedCeskeBudejoviceDemo);
   const registerFn = useServerFn(registerDocument);
   const updatePlanFn = useServerFn(updateFloorPlan);
@@ -251,15 +288,14 @@ function SeedDemoButton({ organizationId }: { organizationId: string }) {
   const navigate = useNavigate();
 
   async function run() {
-    if (!confirm("Vytvořit demo projekt McDonald's České Budějovice II?")) return;
+    if (!confirm(t("dashboard.seedConfirm"))) return;
     setLoading(true);
-    setProgress("Zakládám projekt…");
+    setProgress(t("dashboard.seedingProject"));
     try {
       const { projectId, floorPlanId, panels, cables, endpoints } = await seed({
         data: { organizationId },
       });
 
-      // Attach demo documents (PDFs served from /public/demo).
       const DEMO_DOCS: Array<{
         file: string;
         title: string;
@@ -272,18 +308,14 @@ function SeedDemoButton({ organizationId }: { organizationId: string }) {
           kind: "FLOOR_PLAN",
           floorPlanBackground: true,
         },
-        {
-          file: "floorplan-bourane.pdf",
-          title: "Půdorys – bourané konstrukce",
-          kind: "FLOOR_PLAN",
-        },
+        { file: "floorplan-bourane.pdf", title: "Půdorys – bourané konstrukce", kind: "FLOOR_PLAN" },
         { file: "cb2-kvs-plan.pdf", title: "KVS plán", kind: "SCHEMATIC" },
         { file: "cb-lan.pdf", title: "LAN schéma", kind: "SCHEMATIC" },
         { file: "cb-patch-panely.pdf", title: "Patch panely (PDF)", kind: "SCHEMATIC" },
         { file: "cb2-informace.pdf", title: "ČB2 – informace", kind: "OTHER" },
       ];
 
-      setProgress("Nahrávám dokumenty…");
+      setProgress(t("dashboard.seedingDocs"));
       let backgroundDocId: string | null = null;
       for (const d of DEMO_DOCS) {
         const res = await fetch(`/demo/${d.file}`);
@@ -311,10 +343,10 @@ function SeedDemoButton({ organizationId }: { organizationId: string }) {
       }
 
       await queryClient.invalidateQueries({ queryKey: ["projects"] });
-      toast.success(`Demo vytvořeno: ${panels} panelů, ${endpoints} endpointů, ${cables} kabelů`);
+      toast.success(`${t("dashboard.seedDone")}: ${panels} · ${endpoints} · ${cables}`);
       navigate({ to: "/projects/$projectId", params: { projectId } });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Chyba");
+      toast.error(err instanceof Error ? err.message : t("common.error"));
     } finally {
       setLoading(false);
       setProgress(null);
@@ -322,13 +354,13 @@ function SeedDemoButton({ organizationId }: { organizationId: string }) {
   }
 
   return (
-    <Button variant="outline" onClick={run} disabled={loading}>
+    <Button variant="outline" onClick={run} disabled={loading} className="rounded-full border-border/60 bg-card/40 backdrop-blur">
       {loading ? (
         <Loader2 className="mr-1 h-4 w-4 animate-spin" />
       ) : (
-        <Sparkles className="mr-1 h-4 w-4" />
+        <Sparkles className="mr-1 h-4 w-4 text-accent" />
       )}
-      {progress ?? "Nahrát demo ČB2"}
+      {progress ?? t("dashboard.seedCta")}
     </Button>
   );
 }
