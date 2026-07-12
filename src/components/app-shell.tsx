@@ -112,6 +112,25 @@ export function AppShell({ children, projectId }: { children: ReactNode; project
             </SheetContent>
           </Sheet>
 
+          {canGoBack && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 px-2 text-muted-foreground hover:text-foreground"
+              onClick={() => {
+                if (window.history.length > 1) {
+                  router.history.back();
+                } else {
+                  navigate({ to: "/dashboard" });
+                }
+              }}
+              aria-label="Zpět"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Zpět</span>
+            </Button>
+          )}
+
           <Link
             to="/dashboard"
             className="flex items-center gap-2 md:hidden"
