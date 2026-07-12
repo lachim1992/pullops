@@ -5,7 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { z } from "zod";
-import { FolderKanban, Loader2, Plus, Settings, Sparkles } from "lucide-react";
+import { AlertTriangle, FolderKanban, Loader2, Plus, Settings, Sparkles, Wrench } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
@@ -20,8 +20,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { listMyOrganizations } from "@/lib/orgs.functions";
-import { createProject, listMyProjects } from "@/lib/projects.functions";
+import { createProject } from "@/lib/projects.functions";
+import { getMyDashboardSummary } from "@/lib/metrics.functions";
 import { seedCeskeBudejoviceDemo } from "@/lib/demoSeed.functions";
 import { registerDocument } from "@/lib/documents.functions";
 import { updateFloorPlan } from "@/lib/floorPlans.functions";
@@ -43,14 +45,14 @@ function DashboardPage() {
   const navigate = useNavigate();
   const { t } = useT();
   const listOrgs = useServerFn(listMyOrganizations);
-  const listProjects = useServerFn(listMyProjects);
+  const fetchSummary = useServerFn(getMyDashboardSummary);
 
   const orgs = useQuery({ queryKey: ["orgs"], queryFn: () => listOrgs() });
   const activeOrgId = search.org ?? orgs.data?.[0]?.id ?? undefined;
 
-  const projects = useQuery({
-    queryKey: ["projects", activeOrgId],
-    queryFn: () => listProjects({ data: { organizationId: activeOrgId! } }),
+  const summary = useQuery({
+    queryKey: ["dashboard-summary", activeOrgId],
+    queryFn: () => fetchSummary({ data: { organizationId: activeOrgId! } }),
     enabled: !!activeOrgId,
   });
 
@@ -113,6 +115,28 @@ function DashboardPage() {
         </div>
       </motion.header>
 
+      {/* Stat cards */}
+      <section className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <StatCard
+          icon={FolderKanban}
+          label={t("dashboard.statsProjects")}
+          value={summary.data?.totals.projects ?? 0}
+          tone="accent"
+        />
+        <StatCard
+          icon={AlertTriangle}
+          label={t("dashboard.statsOpenDefects")}
+          value={summary.data?.totals.myOpenDefects ?? 0}
+          tone="warn"
+        />
+        <StatCard
+          icon={Wrench}
+          label={t("dashboard.statsOpenTasks")}
+          value={summary.data?.totals.myOpenTasks ?? 0}
+          tone="info"
+        />
+      </section>
+
       <section>
         <div className="mb-4 flex items-center gap-3">
           <h2 className="font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
@@ -121,12 +145,12 @@ function DashboardPage() {
           <div className="hairline-gold h-px flex-1" />
         </div>
 
-        {projects.isLoading ? (
+        {summary.isLoading ? (
           <div className="flex items-center gap-2 text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
             {t("common.loading")}
           </div>
-        ) : !projects.data || projects.data.length === 0 ? (
+        ) : !summary.data || summary.data.projects.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border/70 bg-card/30 p-12 text-center text-sm text-muted-foreground">
             {t("dashboard.noProjects")}
           </div>
@@ -134,19 +158,13 @@ function DashboardPage() {
           <motion.div
             initial="hidden"
             animate="show"
-            variants={{
-              hidden: {},
-              show: { transition: { staggerChildren: 0.05 } },
-            }}
-            className="grid gap-3 md:grid-cols-2 lg:grid-cols-3"
+            variants={{ hidden: {}, show: { transition: { staggerChildren: 0.05 } } }}
+            className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
           >
-            {projects.data.map((p) => (
+            {summary.data.projects.map((p) => (
               <motion.div
                 key={p.id}
-                variants={{
-                  hidden: { opacity: 0, y: 10 },
-                  show: { opacity: 1, y: 0 },
-                }}
+                variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}
               >
                 <Link
                   to="/projects/$projectId"
@@ -154,11 +172,11 @@ function DashboardPage() {
                   className="group relative block overflow-hidden rounded-xl border border-border/60 bg-card/60 p-5 backdrop-blur transition-all hover:-translate-y-0.5 hover:border-[color:var(--accent)]/50 hover:shadow-[0_20px_50px_-30px_var(--accent)]"
                 >
                   <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[color:var(--accent)]/60 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
-                  <div className="flex items-start justify-between">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-md border border-[color:var(--accent)]/30 bg-[color:var(--accent)]/10 text-accent">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-[color:var(--accent)]/30 bg-[color:var(--accent)]/10 text-accent">
                       <FolderKanban className="h-5 w-5" />
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex flex-wrap justify-end gap-1">
                       {p.is_demo && (
                         <Badge variant="outline" className="border-[color:var(--accent)]/40 font-mono text-[10px] text-accent">
                           DEMO
@@ -175,6 +193,26 @@ function DashboardPage() {
                   <div className="mt-1 font-display text-lg font-semibold tracking-tight">
                     {p.name}
                   </div>
+                  <div className="mt-4">
+                    <div className="mb-1 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                      <span>{t("dashboard.progressLabel")}</span>
+                      <span className="text-accent">{p.progressPct}%</span>
+                    </div>
+                    <Progress value={p.progressPct} className="h-1.5" />
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                      <span>
+                        {p.cablesTotal > 0
+                          ? `${p.cablesTotal} ${t("dashboard.cablesLabel").toLowerCase()}`
+                          : t("dashboard.noCables")}
+                      </span>
+                      {p.openDefects > 0 && (
+                        <span className="inline-flex items-center gap-1 text-amber-500">
+                          <AlertTriangle className="h-3 w-3" />
+                          {p.openDefects} {t("dashboard.defectsLabel")}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </Link>
               </motion.div>
             ))}
@@ -182,6 +220,38 @@ function DashboardPage() {
         )}
       </section>
     </AppShell>
+  );
+}
+
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  tone,
+}: {
+  icon: typeof FolderKanban;
+  label: string;
+  value: number;
+  tone: "accent" | "warn" | "info";
+}) {
+  const toneCls =
+    tone === "warn"
+      ? "text-amber-500 border-amber-500/30 bg-amber-500/10"
+      : tone === "info"
+        ? "text-sky-400 border-sky-400/30 bg-sky-400/10"
+        : "text-accent border-[color:var(--accent)]/30 bg-[color:var(--accent)]/10";
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-card/50 p-4 backdrop-blur">
+      <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md border ${toneCls}`}>
+        <Icon className="h-5 w-5" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+          {label}
+        </div>
+        <div className="mt-0.5 font-display text-2xl font-semibold">{value}</div>
+      </div>
+    </div>
   );
 }
 
