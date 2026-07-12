@@ -29,14 +29,14 @@ export const listChatMessages = createServerFn({ method: "GET" })
       .limit(data.limit);
     if (error) throw new Error(error.message);
     const userIds = Array.from(new Set(((rows as any[]) ?? []).map((r) => r.user_id).filter(Boolean)));
-    let profiles = new Map<string, { name: string | null; email: string | null }>();
+    const profiles = new Map<string, { name: string | null }>();
     if (userIds.length > 0) {
       const { data: profs } = await context.supabase
         .from("profiles")
-        .select("id, full_name, email")
+        .select("id, full_name")
         .in("id", userIds);
       for (const p of profs ?? []) {
-        profiles.set(p.id as string, { name: (p.full_name as string | null) ?? null, email: (p.email as string | null) ?? null });
+        profiles.set(p.id as string, { name: (p.full_name as string | null) ?? null });
       }
     }
     return ((rows as any[]) ?? []).map((r) => ({
