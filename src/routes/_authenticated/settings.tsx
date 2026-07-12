@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { LogOut, Loader2, Star, StarOff, UserMinus } from "lucide-react";
+import { Bell, BellOff, LogOut, Loader2, Send, Star, StarOff, UserMinus } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,13 @@ import {
   updateMyProfile,
   type NotificationPrefs,
 } from "@/lib/settings.functions";
+import {
+  disablePushOnThisDevice,
+  enablePushOnThisDevice,
+  getExistingPushSubscription,
+  isPushSupported,
+} from "@/lib/pushClient";
+import { sendTestPush } from "@/lib/push.functions";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
@@ -392,6 +399,8 @@ function NotificationsSection() {
 
   return (
     <div className="space-y-4">
+      <PushDeviceCard />
+
       <Card title="V aplikaci" desc="Notifikace zobrazované v aplikaci a v zvonečku.">
         <ul className="divide-y divide-border">
           {inapp.map((p) => (
@@ -427,5 +436,116 @@ function NotificationsSection() {
         </Button>
       </div>
     </div>
+  );
+}
+
+/* ---------------- Push zařízení ---------------- */
+
+function PushDeviceCard() {
+  const testFn = useServerFn(sendTestPush);
+  const [enabled, setEnabled] = useState<boolean | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const supported = typeof window !== "undefined" && isPushSupported();
+  const isStandalone =
+    typeof window !== "undefined" &&
+    (window.matchMedia?.("(display-mode: standalone)").matches ||
+      (window.navigator as unknown as { standalone?: boolean }).standalone === true);
+  const isIOS =
+    typeof navigator !== "undefined" && /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+  useEffect(() => {
+    if (!supported) {
+      setEnabled(false);
+      return;
+    }
+    getExistingPushSubscription().then((s) => setEnabled(!!s));
+  }, [supported]);
+
+  async function toggle(v: boolean) {
+    setBusy(true);
+    try {
+      if (v) {
+        const res = await enablePushOnThisDevice();
+        if (!res.ok) {
+          toast.error(res.reason ?? "Nepodařilo se povolit");
+          setEnabled(false);
+          return;
+        }
+        setEnabled(true);
+        toast.success("Push notifikace jsou aktivní na tomto zařízení");
+      } else {
+        await disablePushOnThisDevice();
+        setEnabled(false);
+        toast.success("Push vypnut na tomto zařízení");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Chyba");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function test() {
+    setTesting(true);
+    try {
+      await testFn();
+      toast.success("Odesláno – notifikace by měla dorazit během pár vteřin");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Chyba");
+    } finally {
+      setTesting(false);
+    }
+  }
+
+  return (
+    <Card
+      title="Push do telefonu / prohlížeče"
+      desc={`Zapni push na každém zařízení zvlášť. Na iPhonu je potřeba nejdřív aplikaci "Přidat na plochu" v Safari a spustit ji z ikony.`}
+    >
+      {isIOS && !isStandalone && (
+        <div className="mb-3 rounded-sm border border-accent/40 bg-accent/5 p-3 text-xs text-accent-foreground">
+          <strong className="font-semibold">iPhone:</strong> Nahoře v Safari klepni na
+          Sdílet <span className="font-mono">⎋</span> → &bdquo;Přidat na plochu&ldquo;. Push notifikace fungují
+          na iOS jen v aplikaci spuštěné z plochy.
+        </div>
+      )}
+
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          {enabled ? (
+            <Bell className="h-4 w-4 text-accent" />
+          ) : (
+            <BellOff className="h-4 w-4 text-muted-foreground" />
+          )}
+          <span className="text-sm">
+            {!supported
+              ? "Toto zařízení / prohlížeč push nepodporuje"
+              : enabled === null
+                ? "Zjišťuji stav…"
+                : enabled
+                  ? "Push aktivní na tomto zařízení"
+                  : "Push vypnut na tomto zařízení"}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          {enabled && (
+            <Button variant="outline" size="sm" onClick={test} disabled={testing}>
+              {testing ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="mr-2 h-4 w-4" />
+              )}
+              Test
+            </Button>
+          )}
+          <Switch
+            checked={!!enabled}
+            onCheckedChange={toggle}
+            disabled={!supported || busy || enabled === null}
+          />
+        </div>
+      </div>
+    </Card>
   );
 }
