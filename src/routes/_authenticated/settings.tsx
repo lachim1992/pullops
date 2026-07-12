@@ -22,6 +22,13 @@ import {
   updateMyProfile,
   type NotificationPrefs,
 } from "@/lib/settings.functions";
+import {
+  disablePushOnThisDevice,
+  enablePushOnThisDevice,
+  getExistingPushSubscription,
+  isPushSupported,
+} from "@/lib/pushClient";
+import { sendTestPush } from "@/lib/push.functions";
 
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
