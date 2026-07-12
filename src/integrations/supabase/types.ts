@@ -1311,6 +1311,51 @@ export type Database = {
           },
         ]
       }
+      project_chat_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          organization_id: string
+          project_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          organization_id: string
+          project_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          organization_id?: string
+          project_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_chat_messages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_chat_messages_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_documents: {
         Row: {
           created_at: string
@@ -1368,6 +1413,57 @@ export type Database = {
           },
         ]
       }
+      project_lobby_photos: {
+        Row: {
+          caption: string | null
+          created_at: string
+          id: string
+          organization_id: string
+          project_id: string
+          storage_path: string
+          taken_at: string | null
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          organization_id: string
+          project_id: string
+          storage_path: string
+          taken_at?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          organization_id?: string
+          project_id?: string
+          storage_path?: string
+          taken_at?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_lobby_photos_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_lobby_photos_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_members: {
         Row: {
           joined_at: string
@@ -1387,6 +1483,111 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "project_members_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_task_checkpoints: {
+        Row: {
+          created_at: string
+          done: boolean
+          id: string
+          label: string
+          project_id: string
+          sort_order: number
+          task_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          done?: boolean
+          id?: string
+          label: string
+          project_id: string
+          sort_order?: number
+          task_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          done?: boolean
+          id?: string
+          label?: string
+          project_id?: string
+          sort_order?: number
+          task_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_task_checkpoints_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_task_checkpoints_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "project_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_tasks: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          organization_id: string
+          project_id: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          organization_id: string
+          project_id: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          organization_id?: string
+          project_id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_tasks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_tasks_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -1760,6 +1961,9 @@ export type Database = {
       pull_tasks: {
         Row: {
           cable_id: string
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cancelled_reason: string | null
           created_at: string
           created_by: string | null
           done_at: string | null
@@ -1771,10 +1975,17 @@ export type Database = {
           spool_group: string | null
           started_at: string | null
           status: string
+          terminated_at: string | null
+          terminated_by: string | null
+          tested_at: string | null
+          tested_by: string | null
           updated_at: string
         }
         Insert: {
           cable_id: string
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cancelled_reason?: string | null
           created_at?: string
           created_by?: string | null
           done_at?: string | null
@@ -1786,10 +1997,17 @@ export type Database = {
           spool_group?: string | null
           started_at?: string | null
           status?: string
+          terminated_at?: string | null
+          terminated_by?: string | null
+          tested_at?: string | null
+          tested_by?: string | null
           updated_at?: string
         }
         Update: {
           cable_id?: string
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cancelled_reason?: string | null
           created_at?: string
           created_by?: string | null
           done_at?: string | null
@@ -1801,6 +2019,10 @@ export type Database = {
           spool_group?: string | null
           started_at?: string | null
           status?: string
+          terminated_at?: string | null
+          terminated_by?: string | null
+          tested_at?: string | null
+          tested_by?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -2103,6 +2325,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_org_admin_for_project: {
+        Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
       is_org_member: {
