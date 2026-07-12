@@ -186,6 +186,9 @@ function SidebarBody({
           <NavItem to="/org-chat" icon={MessageSquare} onClick={onNavigate}>
             Firemní chat
           </NavItem>
+          <NavItem to="/settings" icon={Settings} onClick={onNavigate}>
+            Můj profil
+          </NavItem>
           {isOrgAdmin && (
             <NavItem to="/audit" icon={ScrollText} onClick={onNavigate}>
               {t("nav.audit")}
