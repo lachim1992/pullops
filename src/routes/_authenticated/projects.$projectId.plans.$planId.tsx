@@ -837,7 +837,7 @@ function PlanEditorPage() {
             </div>
           </div>
           <div className="absolute left-2 top-2 z-10 rounded-sm bg-background/80 px-2 py-1 font-mono text-[10px] text-muted-foreground">
-            Kolečko = zoom · Alt/prostřední tlač. = posun
+            Kolečko = zoom · Space/Alt/střední tlač. + tažení = posun
           </div>
 
           <div
