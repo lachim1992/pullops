@@ -43,6 +43,9 @@ export function AppShell({ children, projectId }: { children: ReactNode; project
   const queryClient = useQueryClient();
   const { t } = useT();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const currentPath = useRouterState({ select: (s) => s.location.pathname });
+  const canGoBack =
+    currentPath !== "/dashboard" && currentPath !== "/" && currentPath !== "/auth";
   const fetchProfile = useServerFn(getMyProfile);
   const fetchCaps = useServerFn(getMyCapabilities);
   const fetchProjectCaps = useServerFn(getMyProjectCapabilities);
