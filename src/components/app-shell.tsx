@@ -143,6 +143,9 @@ export function AppShell({ children, projectId }: { children: ReactNode; project
                   <NavItem to="/projects/$projectId/work" params={{ projectId }} icon={Wrench}>
                     {t("nav.pulling")}
                   </NavItem>
+                  <NavItem to="/projects/$projectId/defects" params={{ projectId }} icon={AlertTriangle}>
+                    {t("nav.defects")}
+                  </NavItem>
                 </BranchItem>
 
                 <BranchItem value="completion" label={t("nav.completionMode")} icon={<CheckSquare className="h-3.5 w-3.5" />}>
