@@ -83,15 +83,19 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: "description",
         content:
-          "Nástroj pro plánování, provedení a dokumentaci strukturované kabeláže na renovacích a nových stavbách McDonald's.",
+          "Plánování, provedení a dokumentace strukturované kabeláže: kabelový registr, trasy, cívky, tah a testování.",
       },
       { property: "og:title", content: "PullOps — plánování strukturované kabeláže" },
       {
         property: "og:description",
-        content: "Kompletní životní cyklus kabelu: dokumentace, trasy, cívky, tah, testování.",
+        content: "Plánování, provedení a dokumentace strukturované kabeláže: kabelový registr, trasy, cívky, tah a testování.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
+      { name: "twitter:title", content: "PullOps — plánování strukturované kabeláže" },
+      { name: "twitter:description", content: "Plánování, provedení a dokumentace strukturované kabeláže: kabelový registr, trasy, cívky, tah a testování." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/a8316b81-654f-4586-813c-8069b09dfd43/id-preview-b6d49e09--9274c261-c671-4dd9-ae48-fe60b127d7c6.lovable.app-1783845957656.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/a8316b81-654f-4586-813c-8069b09dfd43/id-preview-b6d49e09--9274c261-c671-4dd9-ae48-fe60b127d7c6.lovable.app-1783845957656.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
