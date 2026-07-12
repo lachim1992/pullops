@@ -250,6 +250,7 @@ export const en = {
     settings: "Settings",
     lobbyDesc: "Chat, tasks, photos",
     pulling: "Pulling",
+    defects: "Defects & protocols",
     completion: "Termination & test",
     pickProject: "Pick a project on the Overview",
   },
