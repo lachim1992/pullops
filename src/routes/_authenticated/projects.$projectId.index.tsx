@@ -272,3 +272,146 @@ function Info({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+function ProgressDashboard({
+  progress,
+  loading,
+  t,
+}: {
+  progress: import("@/lib/metrics.functions").ProjectProgress | undefined;
+  loading: boolean;
+  t: (k: string) => string;
+}) {
+  if (loading || !progress) {
+    return (
+      <div className="rounded-xl border border-border/60 bg-card/40 p-6 text-sm text-muted-foreground">
+        <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
+        {t("common.loading")}
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-4">
+      {/* Overall progress hero */}
+      <div className="rounded-2xl border border-border/60 bg-card/60 p-5 backdrop-blur">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
+              {t("metrics.overall")}
+            </div>
+            <div className="mt-1 font-display text-4xl font-semibold tracking-tight text-accent">
+              {progress.progressPct}%
+            </div>
+          </div>
+          <div className="hidden text-right text-xs text-muted-foreground sm:block">
+            {t("metrics.phaseHint")}
+          </div>
+        </div>
+        <Progress value={progress.progressPct} className="mt-4 h-2" />
+      </div>
+
+      {/* Phase breakdown */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <PhaseCard
+          icon={Zap}
+          label={t("metrics.pulled")}
+          done={progress.cables.pulled}
+          total={progress.cables.total}
+          pct={progress.pulledPct}
+        />
+        <PhaseCard
+          icon={Wrench}
+          label={t("metrics.terminated")}
+          done={progress.cables.terminated}
+          total={progress.cables.total}
+          pct={progress.terminatedPct}
+        />
+        <PhaseCard
+          icon={CheckCircle2}
+          label={t("metrics.tested")}
+          done={progress.cables.tested}
+          total={progress.cables.total}
+          pct={progress.testedPct}
+        />
+      </div>
+
+      {/* Counts */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <CountCard label={t("metrics.cablesTotal")} value={progress.cables.total} />
+        <CountCard label={t("metrics.endpointsTotal")} value={progress.endpoints.total} />
+        <CountCard
+          label={t("metrics.defectsOpen")}
+          value={progress.defects.open}
+          tone={progress.defects.open > 0 ? "warn" : "default"}
+        />
+        <CountCard label={t("metrics.defectsResolved")} value={progress.defects.resolved} />
+      </div>
+    </div>
+  );
+}
+
+function PhaseCard({
+  icon: Icon,
+  label,
+  done,
+  total,
+  pct,
+}: {
+  icon: typeof Cable;
+  label: string;
+  done: number;
+  total: number;
+  pct: number;
+}) {
+  return (
+    <div className="rounded-xl border border-border/60 bg-card/50 p-4 backdrop-blur">
+      <div className="flex items-center gap-2">
+        <div className="flex h-8 w-8 items-center justify-center rounded-md border border-[color:var(--accent)]/30 bg-[color:var(--accent)]/10 text-accent">
+          <Icon className="h-4 w-4" />
+        </div>
+        <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+          {label}
+        </div>
+        <div className="ml-auto font-display text-sm font-semibold">{pct}%</div>
+      </div>
+      <Progress value={pct} className="mt-3 h-1.5" />
+      <div className="mt-2 text-xs text-muted-foreground">
+        {done} / {total}
+      </div>
+    </div>
+  );
+}
+
+function CountCard({
+  label,
+  value,
+  tone = "default",
+}: {
+  label: string;
+  value: number;
+  tone?: "default" | "warn";
+}) {
+  return (
+    <div
+      className={`rounded-xl border p-4 backdrop-blur ${
+        tone === "warn"
+          ? "border-amber-500/40 bg-amber-500/10"
+          : "border-border/60 bg-card/50"
+      }`}
+    >
+      <div className="flex items-center gap-1.5">
+        {tone === "warn" && <AlertTriangle className="h-3 w-3 text-amber-500" />}
+        <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+          {label}
+        </div>
+      </div>
+      <div
+        className={`mt-1 font-display text-2xl font-semibold ${
+          tone === "warn" ? "text-amber-500" : ""
+        }`}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
