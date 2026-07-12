@@ -82,26 +82,35 @@ function LobbyPage() {
           </p>
         </header>
 
-        <Tabs defaultValue="chat" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-3">
-            <TabsTrigger value="chat" className="gap-2">
-              <MessageSquare className="h-4 w-4" /> Chat
+        <Tabs defaultValue="comm" className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="comm" className="gap-2">
+              <MessageSquare className="h-4 w-4" /> Chat & fotky
             </TabsTrigger>
             <TabsTrigger value="tasks" className="gap-2">
               <ListChecks className="h-4 w-4" /> Správa úkolů
             </TabsTrigger>
-            <TabsTrigger value="photos" className="gap-2">
-              <Camera className="h-4 w-4" /> Fotky
-            </TabsTrigger>
           </TabsList>
-          <TabsContent value="chat" className="mt-4 animate-fade-in">
-            <ChatTab projectId={projectId} />
+          <TabsContent value="comm" className="mt-4 animate-fade-in">
+            <Tabs defaultValue="chat" className="w-full">
+              <TabsList className="grid w-full max-w-xs grid-cols-2">
+                <TabsTrigger value="chat" className="gap-2">
+                  <MessageSquare className="h-4 w-4" /> Chat
+                </TabsTrigger>
+                <TabsTrigger value="photos" className="gap-2">
+                  <Camera className="h-4 w-4" /> Fotky
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="chat" className="mt-4 animate-fade-in">
+                <ChatTab projectId={projectId} />
+              </TabsContent>
+              <TabsContent value="photos" className="mt-4 animate-fade-in">
+                <PhotosTab projectId={projectId} />
+              </TabsContent>
+            </Tabs>
           </TabsContent>
           <TabsContent value="tasks" className="mt-4 animate-fade-in">
             <TasksTab projectId={projectId} />
-          </TabsContent>
-          <TabsContent value="photos" className="mt-4 animate-fade-in">
-            <PhotosTab projectId={projectId} />
           </TabsContent>
         </Tabs>
       </div>
