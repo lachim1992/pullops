@@ -95,6 +95,17 @@ function ProjectDetailPage() {
             )}
           </motion.header>
 
+          {/* Progress dashboard */}
+          <section className="mb-10">
+            <div className="mb-4 flex items-center gap-3">
+              <h2 className="font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
+                {t("metrics.title")}
+              </h2>
+              <div className="hairline-gold h-px flex-1" />
+            </div>
+            <ProgressDashboard progress={progress.data} loading={progress.isLoading} t={t} />
+          </section>
+
           {/* Four-mode hub */}
           <section className="mb-10">
             <div className="mb-4 flex items-center gap-3">
