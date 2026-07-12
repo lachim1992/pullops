@@ -1742,6 +1742,85 @@ export type Database = {
           },
         ]
       }
+      project_protocols: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          floor_plan_id: string | null
+          id: string
+          location_note: string | null
+          organization_id: string
+          participants: string | null
+          project_id: string
+          reference_number: string
+          reference_seq: number
+          signed_at: string | null
+          signed_by_name: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          floor_plan_id?: string | null
+          id?: string
+          location_note?: string | null
+          organization_id: string
+          participants?: string | null
+          project_id: string
+          reference_number: string
+          reference_seq: number
+          signed_at?: string | null
+          signed_by_name?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          floor_plan_id?: string | null
+          id?: string
+          location_note?: string | null
+          organization_id?: string
+          participants?: string | null
+          project_id?: string
+          reference_number?: string
+          reference_seq?: number
+          signed_at?: string | null
+          signed_by_name?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_protocols_floor_plan_id_fkey"
+            columns: ["floor_plan_id"]
+            isOneToOne: false
+            referencedRelation: "floor_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_protocols_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_protocols_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_task_checkpoints: {
         Row: {
           created_at: string
@@ -1932,6 +2011,61 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      protocol_photos: {
+        Row: {
+          caption: string | null
+          created_at: string
+          id: string
+          organization_id: string
+          project_id: string
+          protocol_id: string
+          storage_path: string
+          uploaded_by: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          organization_id: string
+          project_id: string
+          protocol_id: string
+          storage_path: string
+          uploaded_by: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          organization_id?: string
+          project_id?: string
+          protocol_id?: string
+          storage_path?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "protocol_photos_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "protocol_photos_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "protocol_photos_protocol_id_fkey"
+            columns: ["protocol_id"]
+            isOneToOne: false
+            referencedRelation: "project_protocols"
             referencedColumns: ["id"]
           },
         ]
