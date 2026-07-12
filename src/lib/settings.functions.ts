@@ -40,8 +40,18 @@ export const leaveOrganization = createServerFn({ method: "POST" })
     const { error } = await supabase.rpc("leave_organization_tx", {
       p_organization_id: data.organizationId,
     });
-    if (error) throw new Error(dbErrorMessage(error));
-    return { ok: true };
+    if (error) {
+      const msg = dbErrorMessage(error);
+      if (/last admin/i.test(msg)) {
+        return {
+          ok: false as const,
+          reason: "last_admin" as const,
+          message: "Jsi poslední admin firmy. Nejdřív pověř jiného člena rolí admin.",
+        };
+      }
+      return { ok: false as const, reason: "error" as const, message: msg };
+    }
+    return { ok: true as const };
   });
 
 const PREF_KEYS = [
