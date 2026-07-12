@@ -462,6 +462,160 @@ export type Database = {
           },
         ]
       }
+      defect_comments: {
+        Row: {
+          body: string
+          created_at: string
+          defect_id: string
+          id: string
+          organization_id: string
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          defect_id: string
+          id?: string
+          organization_id: string
+          project_id: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          defect_id?: string
+          id?: string
+          organization_id?: string
+          project_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "defect_comments_defect_id_fkey"
+            columns: ["defect_id"]
+            isOneToOne: false
+            referencedRelation: "defects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      defect_photos: {
+        Row: {
+          caption: string | null
+          created_at: string
+          created_by: string | null
+          defect_id: string
+          id: string
+          organization_id: string
+          project_id: string
+          storage_path: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          created_by?: string | null
+          defect_id: string
+          id?: string
+          organization_id: string
+          project_id: string
+          storage_path: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          created_by?: string | null
+          defect_id?: string
+          id?: string
+          organization_id?: string
+          project_id?: string
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "defect_photos_defect_id_fkey"
+            columns: ["defect_id"]
+            isOneToOne: false
+            referencedRelation: "defects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      defects: {
+        Row: {
+          assigned_to: string | null
+          code: string | null
+          created_at: string
+          description: string | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          organization_id: string
+          project_id: string
+          reported_by: string | null
+          resolution_note: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          code?: string | null
+          created_at?: string
+          description?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          organization_id: string
+          project_id: string
+          reported_by?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          code?: string | null
+          created_at?: string
+          description?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          organization_id?: string
+          project_id?: string
+          reported_by?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "defects_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "defects_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       dispenser_slots: {
         Row: {
           created_at: string
@@ -1101,6 +1255,51 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          kind: string
+          link_path: string | null
+          organization_id: string | null
+          project_id: string | null
+          read_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          kind: string
+          link_path?: string | null
+          organization_id?: string | null
+          project_id?: string | null
+          read_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          kind?: string
+          link_path?: string | null
+          organization_id?: string | null
+          project_id?: string | null
+          read_at?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       organization_members: {
         Row: {
           joined_at: string
@@ -1313,8 +1512,10 @@ export type Database = {
       }
       project_chat_messages: {
         Row: {
+          attachment_photo_ids: string[]
           body: string
           created_at: string
+          defect_id: string | null
           id: string
           organization_id: string
           project_id: string
@@ -1322,8 +1523,10 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          attachment_photo_ids?: string[]
           body: string
           created_at?: string
+          defect_id?: string | null
           id?: string
           organization_id: string
           project_id: string
@@ -1331,8 +1534,10 @@ export type Database = {
           user_id: string
         }
         Update: {
+          attachment_photo_ids?: string[]
           body?: string
           created_at?: string
+          defect_id?: string | null
           id?: string
           organization_id?: string
           project_id?: string
@@ -1543,11 +1748,17 @@ export type Database = {
           assigned_to: string | null
           created_at: string
           created_by: string | null
+          defect_id: string | null
           description: string | null
           due_date: string | null
           id: string
+          labels: string[]
           organization_id: string
+          priority: string
           project_id: string
+          sort_order: number
+          source_id: string | null
+          source_type: string | null
           status: string
           title: string
           updated_at: string
@@ -1556,11 +1767,17 @@ export type Database = {
           assigned_to?: string | null
           created_at?: string
           created_by?: string | null
+          defect_id?: string | null
           description?: string | null
           due_date?: string | null
           id?: string
+          labels?: string[]
           organization_id: string
+          priority?: string
           project_id: string
+          sort_order?: number
+          source_id?: string | null
+          source_type?: string | null
           status?: string
           title: string
           updated_at?: string
@@ -1569,11 +1786,17 @@ export type Database = {
           assigned_to?: string | null
           created_at?: string
           created_by?: string | null
+          defect_id?: string | null
           description?: string | null
           due_date?: string | null
           id?: string
+          labels?: string[]
           organization_id?: string
+          priority?: string
           project_id?: string
+          sort_order?: number
+          source_id?: string | null
+          source_type?: string | null
           status?: string
           title?: string
           updated_at?: string
