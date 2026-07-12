@@ -92,6 +92,7 @@ export const cs = {
     settings: "Nastavení",
     lobbyDesc: "Chat, úkoly, fotky",
     pulling: "Tahání",
+    defects: "Závady a protokoly",
     completion: "Zakončení & test",
     pickProject: "Vyberte projekt na Přehledu",
   },
