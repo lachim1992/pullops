@@ -16,19 +16,47 @@ async function projectCtx(supabase: any, projectId: string) {
   return data as { organization_id: string };
 }
 
+async function signLobbyPhotos(supabase: any, ids: string[]) {
+  if (ids.length === 0) return new Map<string, { url: string | null; storagePath: string | null }>();
+  const { data: rows } = await supabase
+    .from("project_lobby_photos" as never)
+    .select("id, storage_path")
+    .in("id", ids);
+  const out = new Map<string, { url: string | null; storagePath: string | null }>();
+  for (const r of (rows as any[]) ?? []) {
+    const path = r.storage_path as string;
+    const { data: signed } = await supabase.storage
+      .from("project-lobby-photos")
+      .createSignedUrl(path, 60 * 60);
+    out.set(r.id as string, { url: signed?.signedUrl ?? null, storagePath: path });
+  }
+  return out;
+}
+
 // ================ CHAT ================
 export const listChatMessages = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ projectId: uuid, limit: z.number().int().min(1).max(500).default(200) }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ projectId: uuid, limit: z.number().int().min(1).max(500).default(200) }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
       .from("project_chat_messages" as never)
-      .select("id, user_id, body, created_at, updated_at")
+      .select("id, user_id, body, created_at, updated_at, attachment_photo_ids, defect_id")
       .eq("project_id", data.projectId)
       .order("created_at", { ascending: true })
       .limit(data.limit);
     if (error) throw new Error(error.message);
-    const userIds = Array.from(new Set(((rows as any[]) ?? []).map((r) => r.user_id).filter(Boolean)));
+    const messages = ((rows as any[]) ?? []) as Array<{
+      id: string;
+      user_id: string;
+      body: string;
+      created_at: string;
+      attachment_photo_ids: string[] | null;
+      defect_id: string | null;
+    }>;
+
+    const userIds = Array.from(new Set(messages.map((r) => r.user_id).filter(Boolean)));
     const profiles = new Map<string, { name: string | null }>();
     if (userIds.length > 0) {
       const { data: profs } = await context.supabase
@@ -39,18 +67,38 @@ export const listChatMessages = createServerFn({ method: "GET" })
         profiles.set(p.id as string, { name: (p.full_name as string | null) ?? null });
       }
     }
-    return ((rows as any[]) ?? []).map((r) => ({
-      id: r.id as string,
-      userId: r.user_id as string,
-      body: r.body as string,
-      createdAt: r.created_at as string,
+
+    const allPhotoIds = Array.from(
+      new Set(messages.flatMap((r) => (r.attachment_photo_ids ?? []) as string[])),
+    );
+    const photoMap = await signLobbyPhotos(context.supabase, allPhotoIds);
+
+    return messages.map((r) => ({
+      id: r.id,
+      userId: r.user_id,
+      body: r.body,
+      createdAt: r.created_at,
       authorName: profiles.get(r.user_id)?.name ?? "Neznámý",
+      defectId: r.defect_id,
+      attachments: ((r.attachment_photo_ids ?? []) as string[]).map((id) => ({
+        id,
+        url: photoMap.get(id)?.url ?? null,
+      })),
     }));
   });
 
 export const sendChatMessage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ projectId: uuid, body: z.string().min(1).max(4000) }).parse(d))
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        projectId: uuid,
+        body: z.string().min(1).max(4000),
+        attachmentPhotoIds: z.array(uuid).max(20).optional(),
+        defectId: uuid.nullable().optional(),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const ctx = await projectCtx(supabase, data.projectId);
@@ -61,6 +109,8 @@ export const sendChatMessage = createServerFn({ method: "POST" })
         organization_id: ctx.organization_id,
         user_id: userId,
         body: data.body,
+        attachment_photo_ids: data.attachmentPhotoIds ?? [],
+        defect_id: data.defectId ?? null,
       } as never)
       .select("id")
       .single();
@@ -72,9 +122,35 @@ export const deleteChatMessage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: uuid }).parse(d))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("project_chat_messages" as never).delete().eq("id", data.id);
+    const { error } = await context.supabase
+      .from("project_chat_messages" as never)
+      .delete()
+      .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+// ================ PROJECT MEMBERS ================
+export const listProjectMembers = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ projectId: uuid }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: rows, error } = await supabase
+      .from("project_members")
+      .select("user_id")
+      .eq("project_id", data.projectId);
+    if (error) throw new Error(error.message);
+    const ids = ((rows as any[]) ?? []).map((r) => r.user_id as string);
+    if (ids.length === 0) return [] as Array<{ id: string; name: string }>;
+    const { data: profs } = await supabase
+      .from("profiles")
+      .select("id, full_name")
+      .in("id", ids);
+    return ((profs as any[]) ?? []).map((p) => ({
+      id: p.id as string,
+      name: (p.full_name as string | null) ?? "",
+    }));
   });
 
 // ================ TASKS ================
@@ -85,8 +161,11 @@ export const listTasks = createServerFn({ method: "GET" })
     const [tasksRes, cpsRes] = await Promise.all([
       context.supabase
         .from("project_tasks" as never)
-        .select("id, title, description, assigned_to, due_date, status, created_by, created_at, updated_at")
+        .select(
+          "id, title, description, assigned_to, due_date, status, priority, labels, sort_order, defect_id, source_type, source_id, created_by, created_at, updated_at",
+        )
         .eq("project_id", data.projectId)
+        .order("sort_order", { ascending: true })
         .order("created_at", { ascending: false }),
       context.supabase
         .from("project_task_checkpoints" as never)
@@ -109,6 +188,12 @@ export const listTasks = createServerFn({ method: "GET" })
       assignedTo: (t.assigned_to as string | null) ?? null,
       dueDate: (t.due_date as string | null) ?? null,
       status: t.status as string,
+      priority: (t.priority as string) ?? "NORMAL",
+      labels: ((t.labels as string[] | null) ?? []) as string[],
+      sortOrder: (t.sort_order as number) ?? 0,
+      defectId: (t.defect_id as string | null) ?? null,
+      sourceType: (t.source_type as string | null) ?? null,
+      sourceId: (t.source_id as string | null) ?? null,
       createdBy: (t.created_by as string | null) ?? null,
       createdAt: t.created_at as string,
       checkpoints: cpsByTask.get(t.id) ?? [],
@@ -127,13 +212,16 @@ export const upsertTask = createServerFn({ method: "POST" })
         assignedTo: uuid.nullable().optional(),
         dueDate: z.string().nullable().optional(),
         status: z.enum(["TODO", "IN_PROGRESS", "DONE", "CANCELLED"]).default("TODO"),
+        priority: z.enum(["LOW", "NORMAL", "HIGH", "URGENT"]).default("NORMAL"),
+        labels: z.array(z.string().max(40)).max(10).optional(),
+        sortOrder: z.number().int().optional(),
       })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const ctx = await projectCtx(supabase, data.projectId);
-    const patch = {
+    const patch: Record<string, unknown> = {
       project_id: data.projectId,
       organization_id: ctx.organization_id,
       title: data.title,
@@ -141,7 +229,10 @@ export const upsertTask = createServerFn({ method: "POST" })
       assigned_to: data.assignedTo ?? null,
       due_date: data.dueDate ?? null,
       status: data.status,
+      priority: data.priority,
+      labels: data.labels ?? [],
     };
+    if (typeof data.sortOrder === "number") patch.sort_order = data.sortOrder;
     if (data.id) {
       const { error } = await supabase.from("project_tasks" as never).update(patch as never).eq("id", data.id);
       if (error) throw new Error(error.message);
@@ -154,6 +245,26 @@ export const upsertTask = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
     return { id: (row as any).id as string };
+  });
+
+export const moveTask = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        id: uuid,
+        status: z.enum(["TODO", "IN_PROGRESS", "DONE", "CANCELLED"]),
+        sortOrder: z.number().int(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("project_tasks" as never)
+      .update({ status: data.status, sort_order: data.sortOrder } as never)
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
 
 export const deleteTask = createServerFn({ method: "POST" })
@@ -188,7 +299,10 @@ export const upsertCheckpoint = createServerFn({ method: "POST" })
       sort_order: data.sortOrder,
     };
     if (data.id) {
-      const { error } = await context.supabase.from("project_task_checkpoints" as never).update(patch as never).eq("id", data.id);
+      const { error } = await context.supabase
+        .from("project_task_checkpoints" as never)
+        .update(patch as never)
+        .eq("id", data.id);
       if (error) throw new Error(error.message);
       return { id: data.id };
     }
@@ -205,7 +319,10 @@ export const toggleCheckpoint = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: uuid, done: z.boolean() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("project_task_checkpoints" as never).update({ done: data.done } as never).eq("id", data.id);
+    const { error } = await context.supabase
+      .from("project_task_checkpoints" as never)
+      .update({ done: data.done } as never)
+      .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -214,7 +331,10 @@ export const deleteCheckpoint = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: uuid }).parse(d))
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("project_task_checkpoints" as never).delete().eq("id", data.id);
+    const { error } = await context.supabase
+      .from("project_task_checkpoints" as never)
+      .delete()
+      .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -230,7 +350,13 @@ export const listLobbyPhotos = createServerFn({ method: "GET" })
       .eq("project_id", data.projectId)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
-    const photos: Array<{ id: string; url: string | null; caption: string | null; createdAt: string; uploadedBy: string | null }> = [];
+    const photos: Array<{
+      id: string;
+      url: string | null;
+      caption: string | null;
+      createdAt: string;
+      uploadedBy: string | null;
+    }> = [];
     for (const r of (rows as any[]) ?? []) {
       const { data: signed } = await context.supabase.storage
         .from("project-lobby-photos")
@@ -269,26 +395,34 @@ export const createLobbyPhotoRecord = createServerFn({ method: "POST" })
         caption: data.caption ?? null,
         uploaded_by: userId,
       } as never)
-      .select("id")
+      .select("id, storage_path")
       .single();
     if (error) throw new Error(error.message);
-    return { id: (row as any).id as string };
+    const path = (row as any).storage_path as string;
+    const { data: signed } = await supabase.storage
+      .from("project-lobby-photos")
+      .createSignedUrl(path, 60 * 60);
+    return { id: (row as any).id as string, url: signed?.signedUrl ?? null };
   });
 
 export const deleteLobbyPhoto = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: uuid }).parse(d))
   .handler(async ({ data, context }) => {
-    // fetch storage_path first
     const { data: row } = await context.supabase
       .from("project_lobby_photos" as never)
       .select("storage_path")
       .eq("id", data.id)
       .maybeSingle();
     if (row && (row as any).storage_path) {
-      await context.supabase.storage.from("project-lobby-photos").remove([(row as any).storage_path]);
+      await context.supabase.storage
+        .from("project-lobby-photos")
+        .remove([(row as any).storage_path]);
     }
-    const { error } = await context.supabase.from("project_lobby_photos" as never).delete().eq("id", data.id);
+    const { error } = await context.supabase
+      .from("project_lobby_photos" as never)
+      .delete()
+      .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

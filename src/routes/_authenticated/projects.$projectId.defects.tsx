@@ -10,6 +10,7 @@ import {
   ChevronRight,
   Circle,
   Clock,
+  FileDown,
   Flag,
   Info,
   Loader2,
@@ -587,6 +588,22 @@ function DefectDetail({
 
           <Button
             size="sm"
+            variant="outline"
+            onClick={() =>
+              exportDefectProtocol({
+                defect: def,
+                photos: detail.data!.photos,
+                comments: detail.data!.comments,
+                assigneeName: def.assigned_to ? memberMap.get(def.assigned_to) ?? null : null,
+              })
+            }
+          >
+            <FileDown className="mr-1 h-3 w-3" />
+            Export protokol (PDF)
+          </Button>
+
+          <Button
+            size="sm"
             variant="ghost"
             className="ml-auto text-red-300 hover:bg-red-500/10 hover:text-red-200"
             onClick={async () => {
@@ -746,4 +763,137 @@ function DefectDetail({
       </CardContent>
     </Card>
   );
+}
+
+// ================ PDF EXPORT ================
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function exportDefectProtocol(input: {
+  defect: any;
+  photos: Array<{ id: string; url: string | null; caption: string | null }>;
+  comments: Array<{ id: string; body: string; authorName: string; createdAt: string }>;
+  assigneeName: string | null;
+}) {
+  const { defect, photos, comments, assigneeName } = input;
+  const sev = SEVERITY_META[defect.severity as Severity];
+  const st = STATUS_META[defect.status as Status];
+  const created = new Date(defect.created_at).toLocaleString("cs-CZ");
+  const resolved = defect.resolved_at ? new Date(defect.resolved_at).toLocaleString("cs-CZ") : null;
+
+  const photosHtml = photos
+    .filter((p) => p.url)
+    .map(
+      (p) =>
+        `<div class="photo"><img src="${escapeHtml(p.url!)}" alt="" />${
+          p.caption ? `<div class="cap">${escapeHtml(p.caption)}</div>` : ""
+        }</div>`,
+    )
+    .join("");
+
+  const commentsHtml = comments.length
+    ? comments
+        .map(
+          (c) =>
+            `<div class="comment"><div class="meta"><strong>${escapeHtml(
+              c.authorName,
+            )}</strong> · ${new Date(c.createdAt).toLocaleString("cs-CZ")}</div><div>${escapeHtml(
+              c.body,
+            )}</div></div>`,
+        )
+        .join("")
+    : '<div class="empty">Bez komentářů.</div>';
+
+  const html = `<!DOCTYPE html>
+<html lang="cs"><head><meta charset="utf-8"/>
+<title>Protokol závady · ${escapeHtml(defect.title)}</title>
+<style>
+  @page { size: A4; margin: 18mm 14mm; }
+  * { box-sizing: border-box; }
+  body { font-family: 'DM Sans', system-ui, -apple-system, sans-serif; color: #111; line-height: 1.5; margin: 0; padding: 20px; }
+  h1 { font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 22px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  h2 { font-family: 'Space Grotesk', system-ui, sans-serif; font-size: 14px; margin: 20px 0 8px; text-transform: uppercase; letter-spacing: 0.15em; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 4px; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; border-bottom: 2px solid #111; padding-bottom: 10px; }
+  .brand { font-family: 'Space Grotesk'; font-weight: 700; font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: #b8860b; }
+  .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px; font-size: 12px; margin: 8px 0 12px; }
+  .meta-grid div span:first-child { color: #666; text-transform: uppercase; font-size: 9px; letter-spacing: 0.15em; display: block; margin-bottom: 2px; font-family: 'Space Grotesk'; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; border: 1px solid; margin-right: 4px; }
+  .sev-INFO { background: #e0f2fe; color: #075985; border-color: #7dd3fc; }
+  .sev-DEFECT { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+  .sev-CRITICAL { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+  .status { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
+  .description { background: #f9fafb; padding: 12px; border-left: 3px solid #b8860b; font-size: 12px; }
+  .photos { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .photo { border: 1px solid #ddd; border-radius: 4px; overflow: hidden; page-break-inside: avoid; }
+  .photo img { width: 100%; height: 220px; object-fit: cover; display: block; }
+  .photo .cap { padding: 4px 8px; font-size: 10px; color: #666; }
+  .comment { border-left: 2px solid #e5e7eb; padding: 6px 0 6px 10px; margin-bottom: 8px; font-size: 12px; page-break-inside: avoid; }
+  .comment .meta { font-size: 10px; color: #666; margin-bottom: 2px; }
+  .empty { color: #999; font-style: italic; font-size: 12px; }
+  .resolution { background: #ecfdf5; border-left: 3px solid #10b981; padding: 12px; font-size: 12px; }
+  .footer { margin-top: 30px; padding-top: 10px; border-top: 1px solid #ddd; font-size: 10px; color: #666; text-align: center; font-family: 'Space Grotesk'; letter-spacing: 0.1em; text-transform: uppercase; }
+  @media print { button { display: none; } body { padding: 0; } }
+</style></head>
+<body>
+  <div class="header">
+    <div>
+      <div class="brand">PullOps · Protokol závady</div>
+      <h1>${escapeHtml(defect.title)}</h1>
+      <div style="margin-top:6px">
+        <span class="badge sev-${defect.severity}">${escapeHtml(sev.label)}</span>
+        <span class="badge status">${escapeHtml(st.label)}</span>
+      </div>
+    </div>
+    <div style="text-align:right; font-size:10px; color:#666; font-family:'Space Grotesk'">
+      <div>Vygenerováno</div>
+      <div style="color:#111; font-weight:600">${new Date().toLocaleString("cs-CZ")}</div>
+    </div>
+  </div>
+
+  <div class="meta-grid">
+    <div><span>Vytvořeno</span><span>${escapeHtml(created)}</span></div>
+    <div><span>Přiřazeno</span><span>${escapeHtml(assigneeName ?? "Nepřiřazeno")}</span></div>
+    <div><span>ID</span><span style="font-family:monospace">${escapeHtml(defect.id)}</span></div>
+    <div><span>Vyřešeno</span><span>${escapeHtml(resolved ?? "—")}</span></div>
+  </div>
+
+  ${
+    defect.description
+      ? `<h2>Popis</h2><div class="description">${escapeHtml(defect.description)}</div>`
+      : ""
+  }
+
+  ${
+    defect.resolution_note
+      ? `<h2>Řešení</h2><div class="resolution">${escapeHtml(defect.resolution_note)}</div>`
+      : ""
+  }
+
+  ${photosHtml ? `<h2>Fotodokumentace (${photos.length})</h2><div class="photos">${photosHtml}</div>` : ""}
+
+  <h2>Diskuze (${comments.length})</h2>
+  ${commentsHtml}
+
+  <div class="footer">PullOps · ${new Date().getFullYear()}</div>
+
+  <script>
+    window.addEventListener('load', function() {
+      setTimeout(function(){ window.print(); }, 400);
+    });
+  </script>
+</body></html>`;
+
+  const w = window.open("", "_blank", "width=900,height=1000");
+  if (!w) {
+    toast.error("Prohlížeč zablokoval otevření okna");
+    return;
+  }
+  w.document.write(html);
+  w.document.close();
 }
