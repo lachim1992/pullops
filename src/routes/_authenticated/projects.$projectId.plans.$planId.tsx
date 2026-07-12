@@ -2450,14 +2450,21 @@ function DayPlanEditor(props: {
   assignments: DayPlanAssignment[];
   branches: BranchRow[];
   onCreate: () => Promise<void> | void;
-  onUpdate: (patch: {
-    id: string;
-    name: string;
-    sortOrder: number;
-    spoolCount: number;
-    spoolLengthM: number;
-    plannedDate?: string | null;
-  }) => Promise<void> | void;
+  onUpdate: (
+    patch: {
+      id: string;
+      name: string;
+      sortOrder: number;
+      spoolCount: number;
+      spoolLengthM: number;
+    } & Partial<{
+      plannedDate: string | null;
+      notes: string | null;
+      assignedTo: string | null;
+      priority: string;
+      status: string;
+    }>,
+  ) => Promise<void> | void;
   onDelete: (id: string) => Promise<void> | void;
   onAssign: (cableId: string, dayPlanId: string | null) => Promise<void> | void;
 }) {
