@@ -18,6 +18,7 @@ import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PlanCanvasSurface } from "@/components/plan-canvas-surface";
 import { getPullModeData, setCablePullStatus } from "@/lib/pullTasks.functions";
 import { endpointKindInfo } from "@/lib/endpointKinds";
 import type { NormPoint } from "@/lib/length";
@@ -1109,21 +1110,12 @@ function PullMap({
         className="absolute inset-0"
         style={{ transform: `translate(${view.tx}px, ${view.ty}px) scale(${view.s})`, transformOrigin: "0 0" }}
       >
-        {plan?.documentUrl ? (
-          plan.mimeType === "application/pdf" ? (
-            <PdfPlanBackground url={plan.documentUrl} title={plan.name} />
-          ) : (
-            <img
-              src={plan.documentUrl}
-              alt={plan.name}
-              className="pointer-events-none absolute inset-0 h-full w-full select-none object-contain"
-            />
-          )
-        ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
-            Plán nemá podkladový obrázek.
-          </div>
-        )}
+        <PlanCanvasSurface
+          documentUrl={plan?.documentUrl ?? null}
+          mimeType={plan?.mimeType ?? null}
+          title={plan?.name ?? "Plán"}
+          empty="Plán nemá podkladový obrázek."
+        >
         <svg viewBox="0 0 1 1" preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
           {bundles.map((b) =>
             b.points.length < 2 ? null : (
@@ -1213,6 +1205,7 @@ function PullMap({
             );
           })}
         </svg>
+        </PlanCanvasSurface>
       </div>
 
       <div className="pointer-events-none absolute right-3 top-3 flex flex-col gap-1">

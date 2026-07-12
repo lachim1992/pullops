@@ -31,6 +31,7 @@ import {
   setEndpointCommentResolved,
 } from "@/lib/endpointComments.functions";
 import { useEndpointKinds } from "@/hooks/useEndpointKinds";
+import { PlanCanvasSurface } from "@/components/plan-canvas-surface";
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/endpoints")({
   head: () => ({
@@ -266,13 +267,12 @@ function PlanPreview({
         </Badge>
       </div>
       <div className="relative aspect-[4/3] max-h-[70vh] w-full bg-muted/30">
-        {url ? (
-          <img src={url} alt="" className="absolute inset-0 h-full w-full object-contain" />
-        ) : (
-          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-            {plan.isLoading ? "Načítám…" : "Bez nahraného výkresu"}
-          </div>
-        )}
+        <PlanCanvasSurface
+          documentUrl={url}
+          mimeType={plan.data?.document?.mime_type ?? null}
+          title={plan.data?.plan?.name ?? "Plán"}
+          empty={plan.isLoading ? "Načítám…" : "Bez nahraného výkresu"}
+        >
         <svg
           className="absolute inset-0 h-full w-full"
           viewBox="0 0 100 100"
@@ -308,6 +308,7 @@ function PlanPreview({
             );
           })}
         </svg>
+        </PlanCanvasSurface>
       </div>
     </div>
   );
