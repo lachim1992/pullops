@@ -160,6 +160,9 @@ function SidebarBody({
           <NavItem to="/dashboard" icon={LayoutDashboard} onClick={onNavigate}>
             {t("nav.projects")}
           </NavItem>
+          <NavItem to="/org-chat" icon={MessageSquare} onClick={onNavigate}>
+            Firemní chat
+          </NavItem>
           {isOrgAdmin && (
             <NavItem to="/audit" icon={ScrollText} onClick={onNavigate}>
               {t("nav.audit")}
