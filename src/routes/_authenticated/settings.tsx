@@ -506,7 +506,7 @@ function PushDeviceCard() {
       {isIOS && !isStandalone && (
         <div className="mb-3 rounded-sm border border-accent/40 bg-accent/5 p-3 text-xs text-accent-foreground">
           <strong className="font-semibold">iPhone:</strong> Nahoře v Safari klepni na
-          Sdílet <span className="font-mono">⎋</span> → „Přidat na plochu". Push notifikace fungují
+          Sdílet <span className="font-mono">⎋</span> → &bdquo;Přidat na plochu&ldquo;. Push notifikace fungují
           na iOS jen v aplikaci spuštěné z plochy.
         </div>
       )}
