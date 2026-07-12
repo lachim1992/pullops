@@ -21,6 +21,7 @@ import {
 import { getMyProjectCapabilities } from "@/lib/capabilities.functions";
 import { endpointKindInfo } from "@/lib/endpointKinds";
 import { cn } from "@/lib/utils";
+import { PlanCanvasSurface } from "@/components/plan-canvas-surface";
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/completion/$planId")({
   component: CompletionPlanEditor,
@@ -257,13 +258,12 @@ function MiniMap({
 }) {
   return (
     <div className="relative aspect-[16/10] w-full bg-muted">
-      {imageUrl && mimeType !== "application/pdf" ? (
-        <img src={imageUrl} alt="Plán" className="h-full w-full object-contain" />
-      ) : (
-        <div className="flex h-full items-center justify-center text-muted-foreground">
-          <Layers className="h-10 w-10" />
-        </div>
-      )}
+      <PlanCanvasSurface
+        documentUrl={imageUrl}
+        mimeType={mimeType}
+        title="Plán"
+        empty={<Layers className="h-10 w-10" />}
+      >
       <svg viewBox="0 0 1 1" preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
         {endpoints.map((ep) => {
           const kindColor = ep.kind ? endpointKindInfo(ep.kind).color : "hsl(0 0% 40%)";
@@ -297,6 +297,7 @@ function MiniMap({
           );
         })}
       </svg>
+      </PlanCanvasSurface>
     </div>
   );
 }

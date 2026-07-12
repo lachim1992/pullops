@@ -32,6 +32,7 @@ import { runOptimizer } from "@/lib/pullOptimizer.functions";
 import { listProjectMembersLite } from "@/lib/defects.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Textarea } from "@/components/ui/textarea";
+import { PlanCanvasSurface } from "@/components/plan-canvas-surface";
 import {
   Select,
   SelectContent,
@@ -858,21 +859,12 @@ function PlanEditorPage() {
             className="absolute left-0 top-0 h-full w-full origin-top-left"
             style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
           >
-            {plan.data?.documentUrl ? (
-              plan.data.document?.mime_type?.includes("pdf") ? (
-                <PdfPlanBackground url={plan.data.documentUrl} title={plan.data.plan.name} />
-              ) : (
-                <img
-                  src={plan.data.documentUrl}
-                  alt={plan.data.plan.name}
-                  className="pointer-events-none absolute inset-0 h-full w-full select-none object-contain"
-                />
-              )
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
-                Bez podkladového obrázku — vyberte podklad vpravo
-              </div>
-            )}
+            <PlanCanvasSurface
+              documentUrl={plan.data?.documentUrl ?? null}
+              mimeType={plan.data?.document?.mime_type ?? null}
+              title={plan.data?.plan.name ?? "Plán"}
+              empty="Bez podkladového obrázku — vyberte podklad vpravo"
+            >
 
             <svg
               ref={svgRef}
@@ -1263,6 +1255,7 @@ function PlanEditorPage() {
                 />
               )}
             </svg>
+            </PlanCanvasSurface>
           </div>
         </div>
 
