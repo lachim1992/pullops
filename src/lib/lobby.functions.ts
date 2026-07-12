@@ -44,7 +44,7 @@ export const listChatMessages = createServerFn({ method: "GET" })
       userId: r.user_id as string,
       body: r.body as string,
       createdAt: r.created_at as string,
-      authorName: profiles.get(r.user_id)?.name ?? profiles.get(r.user_id)?.email ?? "Neznámý",
+      authorName: profiles.get(r.user_id)?.name ?? "Neznámý",
     }));
   });
 
