@@ -184,15 +184,44 @@ export const listTasks = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ projectId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
-    const [tasksRes, cpsRes] = await Promise.all([
-      context.supabase
-        .from("project_tasks" as never)
-        .select(
-          "id, title, description, assigned_to, due_date, status, priority, labels, sort_order, defect_id, source_type, source_id, created_by, created_at, updated_at",
-        )
+    const { supabase, userId } = context;
+
+    // Determine if the user is a project manager (or org admin) for this project.
+    // Non-managers only see tasks assigned to them, to avoid list overload.
+    const ctx = await projectCtx(supabase, data.projectId);
+    const [{ data: pmRow }, { data: adminRow }] = await Promise.all([
+      supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
         .eq("project_id", data.projectId)
-        .order("sort_order", { ascending: true })
-        .order("created_at", { ascending: false }),
+        .eq("role", "project_manager")
+        .maybeSingle(),
+      supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .eq("organization_id", ctx.organization_id)
+        .is("project_id", null)
+        .eq("role", "admin")
+        .maybeSingle(),
+    ]);
+    const isManager = Boolean(pmRow) || Boolean(adminRow);
+
+    let tasksQuery = supabase
+      .from("project_tasks" as never)
+      .select(
+        "id, title, description, assigned_to, due_date, status, priority, labels, sort_order, defect_id, source_type, source_id, created_by, created_at, updated_at",
+      )
+      .eq("project_id", data.projectId)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false });
+    if (!isManager) {
+      // Field workers only see their own tasks (assigned to them OR created by them).
+      tasksQuery = tasksQuery.or(`assigned_to.eq.${userId},created_by.eq.${userId}`);
+    }
+    const [tasksRes, cpsRes] = await Promise.all([
+      tasksQuery,
       context.supabase
         .from("project_task_checkpoints" as never)
         .select("id, task_id, label, done, sort_order")
@@ -222,9 +251,11 @@ export const listTasks = createServerFn({ method: "GET" })
       sourceId: (t.source_id as string | null) ?? null,
       createdBy: (t.created_by as string | null) ?? null,
       createdAt: t.created_at as string,
+      isManagerView: isManager,
       checkpoints: cpsByTask.get(t.id) ?? [],
     }));
   });
+
 
 export const upsertTask = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
