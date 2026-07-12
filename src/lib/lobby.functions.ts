@@ -115,6 +115,32 @@ export const sendChatMessage = createServerFn({ method: "POST" })
       .select("id")
       .single();
     if (error) throw new Error(error.message);
+
+    // Fire push to other project members.
+    try {
+      const [{ data: members }, { data: prof }, { data: proj }] = await Promise.all([
+        supabase.from("project_members").select("user_id").eq("project_id", data.projectId),
+        supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
+        supabase.from("projects").select("name").eq("id", data.projectId).maybeSingle(),
+      ]);
+      const recipients = (((members as any[]) ?? []).map((m) => m.user_id as string)).filter(
+        (id) => id && id !== userId,
+      );
+      if (recipients.length > 0) {
+        const { sendPushToUsers } = await import("@/lib/push.server");
+        const author = (prof as { full_name?: string | null } | null)?.full_name ?? "Kolega";
+        const pname = (proj as { name?: string | null } | null)?.name ?? "Projekt";
+        await sendPushToUsers(recipients, {
+          title: `${pname} · ${author}`,
+          body: data.body.slice(0, 140),
+          url: `/projects/${data.projectId}/lobby`,
+          tag: `project-chat:${data.projectId}`,
+        });
+      }
+    } catch (err) {
+      console.error("project chat push failed", err);
+    }
+
     return { id: (row as any).id as string };
   });
 
