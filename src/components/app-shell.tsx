@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  MessageSquare,
   Route as RouteIcon,
   ScrollText,
   Settings,
