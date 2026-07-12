@@ -184,6 +184,9 @@ export function AppShell({ children, projectId }: { children: ReactNode; project
       </aside>
 
       <main className="flex-1 overflow-x-hidden">
+        <div className="sticky top-0 z-20 flex h-12 items-center justify-end gap-2 border-b border-border/40 bg-background/70 px-4 backdrop-blur">
+          <NotificationsBell />
+        </div>
         <div className="mx-auto max-w-6xl px-6 py-8">{children}</div>
       </main>
     </div>
