@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  MessageSquare,
   Route as RouteIcon,
   ScrollText,
   Settings,
@@ -158,6 +159,9 @@ function SidebarBody({
         <NavGroup label={t("nav.overview")}>
           <NavItem to="/dashboard" icon={LayoutDashboard} onClick={onNavigate}>
             {t("nav.projects")}
+          </NavItem>
+          <NavItem to="/org-chat" icon={MessageSquare} onClick={onNavigate}>
+            Firemní chat
           </NavItem>
           {isOrgAdmin && (
             <NavItem to="/audit" icon={ScrollText} onClick={onNavigate}>
