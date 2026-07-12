@@ -1,9 +1,10 @@
 import { useState, type ReactNode } from "react";
-import { Link, useNavigate, useRouter } from "@tanstack/react-router";
+import { Link, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   AlertTriangle,
+  ArrowLeft,
   Cable,
   Camera,
   CheckSquare,
@@ -42,6 +43,9 @@ export function AppShell({ children, projectId }: { children: ReactNode; project
   const queryClient = useQueryClient();
   const { t } = useT();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const currentPath = useRouterState({ select: (s) => s.location.pathname });
+  const canGoBack =
+    currentPath !== "/dashboard" && currentPath !== "/" && currentPath !== "/auth";
   const fetchProfile = useServerFn(getMyProfile);
   const fetchCaps = useServerFn(getMyCapabilities);
   const fetchProjectCaps = useServerFn(getMyProjectCapabilities);
@@ -107,6 +111,25 @@ export function AppShell({ children, projectId }: { children: ReactNode; project
               {sidebar}
             </SheetContent>
           </Sheet>
+
+          {canGoBack && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 px-2 text-muted-foreground hover:text-foreground"
+              onClick={() => {
+                if (window.history.length > 1) {
+                  router.history.back();
+                } else {
+                  navigate({ to: "/dashboard" });
+                }
+              }}
+              aria-label="Zpět"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Zpět</span>
+            </Button>
+          )}
 
           <Link
             to="/dashboard"
