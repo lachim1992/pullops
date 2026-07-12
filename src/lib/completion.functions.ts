@@ -17,7 +17,7 @@ export const listCompletionTasks = createServerFn({ method: "GET" })
       .from("cables")
       .select("id, code, status, notes")
       .eq("project_id", data.projectId)
-      .in("status", COMPLETION_STATUSES as unknown as string[]);
+      .in("status", COMPLETION_STATUSES as unknown as never);
     if (error) throw new Error(error.message);
     return ((rows as any[]) ?? []).map((c) => ({
       id: c.id as string,
