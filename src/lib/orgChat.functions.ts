@@ -73,6 +73,33 @@ export const sendOrgChatMessage = createServerFn({ method: "POST" })
       .select("id")
       .single();
     if (error) throw new Error(error.message);
+
+    // Fire push to other org members (fire-and-forget).
+    try {
+      const [{ data: members }, { data: prof }] = await Promise.all([
+        supabase
+          .from("organization_members")
+          .select("user_id")
+          .eq("organization_id", data.organizationId),
+        supabase.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
+      ]);
+      const recipients = (((members as any[]) ?? []).map((m) => m.user_id as string)).filter(
+        (id) => id && id !== userId,
+      );
+      if (recipients.length > 0) {
+        const { sendPushToUsers } = await import("@/lib/push.server");
+        const author = (prof as { full_name?: string | null } | null)?.full_name ?? "Kolega";
+        await sendPushToUsers(recipients, {
+          title: `Firemní chat · ${author}`,
+          body: data.body.slice(0, 140),
+          url: `/org-chat?org=${data.organizationId}`,
+          tag: `org-chat:${data.organizationId}`,
+        });
+      }
+    } catch (err) {
+      console.error("org chat push failed", err);
+    }
+
     return { id: (row as any).id as string };
   });
 
