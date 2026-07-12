@@ -258,6 +258,9 @@ function SidebarBody({
                 <NavItem to="/projects/$projectId/defects" params={{ projectId }} icon={AlertTriangle} onClick={onNavigate}>
                   {t("nav.defects")}
                 </NavItem>
+                <NavItem to="/projects/$projectId/protocols" params={{ projectId }} icon={FileText} onClick={onNavigate}>
+                  {t("nav.protocols")}
+                </NavItem>
               </BranchItem>
 
               <BranchItem value="completion" label={t("nav.completionMode")} icon={<CheckSquare className="h-3.5 w-3.5" />}>
