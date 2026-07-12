@@ -588,6 +588,22 @@ function DefectDetail({
 
           <Button
             size="sm"
+            variant="outline"
+            onClick={() =>
+              exportDefectProtocol({
+                defect: def,
+                photos: detail.data!.photos,
+                comments: detail.data!.comments,
+                assigneeName: def.assigned_to ? memberMap.get(def.assigned_to) ?? null : null,
+              })
+            }
+          >
+            <FileDown className="mr-1 h-3 w-3" />
+            Export protokol (PDF)
+          </Button>
+
+          <Button
+            size="sm"
             variant="ghost"
             className="ml-auto text-red-300 hover:bg-red-500/10 hover:text-red-200"
             onClick={async () => {
