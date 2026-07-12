@@ -24,8 +24,22 @@ import {
   deleteDayPlan,
   listDayPlans,
   upsertDayPlan,
+  listDayPlanPhotos,
+  addDayPlanPhoto,
+  deleteDayPlanPhoto,
 } from "@/lib/pullDayPlans.functions";
 import { runOptimizer } from "@/lib/pullOptimizer.functions";
+import { listProjectMembersLite } from "@/lib/defects.functions";
+import { supabase } from "@/integrations/supabase/client";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ChevronDown, ChevronRight, Camera, Trash2, X } from "lucide-react";
 
 import {
   createEndpoint,
@@ -2421,6 +2435,10 @@ type DayPlanRow = {
   spoolLengthM: number;
   notes: string | null;
   floorPlanId: string | null;
+  assignedTo: string | null;
+  priority: string;
+  status: string;
+  photoCount: number;
 };
 type DayPlanAssignment = { day_plan_id: string; cable_id: string; sort_order: number };
 type BranchRow = { id: string; code: string };
@@ -2432,14 +2450,21 @@ function DayPlanEditor(props: {
   assignments: DayPlanAssignment[];
   branches: BranchRow[];
   onCreate: () => Promise<void> | void;
-  onUpdate: (patch: {
-    id: string;
-    name: string;
-    sortOrder: number;
-    spoolCount: number;
-    spoolLengthM: number;
-    plannedDate?: string | null;
-  }) => Promise<void> | void;
+  onUpdate: (
+    patch: {
+      id: string;
+      name: string;
+      sortOrder: number;
+      spoolCount: number;
+      spoolLengthM: number;
+    } & Partial<{
+      plannedDate: string | null;
+      notes: string | null;
+      assignedTo: string | null;
+      priority: string;
+      status: string;
+    }>,
+  ) => Promise<void> | void;
   onDelete: (id: string) => Promise<void> | void;
   onAssign: (cableId: string, dayPlanId: string | null) => Promise<void> | void;
 }) {
@@ -2512,115 +2537,386 @@ function DayPlanEditor(props: {
         </div>
       )}
       <div className="space-y-3">
-        {dayPlans.map((dp) => {
-          const cables = byPlan.get(dp.id) ?? [];
-          const capacity = dp.spoolCount * dp.spoolLengthM;
-          return (
-            <div key={dp.id} className="rounded-sm border border-border p-2">
-              <div className="mb-2 grid grid-cols-[minmax(0,1fr)_auto] gap-2">
-                <Input
-                  value={dp.name}
-                  onChange={(e) =>
-                    onUpdate({
-                      id: dp.id,
-                      name: e.target.value,
-                      sortOrder: dp.sortOrder,
-                      spoolCount: dp.spoolCount,
-                      spoolLengthM: dp.spoolLengthM,
-                    })
-                  }
-                  className="h-7 text-xs"
-                />
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => onDelete(dp.id)}
-                  className="h-7 text-xs text-destructive"
-                >
-                  ×
-                </Button>
-              </div>
-              <div className="mb-2 grid grid-cols-2 gap-2">
-                <label className="text-[10px] text-muted-foreground">
-                  Cívek
-                  <Input
-                    type="number"
-                    min={1}
-                    max={20}
-                    value={dp.spoolCount}
-                    onChange={(e) =>
-                      onUpdate({
-                        id: dp.id,
-                        name: dp.name,
-                        sortOrder: dp.sortOrder,
-                        spoolCount: Math.max(1, Number(e.target.value) || 1),
-                        spoolLengthM: dp.spoolLengthM,
-                      })
-                    }
-                    className="h-7 text-xs font-mono"
-                  />
-                </label>
-                <label className="text-[10px] text-muted-foreground">
-                  Metry/cívka
-                  <Input
-                    type="number"
-                    min={1}
-                    value={dp.spoolLengthM}
-                    onChange={(e) =>
-                      onUpdate({
-                        id: dp.id,
-                        name: dp.name,
-                        sortOrder: dp.sortOrder,
-                        spoolCount: dp.spoolCount,
-                        spoolLengthM: Math.max(1, Number(e.target.value) || 1),
-                      })
-                    }
-                    className="h-7 text-xs font-mono"
-                  />
-                </label>
-              </div>
-              <div className="mb-2 text-[10px] font-mono text-muted-foreground">
-                Kapacita: {capacity.toLocaleString("cs-CZ")} m · Kabelů: {cables.length}
-              </div>
-              <div className="mb-2 flex flex-wrap gap-1">
-                {cables.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => onAssign(c.id, null)}
-                    title="Odebrat z bloku"
-                    className="rounded-sm border border-border bg-muted/40 px-2 py-0.5 font-mono text-[10px] hover:bg-destructive/10 hover:text-destructive"
-                  >
-                    {c.code} ×
-                  </button>
-                ))}
-                {cables.length === 0 && (
-                  <span className="text-[10px] text-muted-foreground">Žádný kabel.</span>
-                )}
-              </div>
-              <select
-                value=""
-                onChange={(e) => {
-                  if (e.target.value) onAssign(e.target.value, dp.id);
-                }}
-                className="w-full rounded-sm border border-border bg-background px-2 py-1 text-xs"
-              >
-                <option value="">+ přidat kabel…</option>
-                {unassigned.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.code}
-                  </option>
-                ))}
-              </select>
-            </div>
-          );
-        })}
+        {dayPlans.map((dp) => (
+          <DayPlanCard
+            key={dp.id}
+            projectId={props.projectId}
+            dp={dp}
+            cables={byPlan.get(dp.id) ?? []}
+            unassigned={unassigned}
+            onUpdate={onUpdate}
+            onDelete={onDelete}
+            onAssign={onAssign}
+          />
+        ))}
       </div>
       {unassigned.length > 0 && (
         <div className="mt-3 text-[10px] text-muted-foreground">
           Nezařazeno: <span className="font-mono">{unassigned.length}</span> kabelů
         </div>
       )}
+    </div>
+  );
+}
+
+const PRIORITY_LABEL: Record<string, string> = {
+  LOW: "Nízká",
+  NORMAL: "Normální",
+  HIGH: "Vysoká",
+  URGENT: "Kritická",
+};
+const STATUS_LABEL: Record<string, string> = {
+  PLANNED: "Naplánováno",
+  IN_PROGRESS: "Probíhá",
+  DONE: "Hotovo",
+  CANCELLED: "Zrušeno",
+};
+const PRIORITY_COLOR: Record<string, string> = {
+  LOW: "bg-muted text-muted-foreground",
+  NORMAL: "bg-muted text-foreground",
+  HIGH: "bg-orange-500/15 text-orange-600 dark:text-orange-400",
+  URGENT: "bg-destructive/15 text-destructive",
+};
+
+function DayPlanCard({
+  projectId,
+  dp,
+  cables,
+  unassigned,
+  onUpdate,
+  onDelete,
+  onAssign,
+}: {
+  projectId: string;
+  dp: DayPlanRow;
+  cables: BranchRow[];
+  unassigned: BranchRow[];
+  onUpdate: (patch: {
+    id: string;
+    name: string;
+    sortOrder: number;
+    spoolCount: number;
+    spoolLengthM: number;
+    plannedDate?: string | null;
+    notes?: string | null;
+    assignedTo?: string | null;
+    priority?: string;
+    status?: string;
+  }) => Promise<void> | void;
+  onDelete: (id: string) => Promise<void> | void;
+  onAssign: (cableId: string, dayPlanId: string | null) => Promise<void> | void;
+}) {
+  const capacity = dp.spoolCount * dp.spoolLengthM;
+  const [expanded, setExpanded] = useState(false);
+  const [notesDraft, setNotesDraft] = useState<string>(dp.notes ?? "");
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const qc = useQueryClient();
+
+  useEffect(() => {
+    setNotesDraft(dp.notes ?? "");
+  }, [dp.notes]);
+
+  const membersFn = useServerFn(listProjectMembersLite);
+  const members = useQuery({
+    queryKey: ["project-members-lite", projectId],
+    queryFn: () => membersFn({ data: { projectId } }),
+    enabled: expanded,
+  });
+
+  const photosFn = useServerFn(listDayPlanPhotos);
+  const addPhotoFn = useServerFn(addDayPlanPhoto);
+  const delPhotoFn = useServerFn(deleteDayPlanPhoto);
+  const photos = useQuery({
+    queryKey: ["day-plan-photos", dp.id],
+    queryFn: () => photosFn({ data: { dayPlanId: dp.id } }),
+    enabled: expanded,
+  });
+
+  function patchBase() {
+    return {
+      id: dp.id,
+      name: dp.name,
+      sortOrder: dp.sortOrder,
+      spoolCount: dp.spoolCount,
+      spoolLengthM: dp.spoolLengthM,
+    };
+  }
+
+  async function handleFiles(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try {
+      for (const file of Array.from(files)) {
+        const ext = file.name.split(".").pop() ?? "jpg";
+        const path = `${projectId}/${dp.id}/${crypto.randomUUID()}.${ext}`;
+        const up = await supabase.storage
+          .from("pull-day-plan-photos")
+          .upload(path, file, { cacheControl: "3600", upsert: false });
+        if (up.error) throw new Error(up.error.message);
+        await addPhotoFn({
+          data: { projectId, dayPlanId: dp.id, storagePath: path, caption: null },
+        });
+      }
+      qc.invalidateQueries({ queryKey: ["day-plan-photos", dp.id] });
+      qc.invalidateQueries({ queryKey: ["day-plans", projectId, dp.floorPlanId] });
+      toast.success("Fotky nahrány");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  return (
+    <div className="rounded-sm border border-border p-2">
+      <div className="mb-2 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="rounded-sm p-1 hover:bg-muted"
+          aria-label={expanded ? "Sbalit" : "Rozbalit"}
+        >
+          {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+        </button>
+        <Input
+          value={dp.name}
+          onChange={(e) => onUpdate({ ...patchBase(), name: e.target.value })}
+          className="h-7 text-xs"
+        />
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => onDelete(dp.id)}
+          className="h-7 w-7 p-0 text-destructive"
+          title="Smazat"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <div className="mb-2 flex flex-wrap items-center gap-1.5 text-[10px]">
+        <span className={`rounded-sm px-1.5 py-0.5 font-mono ${PRIORITY_COLOR[dp.priority] ?? "bg-muted"}`}>
+          {PRIORITY_LABEL[dp.priority] ?? dp.priority}
+        </span>
+        <span className="rounded-sm border border-border px-1.5 py-0.5 font-mono text-muted-foreground">
+          {STATUS_LABEL[dp.status] ?? dp.status}
+        </span>
+        {dp.plannedDate && (
+          <span className="rounded-sm border border-border px-1.5 py-0.5 font-mono text-muted-foreground">
+            {dp.plannedDate}
+          </span>
+        )}
+        {dp.photoCount > 0 && (
+          <span className="inline-flex items-center gap-1 rounded-sm border border-border px-1.5 py-0.5 font-mono text-muted-foreground">
+            <Camera className="h-3 w-3" /> {dp.photoCount}
+          </span>
+        )}
+      </div>
+
+      <div className="mb-2 grid grid-cols-2 gap-2">
+        <label className="text-[10px] text-muted-foreground">
+          Cívek
+          <Input
+            type="number"
+            min={1}
+            max={20}
+            value={dp.spoolCount}
+            onChange={(e) =>
+              onUpdate({ ...patchBase(), spoolCount: Math.max(1, Number(e.target.value) || 1) })
+            }
+            className="h-7 text-xs font-mono"
+          />
+        </label>
+        <label className="text-[10px] text-muted-foreground">
+          Metry/cívka
+          <Input
+            type="number"
+            min={1}
+            value={dp.spoolLengthM}
+            onChange={(e) =>
+              onUpdate({ ...patchBase(), spoolLengthM: Math.max(1, Number(e.target.value) || 1) })
+            }
+            className="h-7 text-xs font-mono"
+          />
+        </label>
+      </div>
+
+      {expanded && (
+        <div className="mb-2 space-y-2 rounded-sm border border-dashed border-border bg-muted/30 p-2">
+          <div className="grid grid-cols-2 gap-2">
+            <label className="text-[10px] text-muted-foreground">
+              Termín
+              <Input
+                type="date"
+                value={dp.plannedDate ?? ""}
+                onChange={(e) =>
+                  onUpdate({ ...patchBase(), plannedDate: e.target.value || null })
+                }
+                className="h-7 text-xs font-mono"
+              />
+            </label>
+            <label className="text-[10px] text-muted-foreground">
+              Přiřazen
+              <Select
+                value={dp.assignedTo ?? "__none"}
+                onValueChange={(v) =>
+                  onUpdate({ ...patchBase(), assignedTo: v === "__none" ? null : v })
+                }
+              >
+                <SelectTrigger className="h-7 text-xs">
+                  <SelectValue placeholder="Nikomu" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none">Nikomu</SelectItem>
+                  {(members.data ?? []).map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.name || m.id.slice(0, 8)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </label>
+            <label className="text-[10px] text-muted-foreground">
+              Priorita
+              <Select
+                value={dp.priority}
+                onValueChange={(v) => onUpdate({ ...patchBase(), priority: v })}
+              >
+                <SelectTrigger className="h-7 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="LOW">Nízká</SelectItem>
+                  <SelectItem value="NORMAL">Normální</SelectItem>
+                  <SelectItem value="HIGH">Vysoká</SelectItem>
+                  <SelectItem value="URGENT">Kritická</SelectItem>
+                </SelectContent>
+              </Select>
+            </label>
+            <label className="text-[10px] text-muted-foreground">
+              Stav
+              <Select
+                value={dp.status}
+                onValueChange={(v) => onUpdate({ ...patchBase(), status: v })}
+              >
+                <SelectTrigger className="h-7 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="PLANNED">Naplánováno</SelectItem>
+                  <SelectItem value="IN_PROGRESS">Probíhá</SelectItem>
+                  <SelectItem value="DONE">Hotovo</SelectItem>
+                  <SelectItem value="CANCELLED">Zrušeno</SelectItem>
+                </SelectContent>
+              </Select>
+            </label>
+          </div>
+
+          <label className="block text-[10px] text-muted-foreground">
+            Poznámka
+            <Textarea
+              value={notesDraft}
+              onChange={(e) => setNotesDraft(e.target.value)}
+              onBlur={() => {
+                if ((notesDraft || null) !== (dp.notes ?? null)) {
+                  onUpdate({ ...patchBase(), notes: notesDraft || null });
+                }
+              }}
+              placeholder="Doplňující informace, riziko, materiál…"
+              rows={3}
+              className="mt-1 text-xs"
+            />
+          </label>
+
+          <div>
+            <div className="mb-1 flex items-center justify-between">
+              <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                Fotky
+              </div>
+              <div className="flex items-center gap-1">
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => handleFiles(e.target.files)}
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-6 gap-1 text-[10px]"
+                  disabled={uploading}
+                  onClick={() => fileRef.current?.click()}
+                >
+                  <Camera className="h-3 w-3" />
+                  {uploading ? "Nahrávám…" : "Přidat"}
+                </Button>
+              </div>
+            </div>
+            <div className="grid grid-cols-4 gap-1">
+              {(photos.data ?? []).map((p) => (
+                <div key={p.id} className="group relative aspect-square overflow-hidden rounded-sm border border-border">
+                  <img src={p.url} alt="" className="h-full w-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await delPhotoFn({ data: { id: p.id } });
+                      qc.invalidateQueries({ queryKey: ["day-plan-photos", dp.id] });
+                      qc.invalidateQueries({ queryKey: ["day-plans", projectId, dp.floorPlanId] });
+                    }}
+                    className="absolute right-0.5 top-0.5 rounded-sm bg-background/80 p-0.5 opacity-0 transition-opacity group-hover:opacity-100"
+                    title="Smazat fotku"
+                  >
+                    <Trash2 className="h-3 w-3 text-destructive" />
+                  </button>
+                </div>
+              ))}
+              {(photos.data?.length ?? 0) === 0 && !photos.isLoading && (
+                <div className="col-span-4 rounded-sm border border-dashed border-border p-3 text-center text-[10px] text-muted-foreground">
+                  Zatím žádné fotky.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="mb-2 text-[10px] font-mono text-muted-foreground">
+        Kapacita: {capacity.toLocaleString("cs-CZ")} m · Kabelů: {cables.length}
+      </div>
+      <div className="mb-2 flex flex-wrap gap-1">
+        {cables.map((c) => (
+          <button
+            key={c.id}
+            type="button"
+            onClick={() => onAssign(c.id, null)}
+            title="Odebrat z bloku"
+            className="rounded-sm border border-border bg-muted/40 px-2 py-0.5 font-mono text-[10px] hover:bg-destructive/10 hover:text-destructive"
+          >
+            {c.code} ×
+          </button>
+        ))}
+        {cables.length === 0 && (
+          <span className="text-[10px] text-muted-foreground">Žádný kabel.</span>
+        )}
+      </div>
+      <select
+        value=""
+        onChange={(e) => {
+          if (e.target.value) onAssign(e.target.value, dp.id);
+        }}
+        className="w-full rounded-sm border border-border bg-background px-2 py-1 text-xs"
+      >
+        <option value="">+ přidat kabel…</option>
+        {unassigned.map((b) => (
+          <option key={b.id} value={b.id}>
+            {b.code}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
