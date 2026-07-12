@@ -3,6 +3,7 @@ import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
+  AlertTriangle,
   Cable,
   Camera,
   CheckSquare,
@@ -16,6 +17,7 @@ import {
   ShieldCheck,
   Wrench,
 } from "lucide-react";
+import { NotificationsBell } from "@/components/notifications-bell";
 
 import { supabase } from "@/integrations/supabase/client";
 import { getMyProfile } from "@/lib/orgs.functions";
