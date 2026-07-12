@@ -1046,6 +1046,8 @@ export type Database = {
       endpoints: {
         Row: {
           code: string
+          completion_status: string
+          completion_updated_at: string | null
           created_at: string
           custom_attrs: Json
           customer_code: string | null
@@ -1066,6 +1068,8 @@ export type Database = {
         }
         Insert: {
           code: string
+          completion_status?: string
+          completion_updated_at?: string | null
           created_at?: string
           custom_attrs?: Json
           customer_code?: string | null
@@ -1086,6 +1090,8 @@ export type Database = {
         }
         Update: {
           code?: string
+          completion_status?: string
+          completion_updated_at?: string | null
           created_at?: string
           custom_attrs?: Json
           customer_code?: string | null
@@ -1388,6 +1394,8 @@ export type Database = {
       patch_panels: {
         Row: {
           code: string
+          completion_status: string
+          completion_updated_at: string | null
           created_at: string
           created_by: string | null
           floor_plan_id: string | null
@@ -1402,6 +1410,8 @@ export type Database = {
         }
         Insert: {
           code: string
+          completion_status?: string
+          completion_updated_at?: string | null
           created_at?: string
           created_by?: string | null
           floor_plan_id?: string | null
@@ -1416,6 +1426,8 @@ export type Database = {
         }
         Update: {
           code?: string
+          completion_status?: string
+          completion_updated_at?: string | null
           created_at?: string
           created_by?: string | null
           floor_plan_id?: string | null
@@ -2153,6 +2165,9 @@ export type Database = {
       pull_day_plans: {
         Row: {
           assigned_to: string | null
+          completion_ready: boolean
+          completion_ready_at: string | null
+          completion_ready_by: string | null
           created_at: string
           created_by: string | null
           floor_plan_id: string | null
@@ -2171,6 +2186,9 @@ export type Database = {
         }
         Insert: {
           assigned_to?: string | null
+          completion_ready?: boolean
+          completion_ready_at?: string | null
+          completion_ready_by?: string | null
           created_at?: string
           created_by?: string | null
           floor_plan_id?: string | null
@@ -2189,6 +2207,9 @@ export type Database = {
         }
         Update: {
           assigned_to?: string | null
+          completion_ready?: boolean
+          completion_ready_at?: string | null
+          completion_ready_by?: string | null
           created_at?: string
           created_by?: string | null
           floor_plan_id?: string | null
@@ -2749,6 +2770,10 @@ export type Database = {
         Args: { p_organization_id: string }
         Returns: undefined
       }
+      mark_plan_ready_for_completion_tx: {
+        Args: { p_plan_id: string }
+        Returns: undefined
+      }
       remove_org_member_tx: {
         Args: { p_organization_id: string; p_user_id: string }
         Returns: undefined
@@ -2761,6 +2786,10 @@ export type Database = {
         Args: { p_project_id: string }
         Returns: undefined
       }
+      set_endpoint_completion_status_tx: {
+        Args: { p_endpoint_id: string; p_status: string }
+        Returns: undefined
+      }
       set_org_role_tx: {
         Args: {
           p_grant: boolean
@@ -2768,6 +2797,10 @@ export type Database = {
           p_role: Database["public"]["Enums"]["app_role"]
           p_user_id: string
         }
+        Returns: undefined
+      }
+      set_patch_panel_completion_status_tx: {
+        Args: { p_panel_id: string; p_status: string }
         Returns: undefined
       }
       set_project_role_tx: {
@@ -2780,6 +2813,10 @@ export type Database = {
         Returns: undefined
       }
       share_org: { Args: { _a: string; _b: string }; Returns: boolean }
+      unmark_plan_ready_for_completion_tx: {
+        Args: { p_plan_id: string }
+        Returns: undefined
+      }
       update_project_tx: {
         Args: {
           p_address: string
