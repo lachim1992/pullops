@@ -793,11 +793,8 @@ function PlanEditorPage() {
         <div
           ref={viewportRef}
           className="relative h-[calc(100vh-220px)] min-h-[560px] w-full overflow-hidden rounded-sm border border-border bg-muted"
-          onWheel={handleWheel}
+          style={{ cursor: isPanning ? "grabbing" : spaceDownRef.current ? "grab" : "default", touchAction: "none" }}
           onMouseDown={handleViewportMouseDown}
-          onMouseMove={handleViewportMouseMove}
-          onMouseUp={endPan}
-          onMouseLeave={endPan}
           onContextMenu={(e) => e.preventDefault()}
         >
           {/* Zoom controls */}
