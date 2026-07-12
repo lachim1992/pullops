@@ -45,14 +45,14 @@ function DashboardPage() {
   const navigate = useNavigate();
   const { t } = useT();
   const listOrgs = useServerFn(listMyOrganizations);
-  const listProjects = useServerFn(listMyProjects);
+  const fetchSummary = useServerFn(getMyDashboardSummary);
 
   const orgs = useQuery({ queryKey: ["orgs"], queryFn: () => listOrgs() });
   const activeOrgId = search.org ?? orgs.data?.[0]?.id ?? undefined;
 
-  const projects = useQuery({
-    queryKey: ["projects", activeOrgId],
-    queryFn: () => listProjects({ data: { organizationId: activeOrgId! } }),
+  const summary = useQuery({
+    queryKey: ["dashboard-summary", activeOrgId],
+    queryFn: () => fetchSummary({ data: { organizationId: activeOrgId! } }),
     enabled: !!activeOrgId,
   });
 
