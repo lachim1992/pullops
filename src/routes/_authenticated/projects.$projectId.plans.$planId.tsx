@@ -2537,109 +2537,18 @@ function DayPlanEditor(props: {
         </div>
       )}
       <div className="space-y-3">
-        {dayPlans.map((dp) => {
-          const cables = byPlan.get(dp.id) ?? [];
-          const capacity = dp.spoolCount * dp.spoolLengthM;
-          return (
-            <div key={dp.id} className="rounded-sm border border-border p-2">
-              <div className="mb-2 grid grid-cols-[minmax(0,1fr)_auto] gap-2">
-                <Input
-                  value={dp.name}
-                  onChange={(e) =>
-                    onUpdate({
-                      id: dp.id,
-                      name: e.target.value,
-                      sortOrder: dp.sortOrder,
-                      spoolCount: dp.spoolCount,
-                      spoolLengthM: dp.spoolLengthM,
-                    })
-                  }
-                  className="h-7 text-xs"
-                />
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => onDelete(dp.id)}
-                  className="h-7 text-xs text-destructive"
-                >
-                  ×
-                </Button>
-              </div>
-              <div className="mb-2 grid grid-cols-2 gap-2">
-                <label className="text-[10px] text-muted-foreground">
-                  Cívek
-                  <Input
-                    type="number"
-                    min={1}
-                    max={20}
-                    value={dp.spoolCount}
-                    onChange={(e) =>
-                      onUpdate({
-                        id: dp.id,
-                        name: dp.name,
-                        sortOrder: dp.sortOrder,
-                        spoolCount: Math.max(1, Number(e.target.value) || 1),
-                        spoolLengthM: dp.spoolLengthM,
-                      })
-                    }
-                    className="h-7 text-xs font-mono"
-                  />
-                </label>
-                <label className="text-[10px] text-muted-foreground">
-                  Metry/cívka
-                  <Input
-                    type="number"
-                    min={1}
-                    value={dp.spoolLengthM}
-                    onChange={(e) =>
-                      onUpdate({
-                        id: dp.id,
-                        name: dp.name,
-                        sortOrder: dp.sortOrder,
-                        spoolCount: dp.spoolCount,
-                        spoolLengthM: Math.max(1, Number(e.target.value) || 1),
-                      })
-                    }
-                    className="h-7 text-xs font-mono"
-                  />
-                </label>
-              </div>
-              <div className="mb-2 text-[10px] font-mono text-muted-foreground">
-                Kapacita: {capacity.toLocaleString("cs-CZ")} m · Kabelů: {cables.length}
-              </div>
-              <div className="mb-2 flex flex-wrap gap-1">
-                {cables.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => onAssign(c.id, null)}
-                    title="Odebrat z bloku"
-                    className="rounded-sm border border-border bg-muted/40 px-2 py-0.5 font-mono text-[10px] hover:bg-destructive/10 hover:text-destructive"
-                  >
-                    {c.code} ×
-                  </button>
-                ))}
-                {cables.length === 0 && (
-                  <span className="text-[10px] text-muted-foreground">Žádný kabel.</span>
-                )}
-              </div>
-              <select
-                value=""
-                onChange={(e) => {
-                  if (e.target.value) onAssign(e.target.value, dp.id);
-                }}
-                className="w-full rounded-sm border border-border bg-background px-2 py-1 text-xs"
-              >
-                <option value="">+ přidat kabel…</option>
-                {unassigned.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.code}
-                  </option>
-                ))}
-              </select>
-            </div>
-          );
-        })}
+        {dayPlans.map((dp) => (
+          <DayPlanCard
+            key={dp.id}
+            projectId={props.projectId}
+            dp={dp}
+            cables={byPlan.get(dp.id) ?? []}
+            unassigned={unassigned}
+            onUpdate={onUpdate}
+            onDelete={onDelete}
+            onAssign={onAssign}
+          />
+        ))}
       </div>
       {unassigned.length > 0 && (
         <div className="mt-3 text-[10px] text-muted-foreground">
