@@ -2558,6 +2558,54 @@ export type Database = {
           },
         ]
       }
+      user_notification_prefs: {
+        Row: {
+          created_at: string
+          email_chat_mention: boolean
+          email_defect_assigned: boolean
+          email_defect_status: boolean
+          email_project_member: boolean
+          email_task_assigned: boolean
+          inapp_chat_mention: boolean
+          inapp_defect_assigned: boolean
+          inapp_defect_status: boolean
+          inapp_project_member: boolean
+          inapp_task_assigned: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email_chat_mention?: boolean
+          email_defect_assigned?: boolean
+          email_defect_status?: boolean
+          email_project_member?: boolean
+          email_task_assigned?: boolean
+          inapp_chat_mention?: boolean
+          inapp_defect_assigned?: boolean
+          inapp_defect_status?: boolean
+          inapp_project_member?: boolean
+          inapp_task_assigned?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email_chat_mention?: boolean
+          email_defect_assigned?: boolean
+          email_defect_status?: boolean
+          email_project_member?: boolean
+          email_task_assigned?: boolean
+          inapp_chat_mention?: boolean
+          inapp_defect_assigned?: boolean
+          inapp_defect_status?: boolean
+          inapp_project_member?: boolean
+          inapp_task_assigned?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -2660,6 +2708,10 @@ export type Database = {
       is_project_member: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
+      }
+      leave_organization_tx: {
+        Args: { p_organization_id: string }
+        Returns: undefined
       }
       remove_org_member_tx: {
         Args: { p_organization_id: string; p_user_id: string }

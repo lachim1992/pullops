@@ -107,6 +107,12 @@ function DashboardPage() {
                 </Link>
               </Button>
             )}
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/settings">
+                <Settings className="mr-1 h-4 w-4" />
+                Můj profil
+              </Link>
+            </Button>
           </div>
         </div>
         <div className="flex gap-2">
