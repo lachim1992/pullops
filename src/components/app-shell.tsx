@@ -3,6 +3,7 @@ import { Link, useNavigate, useRouter } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
+  AlertTriangle,
   Cable,
   Camera,
   CheckSquare,
@@ -16,6 +17,7 @@ import {
   ShieldCheck,
   Wrench,
 } from "lucide-react";
+import { NotificationsBell } from "@/components/notifications-bell";
 
 import { supabase } from "@/integrations/supabase/client";
 import { getMyProfile } from "@/lib/orgs.functions";
@@ -141,6 +143,9 @@ export function AppShell({ children, projectId }: { children: ReactNode; project
                   <NavItem to="/projects/$projectId/work" params={{ projectId }} icon={Wrench}>
                     {t("nav.pulling")}
                   </NavItem>
+                  <NavItem to="/projects/$projectId/defects" params={{ projectId }} icon={AlertTriangle}>
+                    {t("nav.defects")}
+                  </NavItem>
                 </BranchItem>
 
                 <BranchItem value="completion" label={t("nav.completionMode")} icon={<CheckSquare className="h-3.5 w-3.5" />}>
@@ -179,6 +184,9 @@ export function AppShell({ children, projectId }: { children: ReactNode; project
       </aside>
 
       <main className="flex-1 overflow-x-hidden">
+        <div className="sticky top-0 z-20 flex h-12 items-center justify-end gap-2 border-b border-border/40 bg-background/70 px-4 backdrop-blur">
+          <NotificationsBell />
+        </div>
         <div className="mx-auto max-w-6xl px-6 py-8">{children}</div>
       </main>
     </div>
