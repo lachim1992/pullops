@@ -9,6 +9,7 @@ import {
   Camera,
   CheckSquare,
   ClipboardList,
+  FileText,
   FolderKanban,
   LayoutDashboard,
   LogOut,
@@ -257,6 +258,9 @@ function SidebarBody({
                 </NavItem>
                 <NavItem to="/projects/$projectId/defects" params={{ projectId }} icon={AlertTriangle} onClick={onNavigate}>
                   {t("nav.defects")}
+                </NavItem>
+                <NavItem to="/projects/$projectId/protocols" params={{ projectId }} icon={FileText} onClick={onNavigate}>
+                  {t("nav.protocols")}
                 </NavItem>
               </BranchItem>
 

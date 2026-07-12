@@ -62,7 +62,7 @@ import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/defects")({
   head: () => ({
-    meta: [{ title: "Závady a protokoly · PullOps" }, { name: "robots", content: "noindex" }],
+    meta: [{ title: "Závady · PullOps" }, { name: "robots", content: "noindex" }],
   }),
   component: DefectsPage,
 });
@@ -138,7 +138,7 @@ function DefectsPage() {
           <div className="mb-1 font-mono text-[11px] uppercase tracking-[0.28em] text-muted-foreground">
             Pull mode / Quality
           </div>
-          <h1 className="font-display text-3xl font-semibold tracking-tight">Závady a protokoly</h1>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">Závady</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Nahlaste závadu na kabel, endpoint nebo cokoli jiného. Fotky, komentáře, přiřazení a konverze na úkol.
           </p>
