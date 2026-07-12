@@ -399,6 +399,8 @@ function NotificationsSection() {
 
   return (
     <div className="space-y-4">
+      <PushDeviceCard />
+
       <Card title="V aplikaci" desc="Notifikace zobrazované v aplikaci a v zvonečku.">
         <ul className="divide-y divide-border">
           {inapp.map((p) => (
