@@ -9,6 +9,7 @@ import {
   Camera,
   CheckSquare,
   ClipboardList,
+  FileText,
   FolderKanban,
   LayoutDashboard,
   LogOut,
