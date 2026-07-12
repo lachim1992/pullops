@@ -88,7 +88,7 @@ function LobbyPage() {
               <MessageSquare className="h-4 w-4" /> Chat
             </TabsTrigger>
             <TabsTrigger value="tasks" className="gap-2">
-              <ListChecks className="h-4 w-4" /> Úkoly
+              <ListChecks className="h-4 w-4" /> Správa úkolů
             </TabsTrigger>
             <TabsTrigger value="photos" className="gap-2">
               <Camera className="h-4 w-4" /> Fotky
