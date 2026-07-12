@@ -13,6 +13,7 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedOrgChatRouteImport } from './routes/_authenticated/org-chat'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
@@ -57,6 +58,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedOrgChatRoute = AuthenticatedOrgChatRouteImport.update({
   id: '/org-chat',
@@ -213,6 +219,7 @@ export interface FileRoutesByFullPath {
   '/audit': typeof AuthenticatedAuditRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/org-chat': typeof AuthenticatedOrgChatRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/organizations/$orgId/settings': typeof AuthenticatedOrganizationsOrgIdSettingsRoute
   '/projects/$projectId/cable-types': typeof AuthenticatedProjectsProjectIdCableTypesRoute
   '/projects/$projectId/cables': typeof AuthenticatedProjectsProjectIdCablesRouteWithChildren
@@ -243,6 +250,7 @@ export interface FileRoutesByTo {
   '/audit': typeof AuthenticatedAuditRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/org-chat': typeof AuthenticatedOrgChatRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/organizations/$orgId/settings': typeof AuthenticatedOrganizationsOrgIdSettingsRoute
   '/projects/$projectId/cable-types': typeof AuthenticatedProjectsProjectIdCableTypesRoute
   '/projects/$projectId/completion': typeof AuthenticatedProjectsProjectIdCompletionRoute
@@ -272,6 +280,7 @@ export interface FileRoutesById {
   '/_authenticated/audit': typeof AuthenticatedAuditRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/org-chat': typeof AuthenticatedOrgChatRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/organizations/$orgId/settings': typeof AuthenticatedOrganizationsOrgIdSettingsRoute
   '/_authenticated/projects/$projectId/cable-types': typeof AuthenticatedProjectsProjectIdCableTypesRoute
   '/_authenticated/projects/$projectId/cables': typeof AuthenticatedProjectsProjectIdCablesRouteWithChildren
@@ -304,6 +313,7 @@ export interface FileRouteTypes {
     | '/audit'
     | '/dashboard'
     | '/org-chat'
+    | '/settings'
     | '/organizations/$orgId/settings'
     | '/projects/$projectId/cable-types'
     | '/projects/$projectId/cables'
@@ -334,6 +344,7 @@ export interface FileRouteTypes {
     | '/audit'
     | '/dashboard'
     | '/org-chat'
+    | '/settings'
     | '/organizations/$orgId/settings'
     | '/projects/$projectId/cable-types'
     | '/projects/$projectId/completion'
@@ -362,6 +373,7 @@ export interface FileRouteTypes {
     | '/_authenticated/audit'
     | '/_authenticated/dashboard'
     | '/_authenticated/org-chat'
+    | '/_authenticated/settings'
     | '/_authenticated/organizations/$orgId/settings'
     | '/_authenticated/projects/$projectId/cable-types'
     | '/_authenticated/projects/$projectId/cables'
@@ -422,6 +434,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/org-chat': {
       id: '/_authenticated/org-chat'
@@ -659,6 +678,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAuditRoute: typeof AuthenticatedAuditRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedOrgChatRoute: typeof AuthenticatedOrgChatRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedOrganizationsOrgIdSettingsRoute: typeof AuthenticatedOrganizationsOrgIdSettingsRoute
   AuthenticatedProjectsProjectIdCableTypesRoute: typeof AuthenticatedProjectsProjectIdCableTypesRoute
   AuthenticatedProjectsProjectIdCablesRoute: typeof AuthenticatedProjectsProjectIdCablesRouteWithChildren
@@ -681,6 +701,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAuditRoute: AuthenticatedAuditRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedOrgChatRoute: AuthenticatedOrgChatRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedOrganizationsOrgIdSettingsRoute:
     AuthenticatedOrganizationsOrgIdSettingsRoute,
   AuthenticatedProjectsProjectIdCableTypesRoute:
