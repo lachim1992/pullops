@@ -169,7 +169,11 @@ function OrgsSection() {
   async function leave(orgId: string, name: string) {
     if (!confirm(`Opravdu odejít z firmy „${name}"? Ztratíš přístup ke všem jejím projektům.`)) return;
     try {
-      await leaveFn({ data: { organizationId: orgId } });
+      const res = await leaveFn({ data: { organizationId: orgId } });
+      if (!res.ok) {
+        toast.error(res.message);
+        return;
+      }
       await qc.invalidateQueries({ queryKey: ["orgs"] });
       await qc.invalidateQueries({ queryKey: ["me"] });
       toast.success("Odešel(a) jsi z firmy");
