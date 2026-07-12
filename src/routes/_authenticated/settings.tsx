@@ -501,7 +501,7 @@ function PushDeviceCard() {
   return (
     <Card
       title="Push do telefonu / prohlížeče"
-      desc="Zapni push na každém zařízení zvlášť. Na iPhonu je potřeba nejdřív aplikaci „Přidat na plochu" v Safari a spustit ji z ikony."
+      desc={`Zapni push na každém zařízení zvlášť. Na iPhonu je potřeba nejdřív aplikaci "Přidat na plochu" v Safari a spustit ji z ikony.`}
     >
       {isIOS && !isStandalone && (
         <div className="mb-3 rounded-sm border border-accent/40 bg-accent/5 p-3 text-xs text-accent-foreground">
