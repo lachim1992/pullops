@@ -725,7 +725,7 @@ function FieldEditor({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
   const displayValue = value || (disabled ? "—" : "(prázdné, klikněte pro úpravu)");
-  useMemo(() => setDraft(value), [value]);
+  useEffect(() => setDraft(value), [value]);
 
   if (!editing) {
     return (
