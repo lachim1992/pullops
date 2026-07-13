@@ -107,7 +107,7 @@ export function AppShell({ children, projectId }: { children: ReactNode; project
             </SheetTrigger>
             <SheetContent
               side="left"
-              className="w-72 border-sidebar-border bg-sidebar p-0 text-sidebar-foreground [&>button]:text-sidebar-foreground"
+              className="w-72 border-sidebar-border bg-sidebar p-0 pt-[env(safe-area-inset-top)] text-sidebar-foreground [&>button]:top-[calc(env(safe-area-inset-top)+1rem)] [&>button]:text-sidebar-foreground"
             >
               {sidebar}
             </SheetContent>
