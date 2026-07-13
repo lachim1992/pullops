@@ -718,6 +718,17 @@ function TasksTab({ projectId }: { projectId: string }) {
                       await deleteCp({ data: { id } });
                       qc.invalidateQueries({ queryKey: ["tasks", projectId] });
                     }}
+                    onStatusChange={async (status) => {
+                      if (status === t.status) return;
+                      const list = byColumn.get(status) ?? [];
+                      const newSort = list.length > 0 ? (list[list.length - 1].sortOrder ?? 0) + 10 : 10;
+                      try {
+                        await moveFn({ data: { id: t.id, status, sortOrder: newSort } });
+                        qc.invalidateQueries({ queryKey: ["tasks", projectId] });
+                      } catch (e) {
+                        toast.error(e instanceof Error ? e.message : "Chyba přesunu");
+                      }
+                    }}
                     members={members.data ?? []}
                   />
                 ))}
