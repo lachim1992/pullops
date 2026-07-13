@@ -177,3 +177,16 @@
 @utility hairline-gold {
   border-top: 1px solid color-mix(in oklab, var(--accent) 35%, transparent);
 }
+
+.plan-canvas-surface:fullscreen {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background: var(--background);
+  z-index: 9999;
+}
+
+.plan-canvas-surface:fullscreen::backdrop {
+  background: var(--background);
+}
