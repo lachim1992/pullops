@@ -888,6 +888,7 @@ function KanbanCard({
   onAddCp,
   onToggleCp,
   onDeleteCp,
+  onStatusChange,
 }: {
   task: Task;
   assigneeName: string | null | undefined;
@@ -899,6 +900,7 @@ function KanbanCard({
   onAddCp: (label: string) => void;
   onToggleCp: (id: string, done: boolean) => void;
   onDeleteCp: (id: string) => void;
+  onStatusChange: (status: "TODO" | "IN_PROGRESS" | "DONE" | "CANCELLED") => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [cpLabel, setCpLabel] = useState("");
