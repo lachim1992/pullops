@@ -718,6 +718,17 @@ function TasksTab({ projectId }: { projectId: string }) {
                       await deleteCp({ data: { id } });
                       qc.invalidateQueries({ queryKey: ["tasks", projectId] });
                     }}
+                    onStatusChange={async (status) => {
+                      if (status === t.status) return;
+                      const list = byColumn.get(status) ?? [];
+                      const newSort = list.length > 0 ? (list[list.length - 1].sortOrder ?? 0) + 10 : 10;
+                      try {
+                        await moveFn({ data: { id: t.id, status, sortOrder: newSort } });
+                        qc.invalidateQueries({ queryKey: ["tasks", projectId] });
+                      } catch (e) {
+                        toast.error(e instanceof Error ? e.message : "Chyba přesunu");
+                      }
+                    }}
                     members={members.data ?? []}
                   />
                 ))}
@@ -888,6 +899,7 @@ function KanbanCard({
   onAddCp,
   onToggleCp,
   onDeleteCp,
+  onStatusChange,
 }: {
   task: Task;
   assigneeName: string | null | undefined;
@@ -899,6 +911,7 @@ function KanbanCard({
   onAddCp: (label: string) => void;
   onToggleCp: (id: string, done: boolean) => void;
   onDeleteCp: (id: string) => void;
+  onStatusChange: (status: "TODO" | "IN_PROGRESS" | "DONE" | "CANCELLED") => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [cpLabel, setCpLabel] = useState("");
@@ -930,6 +943,21 @@ function KanbanCard({
         >
           <Trash2 className="h-3 w-3" />
         </Button>
+      </div>
+
+      <div className="mb-1.5" onPointerDown={(e) => e.stopPropagation()}>
+        <Select value={task.status} onValueChange={(v) => onStatusChange(v as any)}>
+          <SelectTrigger className="h-7 text-[11px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUS_COLUMNS.map((c) => (
+              <SelectItem key={c.key} value={c.key} className="text-xs">
+                {c.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="mb-1.5 flex flex-wrap items-center gap-1">
@@ -1119,7 +1147,7 @@ function PhotosTab({ projectId }: { projectId: string }) {
           type="file"
           accept="image/*"
           multiple
-          className="hidden"
+          className="sr-only"
           onChange={(e) => onUpload(e.target.files)}
         />
       </div>
