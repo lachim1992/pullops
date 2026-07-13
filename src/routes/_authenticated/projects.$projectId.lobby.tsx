@@ -934,6 +934,21 @@ function KanbanCard({
         </Button>
       </div>
 
+      <div className="mb-1.5" onPointerDown={(e) => e.stopPropagation()}>
+        <Select value={task.status} onValueChange={(v) => onStatusChange(v as any)}>
+          <SelectTrigger className="h-7 text-[11px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUS_COLUMNS.map((c) => (
+              <SelectItem key={c.key} value={c.key} className="text-xs">
+                {c.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="mb-1.5 flex flex-wrap items-center gap-1">
         <span
           className={cn(
