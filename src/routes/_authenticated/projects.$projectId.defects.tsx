@@ -638,7 +638,7 @@ function DefectDetail({
               type="file"
               accept="image/*"
               multiple
-              className="hidden"
+              className="sr-only"
               onChange={(e) => onFilePick(e.target.files)}
             />
           </div>

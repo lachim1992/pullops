@@ -642,7 +642,7 @@ function ProtocolDetail({
                   type="file"
                   accept="image/*"
                   multiple
-                  className="hidden"
+                  className="sr-only"
                   onChange={(e) => upload(e.target.files)}
                 />
                 <Button

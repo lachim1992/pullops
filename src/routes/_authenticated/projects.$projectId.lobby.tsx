@@ -1119,7 +1119,7 @@ function PhotosTab({ projectId }: { projectId: string }) {
           type="file"
           accept="image/*"
           multiple
-          className="hidden"
+          className="sr-only"
           onChange={(e) => onUpload(e.target.files)}
         />
       </div>
