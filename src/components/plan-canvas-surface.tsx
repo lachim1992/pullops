@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import { Maximize2, Minimize2 } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 
 import { cn } from "@/lib/utils";
 
@@ -9,6 +12,7 @@ type PlanCanvasSurfaceProps = {
   children?: React.ReactNode;
   className?: string;
   empty?: React.ReactNode;
+  allowFullscreen?: boolean;
 };
 
 const DEFAULT_ASPECT = 1;
@@ -20,10 +24,12 @@ export function PlanCanvasSurface({
   children,
   className,
   empty,
+  allowFullscreen = true,
 }: PlanCanvasSurfaceProps) {
   const outerRef = useRef<HTMLDivElement>(null);
   const [aspect, setAspect] = useState(DEFAULT_ASPECT);
   const [size, setSize] = useState({ width: 0, height: 0 });
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
     const el = outerRef.current;
@@ -38,13 +44,32 @@ export function PlanCanvasSurface({
     return () => ro.disconnect();
   }, []);
 
+  useEffect(() => {
+    const update = () => setIsFullscreen(document.fullscreenElement === outerRef.current);
+    document.addEventListener("fullscreenchange", update);
+    return () => document.removeEventListener("fullscreenchange", update);
+  }, []);
+
+  async function toggleFullscreen() {
+    const el = outerRef.current;
+    if (!el) return;
+    if (document.fullscreenElement === el) {
+      await document.exitFullscreen();
+    } else {
+      await el.requestFullscreen();
+    }
+  }
+
   const safeAspect = Number.isFinite(aspect) && aspect > 0 ? aspect : DEFAULT_ASPECT;
   const outerAspect = size.width > 0 && size.height > 0 ? size.width / size.height : safeAspect;
   const innerWidth = outerAspect > safeAspect ? size.height * safeAspect : size.width;
   const innerHeight = outerAspect > safeAspect ? size.height : size.width / safeAspect;
 
   return (
-    <div ref={outerRef} className={cn("absolute inset-0 flex items-center justify-center", className)}>
+    <div
+      ref={outerRef}
+      className={cn("plan-canvas-surface absolute inset-0 flex items-center justify-center", className)}
+    >
       {documentUrl ? (
         <div
           className="relative overflow-hidden bg-muted"
@@ -72,6 +97,19 @@ export function PlanCanvasSurface({
         <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
           {empty ?? "Bez podkladového výkresu"}
         </div>
+      )}
+      {allowFullscreen && document.fullscreenEnabled && (
+        <Button
+          type="button"
+          size="icon"
+          variant="outline"
+          className="absolute bottom-2 right-2 z-30 h-8 w-8 border-border/70 bg-background/90 shadow-sm backdrop-blur"
+          onClick={toggleFullscreen}
+          title={isFullscreen ? "Ukončit full-screen" : "Zvětšit na full-screen"}
+          aria-label={isFullscreen ? "Ukončit full-screen" : "Zvětšit na full-screen"}
+        >
+          {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+        </Button>
       )}
     </div>
   );
