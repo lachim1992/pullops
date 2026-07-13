@@ -92,7 +92,7 @@ export function AppShell({ children, projectId }: { children: ReactNode; project
       </aside>
 
       <main className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
-        <div className="sticky top-0 z-20 flex h-12 items-center gap-2 border-b border-border/40 bg-background/70 px-3 backdrop-blur sm:px-4">
+        <div className="sticky top-0 z-20 flex min-h-12 items-center gap-2 border-b border-border/40 bg-background/70 px-3 pt-[env(safe-area-inset-top)] backdrop-blur sm:px-4 md:h-12 md:pt-0">
           {/* Mobile hamburger */}
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>

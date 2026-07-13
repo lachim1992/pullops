@@ -30,6 +30,7 @@ export function PlanCanvasSurface({
   const [aspect, setAspect] = useState(DEFAULT_ASPECT);
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [fullscreenSupported, setFullscreenSupported] = useState(false);
 
   useEffect(() => {
     const el = outerRef.current;
@@ -45,6 +46,7 @@ export function PlanCanvasSurface({
   }, []);
 
   useEffect(() => {
+    setFullscreenSupported(Boolean(document.fullscreenEnabled));
     const update = () => setIsFullscreen(document.fullscreenElement === outerRef.current);
     document.addEventListener("fullscreenchange", update);
     return () => document.removeEventListener("fullscreenchange", update);
@@ -98,7 +100,7 @@ export function PlanCanvasSurface({
           {empty ?? "Bez podkladového výkresu"}
         </div>
       )}
-      {allowFullscreen && document.fullscreenEnabled && (
+      {allowFullscreen && fullscreenSupported && (
         <Button
           type="button"
           size="icon"

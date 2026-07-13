@@ -244,7 +244,7 @@ function ChatTab({ projectId }: { projectId: string }) {
       if (!uid) throw new Error("Nepřihlášen");
       const added: Array<{ id: string; url: string | null }> = [];
       for (const file of Array.from(files)) {
-        const path = `${uid}/${projectId}/${crypto.randomUUID()}-${file.name}`;
+        const path = `${projectId}/${uid}/${crypto.randomUUID()}-${file.name}`;
         const up = await supabase.storage
           .from("project-lobby-photos")
           .upload(path, file, { upsert: false });
@@ -303,10 +303,10 @@ function ChatTab({ projectId }: { projectId: string }) {
   const photoStrip = (photos.data ?? []).slice(0, 20);
 
   return (
-    <Card className="border-border/60 overflow-hidden">
+    <Card className="card-noir overflow-hidden border-primary/35 shadow-[0_0_0_1px_color-mix(in_oklab,var(--accent)_18%,transparent),0_24px_70px_-38px_var(--accent)]">
       <CardContent className="p-0">
         {/* Photo strip */}
-        <div className="border-b border-border/60 bg-card/40 px-3 py-2">
+        <div className="border-b border-primary/20 bg-primary/5 px-3 py-2">
           <div className="mb-1.5 flex items-center justify-between">
             <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
               Live fotostream
@@ -317,7 +317,7 @@ function ChatTab({ projectId }: { projectId: string }) {
                 type="file"
                 accept="image/*"
                 multiple
-                className="hidden"
+                className="sr-only"
                 onChange={(e) => uploadFiles(e.target.files)}
               />
               <Button
@@ -363,7 +363,7 @@ function ChatTab({ projectId }: { projectId: string }) {
         </div>
 
         {/* Messages */}
-        <div ref={scrollRef} className="h-[440px] space-y-3 overflow-y-auto p-4">
+        <div ref={scrollRef} className="min-h-[420px] space-y-3 overflow-y-auto p-4 md:h-[560px]">
           {(msgs.data ?? []).length === 0 && (
             <div className="py-16 text-center text-sm text-muted-foreground">
               Zatím žádné zprávy. Napište první nebo přidejte fotku.
@@ -395,7 +395,7 @@ function ChatTab({ projectId }: { projectId: string }) {
         </div>
 
         {/* Composer */}
-        <div className="border-t border-border/60 bg-card/40 p-3">
+        <div className="border-t border-primary/20 bg-primary/5 p-3">
           {pendingAttachments.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-1.5">
               {pendingAttachments.map((a) => (
@@ -1117,7 +1117,7 @@ function PhotosTab({ projectId }: { projectId: string }) {
         const { data: userData } = await supabase.auth.getUser();
         const uid = userData.user?.id;
         if (!uid) throw new Error("Nepřihlášen");
-        const path = `${uid}/${projectId}/${crypto.randomUUID()}-${file.name}`;
+        const path = `${projectId}/${uid}/${crypto.randomUUID()}-${file.name}`;
         const up = await supabase.storage
           .from("project-lobby-photos")
           .upload(path, file, { upsert: false });
