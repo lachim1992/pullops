@@ -807,7 +807,7 @@ function PlanEditorPage() {
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div
           ref={viewportRef}
-          className="relative h-[calc(100vh-220px)] min-h-[560px] w-full overflow-hidden rounded-sm border border-border bg-muted"
+          className="field-plan-viewer relative h-[calc(100vh-220px)] min-h-[560px] w-full overflow-hidden rounded-sm border border-border bg-muted"
           style={{ cursor: isPanning ? "grabbing" : spaceDownRef.current ? "grab" : "default", touchAction: "none" }}
           onMouseDown={handleViewportMouseDown}
           onContextMenu={(e) => e.preventDefault()}
@@ -856,14 +856,16 @@ function PlanEditorPage() {
           </div>
 
           <div
-            className="absolute left-0 top-0 h-full w-full origin-top-left"
-            style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
+            className="absolute inset-0"
           >
             <PlanCanvasSurface
               documentUrl={plan.data?.documentUrl ?? null}
               mimeType={plan.data?.document?.mime_type ?? null}
               title={plan.data?.plan.name ?? "Plán"}
               empty="Bez podkladového obrázku — vyberte podklad vpravo"
+              fullscreenTargetRef={viewportRef}
+              contentClassName="origin-top-left"
+              contentStyle={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
             >
 
             <svg
