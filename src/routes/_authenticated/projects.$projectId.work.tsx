@@ -1060,6 +1060,11 @@ function PullMap({
   const containerRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ tx: 0, ty: 0, s: 1 });
   const panRef = useRef<{ startX: number; startY: number; tx0: number; ty0: number } | null>(null);
+  const selectedCable = cables.find((c) => c.id === selectedCableId) ?? null;
+  const selectedEndpoint = endpoints.find((e) => e.id === selectedEndpointId) ?? null;
+  const selectedEndpointCables = selectedEndpoint
+    ? cables.filter((c) => c.fromEndpointId === selectedEndpoint.id || c.toEndpointId === selectedEndpoint.id)
+    : [];
 
   useEffect(() => {
     const el = containerRef.current;
@@ -1080,41 +1085,75 @@ function PullMap({
     return () => el.removeEventListener("wheel", handler);
   }, []);
 
-
-  const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.button !== 0 && e.button !== 1) return;
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === "mouse" && e.button !== 0 && e.button !== 1) return;
     const target = e.target as SVGElement | HTMLElement;
     if (target instanceof SVGElement && target.tagName !== "svg") return;
+    e.currentTarget.setPointerCapture(e.pointerId);
     panRef.current = { startX: e.clientX, startY: e.clientY, tx0: view.tx, ty0: view.ty };
   };
-  const onMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!panRef.current) return;
     const dx = e.clientX - panRef.current.startX;
     const dy = e.clientY - panRef.current.startY;
     setView((v) => ({ ...v, tx: panRef.current!.tx0 + dx, ty: panRef.current!.ty0 + dy }));
   };
-  const onMouseUp = () => { panRef.current = null; };
+  const onPointerUp = () => { panRef.current = null; };
   const resetView = () => setView({ tx: 0, ty: 0, s: 1 });
 
   return (
     <div
       ref={containerRef}
-      
-      onMouseDown={onMouseDown}
-      onMouseMove={onMouseMove}
-      onMouseUp={onMouseUp}
-      onMouseLeave={onMouseUp}
-      className="relative h-[calc(100vh-220px)] min-h-[560px] w-full overflow-hidden bg-muted select-none"
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+      className="field-plan-viewer relative h-[calc(100vh-220px)] min-h-[560px] w-full touch-none select-none overflow-hidden bg-muted"
     >
-      <div
-        className="absolute inset-0"
-        style={{ transform: `translate(${view.tx}px, ${view.ty}px) scale(${view.s})`, transformOrigin: "0 0" }}
-      >
         <PlanCanvasSurface
           documentUrl={plan?.documentUrl ?? null}
           mimeType={plan?.mimeType ?? null}
           title={plan?.name ?? "Plán"}
           empty="Plán nemá podkladový obrázek."
+          fullscreenTargetRef={containerRef}
+          contentClassName="origin-top-left"
+          contentStyle={{ transform: `translate(${view.tx}px, ${view.ty}px) scale(${view.s})` }}
+          overlay={
+            <div className="pointer-events-none absolute left-3 right-14 top-3 z-20 flex flex-wrap items-start gap-2">
+              <div className="rounded-sm border border-border bg-background/90 px-2 py-1 font-mono text-[10px] shadow-sm backdrop-blur">
+                Zoom {Math.round(view.s * 100)}% · tažením posun
+              </div>
+              {selectedCable && (
+                <div className="max-w-[320px] rounded-sm border-2 border-accent bg-card/95 p-2 text-xs shadow-lg backdrop-blur">
+                  <div className="font-mono text-sm font-bold">{selectedCable.code}</div>
+                  <div className="text-muted-foreground">
+                    {selectedCable.fromEndpointCode ?? "?"} → {selectedCable.toEndpointCode ?? "?"} · {selectedCable.typeCode} · {selectedCable.meters == null ? "—" : `${selectedCable.meters.toFixed(1)} m`}
+                  </div>
+                  <div className="mt-1 font-mono text-[10px] uppercase text-foreground">
+                    {selectedCable.status === "PULLED" ? "Nataženo" : "K natažení"}
+                  </div>
+                </div>
+              )}
+              {selectedEndpoint && (
+                <div className="max-w-[340px] rounded-sm border-2 border-primary bg-card/95 p-2 text-xs shadow-lg backdrop-blur">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="font-mono text-sm font-bold">{selectedEndpoint.code}</div>
+                    <Badge variant="outline" className="font-mono text-[10px]">
+                      {selectedEndpointCables.filter((c) => c.status === "PULLED").length}/{selectedEndpointCables.length} hotovo
+                    </Badge>
+                  </div>
+                  <div className="mt-1 max-h-28 space-y-1 overflow-y-auto">
+                    {selectedEndpointCables.map((c) => (
+                      <div key={c.id} className="flex justify-between gap-2 font-mono text-[10px] text-muted-foreground">
+                        <span>{c.code}</span>
+                        <span>{c.status === "PULLED" ? "HOTOVO" : "TAHAT"}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          }
         >
         <svg viewBox="0 0 1 1" preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
           {bundles.map((b) =>
@@ -1206,7 +1245,6 @@ function PullMap({
           })}
         </svg>
         </PlanCanvasSurface>
-      </div>
 
       <div className="pointer-events-none absolute right-3 top-3 flex flex-col gap-1">
         <button
