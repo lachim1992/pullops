@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -169,8 +169,10 @@ function CompletionPlanEditor() {
                 imageUrl={fp?.documentUrl ?? null}
                 mimeType={fp?.mimeType ?? null}
                 endpoints={endpoints}
+                cables={cables}
                 selectedEndpointId={selectedEndpointId}
                 onSelect={setSelectedEndpointId}
+                onSetStatus={setEpStatus}
               />
             </section>
 
@@ -247,22 +249,121 @@ function MiniMap({
   imageUrl,
   mimeType,
   endpoints,
+  cables,
   selectedEndpointId,
   onSelect,
+  onSetStatus,
 }: {
   imageUrl: string | null;
   mimeType: string | null;
   endpoints: Array<{ id: string; code: string; kind: string | null; normX: number; normY: number; completionStatus: EndpointCompletionStatus }>;
+  cables: Array<{ id: string; code: string; status: string; fromEndpointId: string | null; toEndpointId: string | null }>;
   selectedEndpointId: string | null;
   onSelect: (id: string | null) => void;
+  onSetStatus: (endpointId: string, status: EndpointCompletionStatus) => void;
 }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const panRef = useRef<{ startX: number; startY: number; tx0: number; ty0: number } | null>(null);
+  const [view, setView] = useState({ tx: 0, ty: 0, s: 1 });
+  const selectedEndpoint = endpoints.find((ep) => ep.id === selectedEndpointId) ?? null;
+  const selectedCables = selectedEndpoint
+    ? cables.filter((c) => c.fromEndpointId === selectedEndpoint.id || c.toEndpointId === selectedEndpoint.id)
+    : [];
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const handler = (e: WheelEvent) => {
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const factor = Math.exp(-(e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY) * 0.0018);
+      setView((v) => {
+        const ns = Math.min(12, Math.max(0.5, v.s * factor));
+        const k = ns / v.s;
+        return { tx: mx - k * (mx - v.tx), ty: my - k * (my - v.ty), s: ns };
+      });
+    };
+    el.addEventListener("wheel", handler, { passive: false });
+    return () => el.removeEventListener("wheel", handler);
+  }, []);
+
+  const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "mouse" && event.button !== 0 && event.button !== 1) return;
+    const target = event.target as SVGElement | HTMLElement;
+    if (target instanceof SVGElement && target.tagName !== "svg") return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    panRef.current = { startX: event.clientX, startY: event.clientY, tx0: view.tx, ty0: view.ty };
+  };
+  const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!panRef.current) return;
+    setView((v) => ({
+      ...v,
+      tx: panRef.current!.tx0 + event.clientX - panRef.current!.startX,
+      ty: panRef.current!.ty0 + event.clientY - panRef.current!.startY,
+    }));
+  };
+  const onPointerUp = () => {
+    panRef.current = null;
+  };
+  const zoomBy = (factor: number) => setView((v) => ({ ...v, s: Math.min(12, Math.max(0.5, v.s * factor)) }));
+
   return (
-    <div className="relative aspect-[16/10] w-full bg-muted">
+    <div
+      ref={containerRef}
+      className="field-plan-viewer relative h-[calc(100vh-230px)] min-h-[620px] w-full touch-none select-none bg-muted"
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+    >
       <PlanCanvasSurface
         documentUrl={imageUrl}
         mimeType={mimeType}
         title="Plán"
         empty={<Layers className="h-10 w-10" />}
+        fullscreenTargetRef={containerRef}
+        contentClassName="origin-top-left"
+        contentStyle={{ transform: `translate(${view.tx}px, ${view.ty}px) scale(${view.s})` }}
+        overlay={
+          <>
+            <div className="pointer-events-none absolute right-3 top-3 z-20 flex flex-col gap-1">
+              <button type="button" onClick={() => zoomBy(1.2)} className="pointer-events-auto rounded-sm border border-border bg-background/90 px-2 py-1 font-mono text-xs shadow-sm">+</button>
+              <button type="button" onClick={() => zoomBy(1 / 1.2)} className="pointer-events-auto rounded-sm border border-border bg-background/90 px-2 py-1 font-mono text-xs shadow-sm">−</button>
+              <button type="button" onClick={() => setView({ tx: 0, ty: 0, s: 1 })} className="pointer-events-auto rounded-sm border border-border bg-background/90 px-2 py-1 font-mono text-[10px] shadow-sm">1:1</button>
+              <div className="rounded-sm bg-background/80 px-1 py-0.5 text-center font-mono text-[10px] text-muted-foreground">{Math.round(view.s * 100)}%</div>
+            </div>
+            {selectedEndpoint && (
+              <div className="pointer-events-auto absolute left-3 right-14 top-3 z-20 max-w-[520px] rounded-sm border-2 border-primary bg-card/95 p-3 shadow-xl backdrop-blur">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <div className="font-mono text-base font-bold uppercase">{selectedEndpoint.code}</div>
+                    <div className="text-xs text-muted-foreground">{selectedEndpoint.kind ? endpointKindInfo(selectedEndpoint.kind).label : "Endpoint"}</div>
+                  </div>
+                  <Badge variant="outline" className="font-mono text-[10px]">{EP_LABEL[selectedEndpoint.completionStatus]}</Badge>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {ENDPOINT_STATUSES.map((status) => (
+                    <Button key={status} size="sm" variant={status === selectedEndpoint.completionStatus ? "default" : "outline"} className="h-7 px-2 font-mono text-[10px]" onClick={() => onSetStatus(selectedEndpoint.id, status)}>
+                      {EP_LABEL[status]}
+                    </Button>
+                  ))}
+                </div>
+                <div className="mt-2 max-h-32 overflow-y-auto rounded-sm border border-border/60 bg-muted/30 p-2">
+                  <div className="mb-1 font-mono text-[10px] uppercase text-muted-foreground">Kabely v bodě ({selectedCables.length})</div>
+                  {selectedCables.length === 0 && <div className="text-xs text-muted-foreground">Bez kabelů.</div>}
+                  {selectedCables.map((c) => (
+                    <div key={c.id} className="flex justify-between gap-3 text-[11px]">
+                      <span className="font-mono">{c.code}</span>
+                      <span className="font-mono text-muted-foreground">{c.status}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        }
       >
       <svg viewBox="0 0 1 1" preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
         {endpoints.map((ep) => {
