@@ -10,9 +10,14 @@ type PlanCanvasSurfaceProps = {
   mimeType?: string | null;
   title: string;
   children?: React.ReactNode;
+  overlay?: React.ReactNode;
   className?: string;
+  contentClassName?: string;
+  contentStyle?: React.CSSProperties;
   empty?: React.ReactNode;
   allowFullscreen?: boolean;
+  fullscreenTargetRef?: React.RefObject<HTMLElement | null>;
+  onFullscreenChange?: (isFullscreen: boolean) => void;
 };
 
 const DEFAULT_ASPECT = 1;
@@ -22,9 +27,14 @@ export function PlanCanvasSurface({
   mimeType,
   title,
   children,
+  overlay,
   className,
+  contentClassName,
+  contentStyle,
   empty,
   allowFullscreen = true,
+  fullscreenTargetRef,
+  onFullscreenChange,
 }: PlanCanvasSurfaceProps) {
   const outerRef = useRef<HTMLDivElement>(null);
   const [aspect, setAspect] = useState(DEFAULT_ASPECT);
@@ -36,24 +46,33 @@ export function PlanCanvasSurface({
     const el = outerRef.current;
     if (!el) return;
     const update = () => {
-      const rect = el.getBoundingClientRect();
-      setSize({ width: rect.width, height: rect.height });
+      setSize({ width: el.clientWidth, height: el.clientHeight });
     };
     update();
-    const ro = new ResizeObserver(update);
+    const ro = new ResizeObserver(([entry]) => {
+      const rect = entry?.contentRect;
+      if (!rect) return update();
+      setSize({ width: rect.width, height: rect.height });
+    });
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
 
   useEffect(() => {
     setFullscreenSupported(Boolean(document.fullscreenEnabled));
-    const update = () => setIsFullscreen(document.fullscreenElement === outerRef.current);
+    const update = () => {
+      const target = fullscreenTargetRef?.current ?? outerRef.current;
+      const active = document.fullscreenElement === target;
+      setIsFullscreen(active);
+      onFullscreenChange?.(active);
+    };
+    update();
     document.addEventListener("fullscreenchange", update);
     return () => document.removeEventListener("fullscreenchange", update);
-  }, []);
+  }, [fullscreenTargetRef, onFullscreenChange]);
 
   async function toggleFullscreen() {
-    const el = outerRef.current;
+    const el = fullscreenTargetRef?.current ?? outerRef.current;
     if (!el) return;
     if (document.fullscreenElement === el) {
       await document.exitFullscreen();
@@ -74,8 +93,13 @@ export function PlanCanvasSurface({
     >
       {documentUrl ? (
         <div
-          className="relative overflow-hidden bg-muted"
-          style={{ width: innerWidth || "100%", height: innerHeight || "100%" }}
+          className={cn("plan-canvas-inner relative overflow-hidden bg-muted", contentClassName)}
+          style={{
+            width: innerWidth || "100%",
+            height: innerHeight || "100%",
+            transformOrigin: "0 0",
+            ...contentStyle,
+          }}
         >
           {mimeType === "application/pdf" || mimeType?.includes("pdf") ? (
             <PdfPlanBackground url={documentUrl} title={title} onAspect={setAspect} />
@@ -100,13 +124,18 @@ export function PlanCanvasSurface({
           {empty ?? "Bez podkladového výkresu"}
         </div>
       )}
+      {overlay}
       {allowFullscreen && fullscreenSupported && (
         <Button
           type="button"
           size="icon"
           variant="outline"
           className="absolute bottom-2 right-2 z-30 h-8 w-8 border-border/70 bg-background/90 shadow-sm backdrop-blur"
-          onClick={toggleFullscreen}
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={(event) => {
+            event.stopPropagation();
+            void toggleFullscreen();
+          }}
           title={isFullscreen ? "Ukončit full-screen" : "Zvětšit na full-screen"}
           aria-label={isFullscreen ? "Ukončit full-screen" : "Zvětšit na full-screen"}
         >
