@@ -187,6 +187,19 @@
   z-index: 9999;
 }
 
+.field-plan-viewer:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+  border: 0;
+  border-radius: 0;
+  background: var(--background);
+}
+
 .plan-canvas-surface:fullscreen::backdrop {
+  background: var(--background);
+}
+
+.field-plan-viewer:fullscreen::backdrop {
   background: var(--background);
 }
