@@ -234,7 +234,8 @@ export const getCompletionPlan = createServerFn({ method: "GET" })
       });
     }
 
-    // All endpoints referenced by plan cables + their status
+    // All endpoints on the plan's floor plan (union with cable-referenced endpoints
+    // from other floors, if any).
     let endpoints: Array<{
       id: string;
       code: string;
@@ -244,24 +245,32 @@ export const getCompletionPlan = createServerFn({ method: "GET" })
       normY: number;
       completionStatus: EndpointCompletionStatus;
     }> = [];
-    if (endpointIds.size > 0) {
-      const { data: eps, error: eperr } = await supabase
-        .from("endpoints")
-        .select("id, code, endpoint_kind, floor_plan_id, norm_x, norm_y, completion_status" as never)
-        .in("id", Array.from(endpointIds));
-      if (eperr) throw new Error(eperr.message);
-      endpoints = ((eps as any[]) ?? []).map((e) => ({
-        id: e.id as string,
-        code: e.code as string,
-        kind: (e.endpoint_kind as string | null) ?? null,
-        floorPlanId: (e.floor_plan_id as string | null) ?? null,
-        normX: Number(e.norm_x ?? 0),
-        normY: Number(e.norm_y ?? 0),
-        completionStatus: ((e.completion_status as string) ?? "PENDING") as EndpointCompletionStatus,
-      }));
+    {
+      const orClauses: string[] = [];
+      if (floorPlanId) orClauses.push(`floor_plan_id.eq.${floorPlanId}`);
+      const extraIds = Array.from(endpointIds);
+      if (extraIds.length > 0) orClauses.push(`id.in.(${extraIds.join(",")})`);
+      if (orClauses.length > 0) {
+        const { data: eps, error: eperr } = await supabase
+          .from("endpoints")
+          .select("id, code, endpoint_kind, floor_plan_id, norm_x, norm_y, completion_status" as never)
+          .eq("project_id", projectId)
+          .or(orClauses.join(","));
+        if (eperr) throw new Error(eperr.message);
+        endpoints = ((eps as any[]) ?? []).map((e) => ({
+          id: e.id as string,
+          code: e.code as string,
+          kind: (e.endpoint_kind as string | null) ?? null,
+          floorPlanId: (e.floor_plan_id as string | null) ?? null,
+          normX: Number(e.norm_x ?? 0),
+          normY: Number(e.norm_y ?? 0),
+          completionStatus: ((e.completion_status as string) ?? "PENDING") as EndpointCompletionStatus,
+        }));
+      }
     }
 
-    // Patch panels on same floor plan
+    // Patch panels on the same floor plan — either directly (panel.floor_plan_id)
+    // or via a rack on that floor.
     let panels: Array<{
       id: string;
       code: string;
@@ -270,11 +279,19 @@ export const getCompletionPlan = createServerFn({ method: "GET" })
       completionStatus: PanelCompletionStatus;
     }> = [];
     if (floorPlanId) {
-      const { data: pps, error: pperr } = await supabase
-        .from("patch_panels")
-        .select("id, code, name, port_count, floor_plan_id, completion_status" as never)
+      const { data: racks } = await supabase
+        .from("racks")
+        .select("id")
         .eq("project_id", projectId)
         .eq("floor_plan_id", floorPlanId);
+      const rackIds = (racks ?? []).map((r) => r.id as string);
+      const orClauses = [`floor_plan_id.eq.${floorPlanId}`];
+      if (rackIds.length > 0) orClauses.push(`rack_id.in.(${rackIds.join(",")})`);
+      const { data: pps, error: pperr } = await supabase
+        .from("patch_panels")
+        .select("id, code, name, port_count, floor_plan_id, rack_id, completion_status" as never)
+        .eq("project_id", projectId)
+        .or(orClauses.join(","));
       if (pperr) throw new Error(pperr.message);
       panels = ((pps as any[]) ?? []).map((p) => ({
         id: p.id as string,
@@ -284,6 +301,7 @@ export const getCompletionPlan = createServerFn({ method: "GET" })
         completionStatus: ((p.completion_status as string) ?? "PENDING") as PanelCompletionStatus,
       }));
     }
+
 
     // Floor plan + doc
     let floorPlan: {
