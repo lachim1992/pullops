@@ -441,8 +441,26 @@ export const getCompletionPlan = createServerFn({ method: "GET" })
       cables,
       endpoints,
       panels,
+      ports,
     };
   });
+
+export const setCableMeasured = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ cableId: uuid, note: z.string().max(2000).nullable().optional() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const patch: Record<string, unknown> = { status: "TERMINATED" };
+    if (data.note && data.note.trim().length > 0) patch.notes = data.note.trim();
+    const { error } = await context.supabase
+      .from("cables")
+      .update(patch as never)
+      .eq("id", data.cableId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 
 export const setEndpointCompletionStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
