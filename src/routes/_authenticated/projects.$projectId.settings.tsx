@@ -201,6 +201,50 @@ function SettingsPage() {
           Uložit
         </Button>
       </form>
+
+      <section className="mt-10 rounded-sm border border-destructive/50 bg-destructive/5 p-4">
+        <h2 className="font-mono text-sm font-bold uppercase tracking-widest text-destructive">
+          Nebezpečná zóna
+        </h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Smazání projektu je nevratné. Odstraní všechna data: plány, endpointy, kabely, patch panely,
+          dokumenty, protokoly, defekty, day plány, spulky i členy. Audit události zůstanou zachovány.
+        </p>
+        <Button
+          type="button"
+          variant="destructive"
+          size="sm"
+          className="mt-3"
+          disabled={deleting}
+          onClick={async () => {
+            const name = String((form?.name as string) ?? project.data?.name ?? "");
+            const answer = window.prompt(
+              `Pro potvrzení smazání napiš přesně název projektu:\n\n${name}`,
+            );
+            if (answer == null) return;
+            if (answer.trim() !== name.trim()) {
+              toast.error("Název nesouhlasí, mazání zrušeno");
+              return;
+            }
+            setDeleting(true);
+            try {
+              await deleteFn({ data: { id: projectId } });
+              toast.success("Projekt smazán");
+              navigate({ to: "/dashboard" });
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : "Chyba");
+              setDeleting(false);
+            }
+          }}
+        >
+          {deleting ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Trash2 className="mr-2 h-4 w-4" />
+          )}
+          Smazat projekt
+        </Button>
+      </section>
     </AppShell>
   );
 }
