@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { createFileRoute, useParams } from "@tanstack/react-router";
+import { createFileRoute, useParams, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getProject, updateProject } from "@/lib/projects.functions";
+import { deleteProject, getProject, updateProject } from "@/lib/projects.functions";
 
 const STATUSES = ["planning", "active", "on_hold", "completed", "archived"] as const;
 
