@@ -30,8 +30,11 @@ export const Route = createFileRoute("/_authenticated/projects/$projectId/settin
 
 function SettingsPage() {
   const { projectId } = useParams({ from: "/_authenticated/projects/$projectId/settings" });
+  const navigate = useNavigate();
   const fetchProject = useServerFn(getProject);
   const updateFn = useServerFn(updateProject);
+  const deleteFn = useServerFn(deleteProject);
+  const [deleting, setDeleting] = useState(false);
   const project = useQuery({
     queryKey: ["project", projectId],
     queryFn: () => fetchProject({ data: { id: projectId } }),
