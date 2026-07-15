@@ -577,3 +577,132 @@ function buildEmptyDaily(days: number) {
   return out;
 }
 
+export type ProjectHome = {
+  hub: {
+    chatRecent: number;
+    pulledPct: number;
+    completionDone: number;
+    completionTotal: number;
+    defectsOpen: number;
+    protocolsTotal: number;
+  };
+  todaysPlans: Array<{ id: string; name: string; totalCables: number }>;
+  recentActivity: Array<{
+    id: string;
+    createdAt: string;
+    author: string;
+    excerpt: string;
+  }>;
+};
+
+export const getProjectHome = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ projectId: uuid }).parse(d))
+  .handler(async ({ data, context }): Promise<ProjectHome> => {
+    const { supabase } = context;
+    const projectId = data.projectId;
+    const todayISO = new Date().toISOString().slice(0, 10);
+    const dayAgoISO = new Date(Date.now() - 24 * 3600_000).toISOString();
+
+    const [cablesRes, defRes, protoRes, chatRecentRes, plansRes, chatMsgs, endpointsRes] =
+      await Promise.all([
+        supabase.from("cables").select("status").eq("project_id", projectId),
+        supabase.from("defects").select("status").eq("project_id", projectId),
+        supabase
+          .from("project_protocols")
+          .select("id", { count: "exact", head: true })
+          .eq("project_id", projectId),
+        supabase
+          .from("project_chat_messages" as never)
+          .select("id", { count: "exact", head: true })
+          .eq("project_id", projectId)
+          .gte("created_at", dayAgoISO),
+        supabase
+          .from("pull_day_plans")
+          .select("id, name, planned_date")
+          .eq("project_id", projectId)
+          .eq("planned_date", todayISO)
+          .order("sort_order", { ascending: true }),
+        supabase
+          .from("project_chat_messages" as never)
+          .select("id, body, user_id, created_at")
+          .eq("project_id", projectId)
+          .order("created_at", { ascending: false })
+          .limit(5),
+        supabase
+          .from("endpoints")
+          .select("completion_status" as never)
+          .eq("project_id", projectId),
+      ]);
+
+    for (const r of [cablesRes, defRes, protoRes, chatRecentRes, plansRes, chatMsgs, endpointsRes]) {
+      if (r.error) throw new Error(dbErrorMessage(r.error));
+    }
+
+    const cables = cablesRes.data ?? [];
+    const total = cables.length;
+    const pulled = cables.filter((c) =>
+      ["PULLED", "TERMINATED", "TESTED", "DONE"].includes(c.status as string),
+    ).length;
+
+    const eps = (endpointsRes.data as Array<{ completion_status: string }> | null) ?? [];
+    const completionTotal = eps.length;
+    const completionDone = eps.filter((e) => e.completion_status === "DONE").length;
+
+    const defOpen = (defRes.data ?? []).filter((d) => d.status !== "RESOLVED").length;
+
+    // Count cables per today's plan
+    const planIds = (plansRes.data ?? []).map((p) => p.id as string);
+    const cablesPerPlan = new Map<string, number>();
+    if (planIds.length > 0) {
+      const { data: dpc } = await supabase
+        .from("pull_day_plan_cables")
+        .select("day_plan_id")
+        .in("day_plan_id", planIds);
+      for (const r of dpc ?? []) {
+        const k = r.day_plan_id as string;
+        cablesPerPlan.set(k, (cablesPerPlan.get(k) ?? 0) + 1);
+      }
+    }
+
+    // Recent activity from chat
+    const msgs = (chatMsgs.data as Array<{
+      id: string;
+      body: string;
+      user_id: string;
+      created_at: string;
+    }> | null) ?? [];
+    const authorIds = Array.from(new Set(msgs.map((m) => m.user_id).filter(Boolean)));
+    const nameById = new Map<string, string>();
+    if (authorIds.length > 0) {
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", authorIds);
+      for (const p of profs ?? [])
+        nameById.set(p.id as string, (p.full_name as string) ?? "");
+    }
+
+    return {
+      hub: {
+        chatRecent: chatRecentRes.count ?? 0,
+        pulledPct: total > 0 ? Math.round((pulled / total) * 100) : 0,
+        completionDone,
+        completionTotal,
+        defectsOpen: defOpen,
+        protocolsTotal: protoRes.count ?? 0,
+      },
+      todaysPlans: (plansRes.data ?? []).map((p) => ({
+        id: p.id as string,
+        name: p.name as string,
+        totalCables: cablesPerPlan.get(p.id as string) ?? 0,
+      })),
+      recentActivity: msgs.map((m) => ({
+        id: m.id,
+        createdAt: m.created_at,
+        author: nameById.get(m.user_id) || "—",
+        excerpt: (m.body ?? "").slice(0, 120),
+      })),
+    };
+  });
+
