@@ -98,7 +98,7 @@ export const cs = {
     pulling: "Tahání",
     defects: "Závady",
     protocols: "Protokoly",
-    completion: "Zakončení & test",
+    completion: "Proměření & test",
     pickProject: "Vyberte projekt na Přehledu",
   },
   dashboard: {
@@ -133,13 +133,13 @@ export const cs = {
     title: "Postup projektu",
     overall: "Celkový progres",
     pulled: "Nataženo",
-    terminated: "Zakončeno",
+    terminated: "Proměřeno",
     tested: "Změřeno",
     cablesTotal: "Kabelů celkem",
     endpointsTotal: "Endpointů",
     defectsOpen: "Otevřené závady",
     defectsResolved: "Vyřešené",
-    phaseHint: "Každý kabel má 3 fáze: natažení → zakončení → měření",
+    phaseHint: "Každý kabel má 3 fáze: natažení → proměření → test",
   },
   projectHub: {
     loading: "Načítám projekt…",
@@ -168,7 +168,7 @@ export const cs = {
     pullTitle: "Režim tahání",
     pullDesc: "Denní plán, tažení, cívky",
     completionTitle: "Kompletace",
-    completionDesc: "Zakončení, test, hotovo",
+    completionDesc: "Proměření, test, hotovo",
   },
   errors: {
     pageTitle: "Stránka se nenačetla",
