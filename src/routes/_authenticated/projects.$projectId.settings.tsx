@@ -230,6 +230,9 @@ function SettingsPage() {
             setDeleting(true);
             try {
               await deleteFn({ data: { id: projectId } });
+              await queryClient.invalidateQueries({ queryKey: ["org-dashboard"] });
+              await queryClient.invalidateQueries({ queryKey: ["projects"] });
+              queryClient.removeQueries({ queryKey: ["project", projectId] });
               toast.success("Projekt smazán");
               navigate({ to: "/dashboard" });
             } catch (e) {
