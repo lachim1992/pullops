@@ -34,6 +34,9 @@ import { useEndpointKinds } from "@/hooks/useEndpointKinds";
 import { PlanCanvasSurface } from "@/components/plan-canvas-surface";
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/endpoints")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    focus: typeof s.focus === "string" ? s.focus : undefined,
+  }),
   head: () => ({
     meta: [{ title: "Endpointy · PullOps" }, { name: "robots", content: "noindex" }],
   }),
@@ -44,12 +47,20 @@ function EndpointsPage() {
   const { projectId } = useParams({
     from: "/_authenticated/projects/$projectId/endpoints",
   });
+  const search = Route.useSearch();
   const listFn = useServerFn(listEndpoints);
   const listPlansFn = useServerFn(listFloorPlans);
   const qc = useQueryClient();
 
   const [selectedPlanId, setSelectedPlanId] = useState<string | "ALL">("ALL");
   const [selectedEndpointId, setSelectedEndpointId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (search.focus) setSelectedEndpointId(search.focus);
+  }, [search.focus]);
+
+  const kindsQuery = useEndpointKinds(projectId);
+
   const kindsQuery = useEndpointKinds(projectId);
   const kindMap = useMemo(() => {
     const m = new Map<string, { label: string; color: string }>();
