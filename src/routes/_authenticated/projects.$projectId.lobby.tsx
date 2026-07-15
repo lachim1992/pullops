@@ -77,7 +77,7 @@ function LobbyPage() {
   const { projectId } = Route.useParams();
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
-  const tab = search.tab ?? "chat";
+  const tab = search.tab ?? "tasks";
   return (
     <AppShell projectId={projectId}>
       <div className="animate-fade-in space-y-5">
@@ -86,24 +86,21 @@ function LobbyPage() {
             Projekt / Lobby
           </div>
           <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight">
-            {tab === "tasks" ? "Úkoly" : tab === "photos" ? "Fotky lobby" : "Chat"}
+            {tab === "photos" ? "Fotky lobby" : "Úkoly"}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Živý chat s fotkami, úkoly týmu a lobby fotky.
+            Úkoly týmu a lobby fotky.
           </p>
         </header>
 
         <Tabs
           value={tab}
           onValueChange={(v) =>
-            navigate({ search: { tab: v as "chat" | "tasks" | "photos" }, replace: true })
+            navigate({ search: { tab: v as "tasks" | "photos" }, replace: true })
           }
           className="w-full"
         >
-          <TabsList className="grid w-full max-w-md grid-cols-3">
-            <TabsTrigger value="chat" className="gap-2">
-              <MessageSquare className="h-4 w-4" /> Chat
-            </TabsTrigger>
+          <TabsList className="grid w-full max-w-md grid-cols-2">
             <TabsTrigger value="tasks" className="gap-2">
               <ListChecks className="h-4 w-4" /> Úkoly
             </TabsTrigger>
@@ -111,9 +108,6 @@ function LobbyPage() {
               <Camera className="h-4 w-4" /> Fotky
             </TabsTrigger>
           </TabsList>
-          <TabsContent value="chat" className="mt-4 animate-fade-in">
-            <ChatTab projectId={projectId} />
-          </TabsContent>
           <TabsContent value="tasks" className="mt-4 animate-fade-in">
             <TasksTab projectId={projectId} />
           </TabsContent>
