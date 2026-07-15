@@ -17,7 +17,7 @@ export default defineTool({
     const { data, error } = await supabaseForUser(ctx)
       .from("endpoints")
       .select(
-        "id, code, label, kind_id, floor_plan_id, x, y, completion_status, created_at",
+        "id, code, label, endpoint_kind, floor_plan_id, floor, room, norm_x, norm_y, completion_status, created_at",
       )
       .eq("project_id", projectId)
       .order("code", { ascending: true })

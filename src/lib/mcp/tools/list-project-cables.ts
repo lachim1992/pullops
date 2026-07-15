@@ -17,7 +17,7 @@ export default defineTool({
     const { data, error } = await supabaseForUser(ctx)
       .from("cables")
       .select(
-        "id, code, cable_type, status, endpoint_id, patch_panel_id, port_id, planned_length_m, actual_length_m, created_at",
+        "id, code, status, cable_type_id, from_endpoint_id, to_endpoint_id, from_port_id, to_port_id, computed_length_m, override_length_m, created_at",
       )
       .eq("project_id", projectId)
       .order("code", { ascending: true })
