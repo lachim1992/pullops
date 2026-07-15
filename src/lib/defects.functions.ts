@@ -21,6 +21,32 @@ async function projectCtx(supabase: any, projectId: string) {
   return data as { organization_id: string };
 }
 
+async function isProjectMember(
+  supabase: any,
+  projectId: string,
+  userId: string,
+): Promise<boolean> {
+  if (!userId || !projectId) return false;
+  const { data, error } = await supabase
+    .from("project_members")
+    .select("user_id")
+    .eq("project_id", projectId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return !!data;
+}
+
+async function assertProjectMember(
+  supabase: any,
+  projectId: string,
+  userId: string,
+): Promise<void> {
+  if (!(await isProjectMember(supabase, projectId, userId))) {
+    throw new Error("Uživatel není členem tohoto projektu.");
+  }
+}
+
 async function notify(
   supabase: any,
   args: {
