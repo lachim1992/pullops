@@ -56,6 +56,9 @@ import { getMyProjectCapabilities } from "@/lib/capabilities.functions";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/protocols")({
+  validateSearch: (s: Record<string, unknown>): { focus?: string } =>
+    typeof s.focus === "string" ? { focus: s.focus } : {},
+
   head: () => ({
     meta: [{ title: "Protokoly · PullOps" }, { name: "robots", content: "noindex" }],
   }),
@@ -64,6 +67,7 @@ export const Route = createFileRoute("/_authenticated/projects/$projectId/protoc
 
 function ProtocolsPage() {
   const { projectId } = Route.useParams();
+  const search = Route.useSearch();
   const qc = useQueryClient();
   const listFn = useServerFn(listProtocols);
   const capsFn = useServerFn(getMyProjectCapabilities);
@@ -80,8 +84,13 @@ function ProtocolsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
+  useEffect(() => {
+    if (search.focus) setSelectedId(search.focus);
+  }, [search.focus]);
+
   const items = list.data ?? [];
   const invalidate = () => qc.invalidateQueries({ queryKey: ["protocols", projectId] });
+
 
   return (
     <AppShell projectId={projectId}>

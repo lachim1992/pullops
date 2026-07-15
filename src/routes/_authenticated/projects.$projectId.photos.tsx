@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -38,7 +38,7 @@ const FILTERS: Array<{ key: PhotoSource | "all"; label: string; icon: typeof Cam
   { key: "endpoint", label: "Endpointy", icon: MapPin },
   { key: "defect", label: "Závady", icon: AlertTriangle },
   { key: "protocol", label: "Protokoly", icon: FileText },
-  { key: "day_plan", label: "Tahání", icon: Cable },
+  { key: "day_plan", label: "Day plány", icon: Cable },
 ];
 
 const SOURCE_META: Record<PhotoSource, { label: string; className: string; icon: typeof Camera }> = {
@@ -63,10 +63,11 @@ const SOURCE_META: Record<PhotoSource, { label: string; className: string; icon:
     icon: FileText,
   },
   day_plan: {
-    label: "Tahání",
+    label: "Day plán",
     className: "border-[color:var(--accent)]/40 bg-[color:var(--accent)]/10 text-accent",
     icon: Cable,
   },
+
 };
 
 function PhotosArchivePage() {
@@ -80,9 +81,11 @@ function PhotosArchivePage() {
     queryFn: () => fetchAll({ data: { projectId } }),
   });
 
+  const photos = query.data?.photos ?? [];
+  const warnings = query.data?.warnings ?? [];
+
   const filtered = useMemo(() => {
-    const rows = query.data ?? [];
-    return rows.filter((p) => {
+    return photos.filter((p) => {
       if (filter !== "all" && p.source !== filter) return false;
       if (q.trim()) {
         const t = q.toLowerCase();
@@ -91,7 +94,7 @@ function PhotosArchivePage() {
       }
       return true;
     });
-  }, [query.data, filter, q]);
+  }, [photos, filter, q]);
 
   const counts = useMemo(() => {
     const c: Record<PhotoSource | "all", number> = {
@@ -102,12 +105,13 @@ function PhotosArchivePage() {
       protocol: 0,
       day_plan: 0,
     };
-    for (const p of query.data ?? []) {
+    for (const p of photos) {
       c.all++;
       c[p.source]++;
     }
     return c;
-  }, [query.data]);
+  }, [photos]);
+
 
   return (
     <AppShell projectId={projectId}>
@@ -156,6 +160,12 @@ function PhotosArchivePage() {
           </div>
         </div>
 
+        {warnings.length > 0 && (
+          <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-2 text-[11px] text-amber-300">
+            Některé zdroje nešlo načíst: {warnings.join(" · ")}
+          </div>
+        )}
+
         {query.isLoading ? (
           <div className="flex items-center gap-2 text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -163,7 +173,7 @@ function PhotosArchivePage() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border/60 bg-card/30 p-12 text-center text-sm text-muted-foreground">
-            {(query.data ?? []).length === 0
+            {photos.length === 0
               ? "Zatím žádné fotky v projektu."
               : "Nic neodpovídá filtru."}
           </div>
@@ -174,6 +184,7 @@ function PhotosArchivePage() {
             ))}
           </div>
         )}
+
       </div>
     </AppShell>
   );
@@ -225,12 +236,13 @@ function PhotoCard({ p }: { p: ArchivePhoto }) {
         </div>
         <div className="mt-1.5 flex items-center justify-between gap-1">
           <Button asChild size="sm" variant="ghost" className="h-6 px-1.5 text-[10px]">
-            <Link to={p.linkTo}>
+            <a href={p.linkTo}>
               <ExternalLink className="mr-1 h-3 w-3" />
               {p.linkLabel}
-            </Link>
+            </a>
           </Button>
         </div>
+
       </div>
     </div>
   );

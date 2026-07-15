@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -61,11 +61,15 @@ import {
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/defects")({
+  validateSearch: (s: Record<string, unknown>): { focus?: string } =>
+    typeof s.focus === "string" ? { focus: s.focus } : {},
+
   head: () => ({
     meta: [{ title: "Závady · PullOps" }, { name: "robots", content: "noindex" }],
   }),
   component: DefectsPage,
 });
+
 
 type Severity = "INFO" | "DEFECT" | "CRITICAL";
 type Status = "OPEN" | "IN_PROGRESS" | "WAITING" | "RESOLVED" | "REJECTED";
@@ -86,6 +90,7 @@ const STATUS_META: Record<Status, { label: string; className: string }> = {
 
 function DefectsPage() {
   const { projectId } = Route.useParams();
+  const search = Route.useSearch();
   const qc = useQueryClient();
   const fetchList = useServerFn(listDefects);
   const fetchMembers = useServerFn(listProjectMembersLite);
@@ -94,6 +99,14 @@ function DefectsPage() {
   const [severityFilter, setSeverityFilter] = useState<"ALL" | Severity>("ALL");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "OPEN_ONLY" | Status>("OPEN_ONLY");
   const [createOpen, setCreateOpen] = useState(false);
+
+  useEffect(() => {
+    if (search.focus) {
+      setSelectedId(search.focus);
+      setStatusFilter("ALL");
+    }
+  }, [search.focus]);
+
 
   const list = useQuery({
     queryKey: ["defects", projectId],

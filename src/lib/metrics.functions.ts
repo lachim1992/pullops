@@ -585,6 +585,7 @@ export type ProjectHome = {
     completionTotal: number;
     defectsOpen: number;
     protocolsTotal: number;
+    photosTotal: number;
   };
   todaysPlans: Array<{ id: string; name: string; totalCables: number }>;
   recentActivity: Array<{
@@ -594,6 +595,7 @@ export type ProjectHome = {
     excerpt: string;
   }>;
 };
+
 
 export const getProjectHome = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -638,6 +640,37 @@ export const getProjectHome = createServerFn({ method: "GET" })
     for (const r of [cablesRes, defRes, protoRes, chatRecentRes, plansRes, chatMsgs, endpointsRes]) {
       if (r.error) throw new Error(dbErrorMessage(r.error));
     }
+
+    // Photo counts across all 5 sources (in parallel, head-only)
+    const [lobbyPhotos, endpointPhotos, defectPhotos, protocolPhotos, planPhotos] =
+      await Promise.all([
+        supabase
+          .from("project_lobby_photos")
+          .select("id", { count: "exact", head: true })
+          .eq("project_id", projectId),
+        supabase
+          .from("endpoint_photos")
+          .select("id", { count: "exact", head: true })
+          .eq("project_id", projectId),
+        supabase
+          .from("defect_photos")
+          .select("id", { count: "exact", head: true })
+          .eq("project_id", projectId),
+        supabase
+          .from("protocol_photos")
+          .select("id", { count: "exact", head: true })
+          .eq("project_id", projectId),
+        supabase
+          .from("pull_day_plan_photos")
+          .select("id", { count: "exact", head: true })
+          .eq("project_id", projectId),
+      ]);
+    const photosTotal =
+      (lobbyPhotos.count ?? 0) +
+      (endpointPhotos.count ?? 0) +
+      (defectPhotos.count ?? 0) +
+      (protocolPhotos.count ?? 0) +
+      (planPhotos.count ?? 0);
 
     const cables = cablesRes.data ?? [];
     const total = cables.length;
@@ -691,7 +724,9 @@ export const getProjectHome = createServerFn({ method: "GET" })
         completionTotal,
         defectsOpen: defOpen,
         protocolsTotal: protoRes.count ?? 0,
+        photosTotal,
       },
+
       todaysPlans: (plansRes.data ?? []).map((p) => ({
         id: p.id as string,
         name: p.name as string,
