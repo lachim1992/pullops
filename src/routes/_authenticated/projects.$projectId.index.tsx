@@ -602,3 +602,180 @@ function SectionLink({
     </Link>
   );
 }
+
+/* ---------------- Personal dashboard ---------------- */
+
+function PersonalDashboard({
+  data,
+  loading,
+  projectId,
+}: {
+  data: import("@/lib/metrics.functions").MyProjectDashboard | undefined;
+  loading: boolean;
+  projectId: string;
+}) {
+  const tasks = data?.tasks ?? {
+    today: { todo: 0, inProgress: 0, done: 0 },
+    total: { todo: 0, inProgress: 0, done: 0 },
+  };
+  const act = data?.activity ?? {
+    pull: { pulled: 0, terminated: 0, tested: 0, done: 0 },
+    completion: { endpoints: 0, panels: 0 },
+  };
+  const pullTotal = act.pull.pulled + act.pull.terminated + act.pull.tested + act.pull.done;
+  const compTotal = act.completion.endpoints + act.completion.panels;
+
+  return (
+    <div className="rounded-xl border border-border/60 bg-card/60 p-3 backdrop-blur sm:p-4">
+      <div className="mb-2 flex items-center gap-3">
+        <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
+          Můj přehled
+        </div>
+        <div className="hairline-gold h-px flex-1" />
+        {loading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+      </div>
+
+      {/* Row 1: today's tasks | Row 2: total tasks */}
+      <div className="grid gap-2 sm:grid-cols-2">
+        <TaskRow
+          label="Dnes"
+          data={tasks.today}
+          projectId={projectId}
+          tone="accent"
+        />
+        <TaskRow
+          label="Celý projekt"
+          data={tasks.total}
+          projectId={projectId}
+          tone="muted"
+        />
+      </div>
+
+      {/* Row 3: today's activity across pull + completion */}
+      <div className="mt-2 flex items-stretch gap-2 overflow-x-auto rounded-lg border border-border/50 bg-background/40 p-2">
+        <div className="flex shrink-0 items-center gap-2 pr-2">
+          <Zap className="h-3.5 w-3.5 text-accent" />
+          <div className="font-mono text-[9px] uppercase tracking-[0.22em] text-muted-foreground">
+            Dnešní aktivita
+          </div>
+        </div>
+        <ActPill icon={Cable} label="Nataženo" value={act.pull.pulled} />
+        <ActPill icon={Cable} label="Zakončeno" value={act.pull.terminated} />
+        <ActPill icon={Cable} label="Změřeno" value={act.pull.tested} />
+        <ActPill icon={CheckSquare} label="Endpoint" value={act.completion.endpoints} />
+        <ActPill icon={CheckSquare} label="Panel" value={act.completion.panels} />
+        <div className="ml-auto shrink-0 self-center font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+          <span className="text-accent">{pullTotal}</span> tahání ·{" "}
+          <span className="text-[color:var(--chart-5)]">{compTotal}</span> kompletace
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TaskRow({
+  label,
+  data,
+  projectId,
+  tone,
+}: {
+  label: string;
+  data: { todo: number; inProgress: number; done: number };
+  projectId: string;
+  tone: "accent" | "muted";
+}) {
+  return (
+    <Link
+      to="/projects/$projectId/lobby"
+      params={{ projectId }}
+      className={`flex items-center gap-2 rounded-lg border p-2 transition-colors hover:bg-card ${
+        tone === "accent"
+          ? "border-[color:var(--accent)]/40 bg-[color:var(--accent)]/5"
+          : "border-border/50 bg-background/40"
+      }`}
+    >
+      <div
+        className={`shrink-0 font-mono text-[9px] uppercase tracking-[0.22em] ${
+          tone === "accent" ? "text-accent" : "text-muted-foreground"
+        }`}
+      >
+        {label}
+      </div>
+      <div className="flex flex-1 items-center justify-around gap-1">
+        <TaskStat icon={Circle} label="K řešení" value={data.todo} color="text-muted-foreground" />
+        <TaskStat
+          icon={PlayCircle}
+          label="Probíhá"
+          value={data.inProgress}
+          color="text-[color:var(--chart-2)]"
+        />
+        <TaskStat
+          icon={CheckCircle2}
+          label="Hotovo"
+          value={data.done}
+          color="text-[color:var(--chart-5)]"
+        />
+      </div>
+    </Link>
+  );
+}
+
+function TaskStat({
+  icon: Icon,
+  label,
+  value,
+  color,
+}: {
+  icon: typeof Circle;
+  label: string;
+  value: number;
+  color: string;
+}) {
+  return (
+    <div className="flex min-w-0 flex-1 items-center gap-1.5">
+      <Icon className={`h-3.5 w-3.5 shrink-0 ${color}`} />
+      <div className="min-w-0 leading-tight">
+        <div className={`font-mono text-base font-bold tabular-nums leading-none ${color}`}>
+          {value}
+        </div>
+        <div className="mt-0.5 truncate font-mono text-[8px] uppercase tracking-[0.18em] text-muted-foreground">
+          {label}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ActPill({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof Cable;
+  label: string;
+  value: number;
+}) {
+  const active = value > 0;
+  return (
+    <div
+      className={`flex shrink-0 items-center gap-1.5 rounded-md border px-2 py-1 ${
+        active
+          ? "border-[color:var(--accent)]/40 bg-[color:var(--accent)]/10"
+          : "border-border/40 bg-transparent"
+      }`}
+    >
+      <Icon className={`h-3 w-3 ${active ? "text-accent" : "text-muted-foreground"}`} />
+      <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
+        {label}
+      </div>
+      <div
+        className={`font-mono text-xs font-bold tabular-nums ${
+          active ? "text-foreground" : "text-muted-foreground"
+        }`}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
