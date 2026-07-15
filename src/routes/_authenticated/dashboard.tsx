@@ -716,11 +716,11 @@ function ProjectsTable({ projects }: { projects: OrgDashboard["topProjects"] }) 
           {/* Mobile: compact stacked rows */}
           <ul className="divide-y divide-border/60 md:hidden">
             {sorted.map((p) => (
-              <li key={p.id}>
+              <li key={p.id} className="relative">
                 <Link
                   to="/projects/$projectId"
                   params={{ projectId: p.id }}
-                  className="group flex items-center gap-3 px-3 py-3 transition-colors hover:bg-muted/30 active:bg-muted/40"
+                  className="group flex items-center gap-3 px-3 py-3 pr-12 transition-colors hover:bg-muted/30 active:bg-muted/40"
                 >
                   <div
                     className={`h-8 w-1 shrink-0 rounded-full ${
@@ -769,8 +769,10 @@ function ProjectsTable({ projects }: { projects: OrgDashboard["topProjects"] }) 
                       )}
                     </div>
                   </div>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5 group-hover:text-accent" />
                 </Link>
+                <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                  <ProjectRowMenu projectId={p.id} projectName={p.name} />
+                </div>
               </li>
             ))}
           </ul>
