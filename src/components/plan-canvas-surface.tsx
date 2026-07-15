@@ -108,11 +108,13 @@ export function PlanCanvasSurface({
     >
       {documentUrl ? (
         <div
+          ref={contentRef}
           className={cn("plan-canvas-inner relative overflow-hidden bg-muted", contentClassName)}
           style={{
             width: innerWidth || "100%",
             height: innerHeight || "100%",
             transformOrigin: "0 0",
+            willChange: "transform",
             ...contentStyle,
           }}
         >
