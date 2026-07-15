@@ -228,7 +228,11 @@ function CompletionPlanEditor() {
           <TabBtn active={tab === "racks"} onClick={() => setTab("racks")}>
             <Server className="mr-2 h-4 w-4" /> Racky
           </TabBtn>
+          <TabBtn active={tab === "measurement"} onClick={() => setTab("measurement")}>
+            <Ruler className="mr-2 h-4 w-4" /> Měření
+          </TabBtn>
         </div>
+
 
         {tab === "endpoints" && (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
