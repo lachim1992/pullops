@@ -383,7 +383,7 @@ export const getOrgDashboard = createServerFn({ method: "GET" })
     const panels = panelsRes.data ?? [];
     const portsTotal = panels.reduce((s, p) => s + (p.port_count ?? 0), 0);
     // ports used ≈ distinct cables with from_port_id or to_port_id (rough)
-    const portsUsed = cables.filter(() => false).length; // placeholder; better below
+    // portsUsed computed by count query below
     // Compute portsUsed by another light query
     const { count: portsUsedCount } = await supabase
       .from("cables")
