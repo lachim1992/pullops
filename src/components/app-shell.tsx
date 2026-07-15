@@ -213,12 +213,9 @@ function SidebarBody({
             </NavItem>
 
             <Accordion
-              type="multiple"
-              defaultValue={
-                canManage
-                  ? ["manage", "docs", "lobby", "pull", "completion"]
-                  : ["docs", "lobby", "pull", "completion"]
-              }
+              type="single"
+              collapsible
+              defaultValue={activeBranch}
               className="mt-2"
             >
               {canManage && (
