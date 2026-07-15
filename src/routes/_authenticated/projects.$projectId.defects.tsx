@@ -61,11 +61,15 @@ import {
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/defects")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    focus: typeof s.focus === "string" ? s.focus : undefined,
+  }),
   head: () => ({
     meta: [{ title: "Závady · PullOps" }, { name: "robots", content: "noindex" }],
   }),
   component: DefectsPage,
 });
+
 
 type Severity = "INFO" | "DEFECT" | "CRITICAL";
 type Status = "OPEN" | "IN_PROGRESS" | "WAITING" | "RESOLVED" | "REJECTED";
