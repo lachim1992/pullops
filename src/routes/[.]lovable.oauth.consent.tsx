@@ -125,7 +125,7 @@ function Consent() {
               Požadovaná oprávnění
             </p>
             <ul className="text-sm">
-              {scopes.map((s) => (
+              {scopes.map((s: string) => (
                 <li key={s} className="text-foreground">
                   • {s}
                 </li>
