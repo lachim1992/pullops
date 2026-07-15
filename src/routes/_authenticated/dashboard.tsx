@@ -50,8 +50,24 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { listMyOrganizations } from "@/lib/orgs.functions";
-import { createProject } from "@/lib/projects.functions";
+import { createProject, deleteProject } from "@/lib/projects.functions";
 import { getOrgDashboard, type OrgDashboard } from "@/lib/metrics.functions";
 import { seedCeskeBudejoviceDemo } from "@/lib/demoSeed.functions";
 import { registerDocument } from "@/lib/documents.functions";
