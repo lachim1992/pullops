@@ -31,7 +31,7 @@ const COLUMNS: Array<{
   next: CompletionStatus[];
 }> = [
   { key: "PULLED", label: "Nataženo", icon: <CableIcon className="h-4 w-4" />, tone: "bg-muted", next: ["TERMINATED", "CANCELLED"] },
-  { key: "TERMINATED", label: "Zakončeno", icon: <Scissors className="h-4 w-4" />, tone: "bg-amber-500/10 text-amber-700 dark:text-amber-400", next: ["TESTED", "CANCELLED"] },
+  { key: "TERMINATED", label: "Proměřeno", icon: <Scissors className="h-4 w-4" />, tone: "bg-amber-500/10 text-amber-700 dark:text-amber-400", next: ["TESTED", "CANCELLED"] },
   { key: "TESTED", label: "Otestováno", icon: <FlaskConical className="h-4 w-4" />, tone: "bg-blue-500/10 text-blue-700 dark:text-blue-400", next: ["DONE", "CANCELLED"] },
   { key: "DONE", label: "Hotovo", icon: <CheckCircle2 className="h-4 w-4" />, tone: "bg-green-500/10 text-green-700 dark:text-green-400", next: [] },
   { key: "CANCELLED", label: "Zrušeno", icon: <XCircle className="h-4 w-4" />, tone: "bg-red-500/10 text-red-700 dark:text-red-400", next: [] },

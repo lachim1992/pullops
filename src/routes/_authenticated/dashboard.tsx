@@ -466,7 +466,7 @@ function TrendChart({ daily }: { daily: OrgDashboard["daily"] }) {
           <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
             Aktivita · 14 dní
           </div>
-          <div className="mt-0.5 font-display text-base font-semibold">Zakončení / testování</div>
+          <div className="mt-0.5 font-display text-base font-semibold">Proměření / testování</div>
         </div>
         <div className="flex gap-3 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
           <span className="inline-flex items-center gap-1">

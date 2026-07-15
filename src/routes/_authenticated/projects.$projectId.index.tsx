@@ -392,7 +392,7 @@ function CompactProgress({
 
       <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
         <MiniBar label="Nataženo" done={progress.cables.pulled} total={progress.cables.total} pct={progress.pulledPct} color="var(--chart-2)" />
-        <MiniBar label="Zakončeno" done={progress.cables.terminated} total={progress.cables.total} pct={progress.terminatedPct} color="var(--accent)" />
+        <MiniBar label="Proměřeno" done={progress.cables.terminated} total={progress.cables.total} pct={progress.terminatedPct} color="var(--accent)" />
         <MiniBar label="Změřeno" done={progress.cables.tested} total={progress.cables.total} pct={progress.testedPct} color="var(--chart-5)" />
         <MiniBar label="Hotovo" done={progress.cables.done} total={progress.cables.total} pct={donePct} color="var(--chart-4)" />
       </div>
@@ -661,7 +661,7 @@ function PersonalDashboard({
           </div>
         </div>
         <ActPill icon={Cable} label="Nataženo" value={act.pull.pulled} />
-        <ActPill icon={Cable} label="Zakončeno" value={act.pull.terminated} />
+        <ActPill icon={Cable} label="Proměřeno" value={act.pull.terminated} />
         <ActPill icon={Cable} label="Změřeno" value={act.pull.tested} />
         <ActPill icon={CheckSquare} label="Endpoint" value={act.completion.endpoints} />
         <ActPill icon={CheckSquare} label="Panel" value={act.completion.panels} />
