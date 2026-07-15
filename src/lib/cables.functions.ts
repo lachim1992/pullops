@@ -124,6 +124,20 @@ export const updateCable = createServerFn({ method: "POST" })
       .eq("id", data.id);
 
     if (error) throw new Error(dbErrorMessage(error));
+    const shouldRecompute =
+      data.cableTypeId !== undefined ||
+      data.routeId !== undefined ||
+      data.fromEndpointId !== undefined ||
+      data.toEndpointId !== undefined ||
+      data.overrideLengthM !== undefined;
+    if (shouldRecompute) {
+      const { data: c } = await supabase
+        .from("cables")
+        .select(CABLE_RECOMPUTE_COLS)
+        .eq("id", data.id)
+        .maybeSingle();
+      if (c) await recomputeOne(supabase, c);
+    }
     return { ok: true };
   });
 
@@ -159,7 +173,7 @@ async function resolveEndpointReserve(
   return cableTypeReserve;
 }
 
-async function recomputeOne(supabase: any, cable: any): Promise<number | null> {
+export async function recomputeOne(supabase: any, cable: any): Promise<number | null> {
   let cableTypeReserve = 0;
   if (cable.cable_type_id) {
     const { data: ct } = await supabase
@@ -223,6 +237,59 @@ async function recomputeOne(supabase: any, cable: any): Promise<number | null> {
   await supabase.from("cables").update({ computed_length_m: result.meters }).eq("id", cable.id);
   return result.meters;
 }
+
+const CABLE_RECOMPUTE_COLS =
+  "id, cable_type_id, route_id, override_length_m, from_endpoint_id, to_endpoint_id";
+
+export async function recomputeCablesByRoute(supabase: any, routeId: string): Promise<number> {
+  const { data: cables } = await supabase
+    .from("cables")
+    .select(CABLE_RECOMPUTE_COLS)
+    .eq("route_id", routeId);
+  let n = 0;
+  for (const c of cables ?? []) {
+    await recomputeOne(supabase, c);
+    n++;
+  }
+  return n;
+}
+
+export async function recomputeCablesByFloorPlan(
+  supabase: any,
+  floorPlanId: string,
+): Promise<number> {
+  const { data: routes } = await supabase
+    .from("cable_routes")
+    .select("id")
+    .eq("floor_plan_id", floorPlanId);
+  const ids = (routes ?? []).map((r: any) => r.id as string);
+  if (ids.length === 0) return 0;
+  const { data: cables } = await supabase
+    .from("cables")
+    .select(CABLE_RECOMPUTE_COLS)
+    .in("route_id", ids);
+  let n = 0;
+  for (const c of cables ?? []) {
+    await recomputeOne(supabase, c);
+    n++;
+  }
+  return n;
+}
+
+export async function recomputeCablesByIds(supabase: any, cableIds: string[]): Promise<number> {
+  if (cableIds.length === 0) return 0;
+  const { data: cables } = await supabase
+    .from("cables")
+    .select(CABLE_RECOMPUTE_COLS)
+    .in("id", cableIds);
+  let n = 0;
+  for (const c of cables ?? []) {
+    await recomputeOne(supabase, c);
+    n++;
+  }
+  return n;
+}
+
 
 export const recomputeCableLength = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
