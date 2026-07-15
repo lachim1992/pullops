@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { createFileRoute, useParams, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Loader2, Trash2 } from "lucide-react";
@@ -34,6 +34,7 @@ function SettingsPage() {
   const fetchProject = useServerFn(getProject);
   const updateFn = useServerFn(updateProject);
   const deleteFn = useServerFn(deleteProject);
+  const queryClient = useQueryClient();
   const [deleting, setDeleting] = useState(false);
   const project = useQuery({
     queryKey: ["project", projectId],
@@ -229,6 +230,9 @@ function SettingsPage() {
             setDeleting(true);
             try {
               await deleteFn({ data: { id: projectId } });
+              await queryClient.invalidateQueries({ queryKey: ["org-dashboard"] });
+              await queryClient.invalidateQueries({ queryKey: ["projects"] });
+              queryClient.removeQueries({ queryKey: ["project", projectId] });
               toast.success("Projekt smazán");
               navigate({ to: "/dashboard" });
             } catch (e) {

@@ -14,12 +14,14 @@ import {
   Clock,
   FolderKanban,
   Loader2,
+  MoreVertical,
   Plug,
   Plus,
   Ruler,
   Server,
   Settings,
   Sparkles,
+  Trash2,
   Trophy,
   Wrench,
   Zap,
@@ -48,8 +50,24 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { listMyOrganizations } from "@/lib/orgs.functions";
-import { createProject } from "@/lib/projects.functions";
+import { createProject, deleteProject } from "@/lib/projects.functions";
 import { getOrgDashboard, type OrgDashboard } from "@/lib/metrics.functions";
 import { seedCeskeBudejoviceDemo } from "@/lib/demoSeed.functions";
 import { registerDocument } from "@/lib/documents.functions";
@@ -698,11 +716,11 @@ function ProjectsTable({ projects }: { projects: OrgDashboard["topProjects"] }) 
           {/* Mobile: compact stacked rows */}
           <ul className="divide-y divide-border/60 md:hidden">
             {sorted.map((p) => (
-              <li key={p.id}>
+              <li key={p.id} className="relative">
                 <Link
                   to="/projects/$projectId"
                   params={{ projectId: p.id }}
-                  className="group flex items-center gap-3 px-3 py-3 transition-colors hover:bg-muted/30 active:bg-muted/40"
+                  className="group flex items-center gap-3 px-3 py-3 pr-12 transition-colors hover:bg-muted/30 active:bg-muted/40"
                 >
                   <div
                     className={`h-8 w-1 shrink-0 rounded-full ${
@@ -751,8 +769,10 @@ function ProjectsTable({ projects }: { projects: OrgDashboard["topProjects"] }) 
                       )}
                     </div>
                   </div>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5 group-hover:text-accent" />
                 </Link>
+                <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                  <ProjectRowMenu projectId={p.id} projectName={p.name} />
+                </div>
               </li>
             ))}
           </ul>
@@ -858,11 +878,115 @@ function ProjectRow({
         )}
       </td>
       <td className="px-3 py-2.5 text-right">
-        <ChevronRight className="ml-auto h-4 w-4 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5 group-hover:text-accent" />
+        <div className="flex items-center justify-end gap-1">
+          <ProjectRowMenu projectId={p.id} projectName={p.name} />
+          <ChevronRight className="h-4 w-4 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5 group-hover:text-accent" />
+        </div>
       </td>
     </tr>
   );
 }
+
+function ProjectRowMenu({ projectId, projectName }: { projectId: string; projectName: string }) {
+  const [open, setOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmName, setConfirmName] = useState("");
+  const queryClient = useQueryClient();
+  const deleteFn = useServerFn(deleteProject);
+
+  const stop = (e: React.SyntheticEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+  };
+
+  async function handleDelete() {
+    if (confirmName.trim() !== projectName.trim()) {
+      toast.error("Název nesouhlasí");
+      return;
+    }
+    setDeleting(true);
+    try {
+      await deleteFn({ data: { id: projectId } });
+      toast.success("Projekt smazán");
+      await queryClient.invalidateQueries({ queryKey: ["org-dashboard"] });
+      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+      setOpen(false);
+      setConfirmName("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Chyba při mazání");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild onClick={stop}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            aria-label="Možnosti projektu"
+          >
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" onClick={stop}>
+          <DropdownMenuItem
+            className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+            onSelect={(e) => {
+              e.preventDefault();
+              setOpen(true);
+            }}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Smazat projekt
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <AlertDialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setConfirmName(""); }}>
+        <AlertDialogContent onClick={stop}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Smazat projekt?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tato akce je nevratná. Odstraní všechna data projektu: plány, endpointy, kabely,
+              patch panely, dokumenty, protokoly, závady, day plány, špulky i členy. Audit události
+              zůstanou zachovány.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor={`confirm-${projectId}`} className="text-xs text-muted-foreground">
+              Pro potvrzení napiš přesný název projektu: <span className="font-mono text-foreground">{projectName}</span>
+            </Label>
+            <Input
+              id={`confirm-${projectId}`}
+              value={confirmName}
+              onChange={(e) => setConfirmName(e.target.value)}
+              placeholder={projectName}
+              autoComplete="off"
+              autoFocus
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Zrušit</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); void handleDelete(); }}
+              disabled={deleting || confirmName.trim() !== projectName.trim()}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+              Smazat
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
+
 
 /* ────────────────────────────────────────────────────────────────────── */
 
