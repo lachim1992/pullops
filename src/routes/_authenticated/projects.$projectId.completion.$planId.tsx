@@ -2,14 +2,24 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, CheckCircle2, Layers, Server, Undo2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Layers, Ruler, Server, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import {
   getCompletionPlan,
+  setCableMeasured,
   setEndpointCompletionStatus,
   setPatchPanelCompletionStatus,
   unmarkPlanReadyForCompletion,
@@ -30,7 +40,7 @@ export const Route = createFileRoute("/_authenticated/projects/$projectId/comple
 const EP_LABEL: Record<EndpointCompletionStatus, string> = {
   PENDING: "Čeká",
   PULLED: "Protaženo",
-  TERMINATED: "Zakončeno",
+  TERMINATED: "Proměřeno",
   TESTED: "Otestováno",
   DONE: "Hotovo",
 };
@@ -49,7 +59,23 @@ const PANEL_LABEL: Record<PanelCompletionStatus, string> = {
   DONE: "Hotovo",
 };
 
-type Tab = "endpoints" | "racks";
+const MEASURED_STATUSES = new Set(["TERMINATED", "TESTED", "DONE"]);
+
+type Tab = "endpoints" | "racks" | "measurement";
+type PortRow = {
+  id: string;
+  panelId: string;
+  portNumber: number;
+  label: string | null;
+  cable: {
+    id: string;
+    code: string;
+    status: string;
+    notes: string | null;
+    peerEndpointCode: string | null;
+  } | null;
+};
+
 
 function CompletionPlanEditor() {
   const { projectId, planId } = Route.useParams();
