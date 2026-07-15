@@ -159,6 +159,12 @@ function PhotosArchivePage() {
           </div>
         </div>
 
+        {warnings.length > 0 && (
+          <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-2 text-[11px] text-amber-300">
+            Některé zdroje nešlo načíst: {warnings.join(" · ")}
+          </div>
+        )}
+
         {query.isLoading ? (
           <div className="flex items-center gap-2 text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -166,7 +172,7 @@ function PhotosArchivePage() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border/60 bg-card/30 p-12 text-center text-sm text-muted-foreground">
-            {(query.data ?? []).length === 0
+            {photos.length === 0
               ? "Zatím žádné fotky v projektu."
               : "Nic neodpovídá filtru."}
           </div>
@@ -177,6 +183,7 @@ function PhotosArchivePage() {
             ))}
           </div>
         )}
+
       </div>
     </AppShell>
   );
