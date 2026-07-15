@@ -295,6 +295,16 @@ export const assignDefect = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: uuid, assignedTo: uuid.nullable() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const { data: defBefore, error: errBefore } = await supabase
+      .from("defects")
+      .select("project_id")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (errBefore) throw new Error(errBefore.message);
+    if (!defBefore) throw new Error("Závada nenalezena");
+    if (data.assignedTo) {
+      await assertProjectMember(supabase, (defBefore as any).project_id, data.assignedTo);
+    }
     const { data: def, error } = await supabase
       .from("defects")
       .update({ assigned_to: data.assignedTo } as never)
@@ -341,12 +351,13 @@ export const addDefectComment = createServerFn({ method: "POST" })
       .select("id")
       .single();
     if (error) throw new Error(error.message);
-    // Notify the other party
+    // Notify the other party — only if they are still project members
     const others = new Set<string>();
     for (const uid of [(def as any).assigned_to, (def as any).reported_by]) {
       if (uid && uid !== userId) others.add(uid);
     }
     for (const uid of others) {
+      if (!(await isProjectMember(supabase, (def as any).project_id, uid))) continue;
       await notify(supabase, {
         userId: uid,
         projectId: (def as any).project_id,
