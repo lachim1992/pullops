@@ -595,6 +595,7 @@ function TasksTab({ projectId }: { projectId: string }) {
   const [open, setOpen] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+  const [doneCollapsed, setDoneCollapsed] = useState(true);
 
   const byColumn = useMemo(() => {
     const map = new Map<string, Task[]>();
