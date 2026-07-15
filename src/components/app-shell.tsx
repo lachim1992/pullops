@@ -208,20 +208,19 @@ function SidebarBody({
 
             <Accordion
               type="multiple"
-              defaultValue={canManage ? ["manage", "lobby", "pull", "completion"] : ["lobby", "pull", "completion"]}
+              defaultValue={
+                canManage
+                  ? ["manage", "docs", "lobby", "pull", "completion"]
+                  : ["docs", "lobby", "pull", "completion"]
+              }
               className="mt-2"
             >
               {canManage && (
-                <BranchItem value="manage" label={t("nav.manage")} icon={<ShieldCheck className="h-3.5 w-3.5" />}>
-                  <NavItem to="/projects/$projectId/documents" params={{ projectId }} icon={ClipboardList} onClick={onNavigate}>
-                    {t("nav.documents")}
-                  </NavItem>
-                  <NavItem to="/projects/$projectId/plans" params={{ projectId }} icon={RouteIcon} onClick={onNavigate}>
-                    {t("nav.plans")}
-                  </NavItem>
-                  <NavItem to="/projects/$projectId/endpoints" params={{ projectId }} icon={Wrench} onClick={onNavigate}>
-                    {t("nav.endpoints")}
-                  </NavItem>
+                <BranchItem
+                  value="manage"
+                  label={t("nav.manage")}
+                  icon={<ShieldCheck className="h-3.5 w-3.5" />}
+                >
                   <NavItem to="/projects/$projectId/cable-types" params={{ projectId }} icon={Cable} onClick={onNavigate}>
                     {t("nav.cableTypes")}
                   </NavItem>
@@ -246,9 +245,48 @@ function SidebarBody({
                 </BranchItem>
               )}
 
+              <BranchItem
+                value="docs"
+                label={t("nav.docsAndPlans")}
+                icon={<RouteIcon className="h-3.5 w-3.5" />}
+              >
+                <NavItem to="/projects/$projectId/plans" params={{ projectId }} icon={RouteIcon} onClick={onNavigate}>
+                  {t("nav.plans")}
+                </NavItem>
+                <NavItem to="/projects/$projectId/endpoints" params={{ projectId }} icon={Wrench} onClick={onNavigate}>
+                  {t("nav.endpoints")}
+                </NavItem>
+                <NavItem to="/projects/$projectId/documents" params={{ projectId }} icon={ClipboardList} onClick={onNavigate}>
+                  {t("nav.documents")}
+                </NavItem>
+              </BranchItem>
+
               <BranchItem value="lobby" label={t("nav.lobby")} icon={<Camera className="h-3.5 w-3.5" />}>
-                <NavItem to="/projects/$projectId/lobby" params={{ projectId }} icon={ClipboardList} onClick={onNavigate}>
-                  {t("nav.lobbyDesc")}
+                <NavItem
+                  to="/projects/$projectId/lobby"
+                  params={{ projectId }}
+                  search={{ tab: "chat" as const }}
+                  icon={MessageSquare}
+                  onClick={onNavigate}
+                >
+                  {t("nav.chat")}
+                </NavItem>
+                <NavItem
+                  to="/projects/$projectId/lobby"
+                  params={{ projectId }}
+                  search={{ tab: "tasks" as const }}
+                  icon={CheckSquare}
+                  onClick={onNavigate}
+                >
+                  {t("nav.tasks")}
+                </NavItem>
+                <NavItem
+                  to="/projects/$projectId/photos"
+                  params={{ projectId }}
+                  icon={Camera}
+                  onClick={onNavigate}
+                >
+                  {t("nav.photoArchive")}
                 </NavItem>
               </BranchItem>
 
@@ -272,6 +310,7 @@ function SidebarBody({
             </Accordion>
           </div>
         )}
+
 
         {!projectId && (
           <NavGroup label={t("nav.project")}>
