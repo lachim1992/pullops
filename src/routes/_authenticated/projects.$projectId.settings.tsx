@@ -34,6 +34,7 @@ function SettingsPage() {
   const fetchProject = useServerFn(getProject);
   const updateFn = useServerFn(updateProject);
   const deleteFn = useServerFn(deleteProject);
+  const queryClient = useQueryClient();
   const [deleting, setDeleting] = useState(false);
   const project = useQuery({
     queryKey: ["project", projectId],
