@@ -339,8 +339,13 @@ function MiniMap({
     let pinchZoom = 1;
     let pinchCenter = { x: 0, y: 0 };
     const dist = (a: Touch, b: Touch) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+    const isInteractive = (target: EventTarget | null) => {
+      const el = target as Element | null;
+      return !!el?.closest?.("button, a, input, textarea, select, [role='button'], [data-no-pan]");
+    };
     const onStart = (e: TouchEvent) => {
       if (e.touches.length === 1) {
+        if (isInteractive(e.target)) return;
         const t = e.target as Element | null;
         if (t && t instanceof SVGElement && t.tagName !== "svg") return;
         mode = "pan";
@@ -407,6 +412,7 @@ function MiniMap({
     if (event.pointerType !== "mouse") return;
     if (event.button !== 0 && event.button !== 1) return;
     const target = event.target as SVGElement | HTMLElement;
+    if ((target as Element).closest?.("button, a, input, textarea, select, [role='button'], [data-no-pan]")) return;
     if (target instanceof SVGElement && target.tagName !== "svg") return;
     event.currentTarget.setPointerCapture(event.pointerId);
     panRef.current = { startX: event.clientX, startY: event.clientY, tx0: viewRef.current.tx, ty0: viewRef.current.ty };
