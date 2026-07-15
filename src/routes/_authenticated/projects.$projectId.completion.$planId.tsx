@@ -806,3 +806,92 @@ function PanelCard({
     </div>
   );
 }
+
+function MeasurementPanelCard({
+  panel,
+  ports,
+  canEdit,
+  onMeasure,
+}: {
+  panel: { id: string; code: string; name: string | null; portCount: number };
+  ports: PortRow[];
+  canEdit: boolean;
+  onMeasure: (port: PortRow) => void;
+}) {
+  const measured = ports.filter((p) => p.cable && MEASURED_STATUSES.has(p.cable.status)).length;
+  const withCable = ports.filter((p) => p.cable).length;
+  return (
+    <div className="rounded-sm border border-border bg-card">
+      <div className="flex items-center justify-between border-b border-border/60 px-3 py-2">
+        <div>
+          <div className="font-mono text-sm font-bold uppercase">{panel.code}</div>
+          <div className="text-[11px] text-muted-foreground">
+            {panel.name ?? "—"} · {panel.portCount} portů
+          </div>
+        </div>
+        <Badge variant="outline" className="font-mono text-[10px]">
+          {measured}/{withCable} proměřeno
+        </Badge>
+      </div>
+      <div className="divide-y divide-border/40">
+        {ports.length === 0 && (
+          <div className="px-3 py-3 text-center text-[11px] text-muted-foreground">
+            Panel nemá porty.
+          </div>
+        )}
+        {ports.map((port) => {
+          const cable = port.cable;
+          const isMeasured = !!cable && MEASURED_STATUSES.has(cable.status);
+          const hasCable = !!cable;
+          return (
+            <button
+              key={port.id}
+              type="button"
+              disabled={!hasCable || !canEdit}
+              onClick={() => onMeasure(port)}
+              className={cn(
+                "flex w-full items-center justify-between gap-2 px-3 py-2 text-left transition-colors",
+                hasCable && canEdit && "hover:bg-muted/50",
+                !hasCable && "opacity-60",
+                !canEdit && "cursor-default",
+              )}
+            >
+              <div className="flex min-w-0 items-center gap-2">
+                <span
+                  className={cn(
+                    "inline-flex h-6 w-8 items-center justify-center rounded-sm border font-mono text-[11px] font-bold",
+                    isMeasured
+                      ? "border-primary bg-primary/15 text-primary"
+                      : hasCable
+                        ? "border-border bg-muted/40"
+                        : "border-dashed border-border text-muted-foreground",
+                  )}
+                >
+                  {port.portNumber}
+                </span>
+                <div className="min-w-0">
+                  <div className="truncate font-mono text-[11px]">
+                    {cable ? cable.code : port.label ?? "—"}
+                  </div>
+                  <div className="truncate text-[10px] text-muted-foreground">
+                    {cable
+                      ? cable.peerEndpointCode
+                        ? `→ ${cable.peerEndpointCode}`
+                        : "bez endpointu"
+                      : "bez kabelu"}
+                  </div>
+                </div>
+              </div>
+              <Badge
+                variant={isMeasured ? "default" : "outline"}
+                className="font-mono text-[10px]"
+              >
+                {isMeasured ? "Proměřeno" : hasCable ? "Čeká" : "—"}
+              </Badge>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
