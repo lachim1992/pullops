@@ -302,6 +302,91 @@ export const getCompletionPlan = createServerFn({ method: "GET" })
       }));
     }
 
+    // Patch ports for these panels + cables connected via ports
+    let ports: Array<{
+      id: string;
+      panelId: string;
+      portNumber: number;
+      label: string | null;
+      cable: {
+        id: string;
+        code: string;
+        status: string;
+        notes: string | null;
+        peerEndpointCode: string | null;
+      } | null;
+    }> = [];
+    if (panels.length > 0) {
+      const panelIds = panels.map((p) => p.id);
+      const { data: portRows, error: portErr } = await supabase
+        .from("patch_ports")
+        .select("id, panel_id, port_number, label")
+        .in("panel_id", panelIds)
+        .order("port_number", { ascending: true });
+      if (portErr) throw new Error(portErr.message);
+      const portIds = (portRows ?? []).map((p) => p.id as string);
+      const portCables = new Map<
+        string,
+        { id: string; code: string; status: string; notes: string | null; peerEndpointId: string | null }
+      >();
+      const peerEndpointIds = new Set<string>();
+      if (portIds.length > 0) {
+        const { data: cbs } = await supabase
+          .from("cables")
+          .select(
+            "id, code, status, notes, from_port_id, to_port_id, from_endpoint_id, to_endpoint_id",
+          )
+          .eq("project_id", projectId)
+          .or(`from_port_id.in.(${portIds.join(",")}),to_port_id.in.(${portIds.join(",")})`);
+        for (const c of (cbs as any[]) ?? []) {
+          const fromPort = (c.from_port_id as string | null) ?? null;
+          const toPort = (c.to_port_id as string | null) ?? null;
+          const peerEp = fromPort
+            ? ((c.to_endpoint_id as string | null) ?? null)
+            : ((c.from_endpoint_id as string | null) ?? null);
+          if (peerEp) peerEndpointIds.add(peerEp);
+          const key = fromPort ?? toPort;
+          if (key) {
+            portCables.set(key, {
+              id: c.id as string,
+              code: c.code as string,
+              status: c.status as string,
+              notes: (c.notes as string | null) ?? null,
+              peerEndpointId: peerEp,
+            });
+          }
+        }
+      }
+      const peerCodes = new Map<string, string>();
+      if (peerEndpointIds.size > 0) {
+        const { data: eps } = await supabase
+          .from("endpoints")
+          .select("id, code")
+          .in("id", Array.from(peerEndpointIds));
+        for (const e of eps ?? []) peerCodes.set(e.id as string, e.code as string);
+      }
+      ports = (portRows ?? []).map((p) => {
+        const c = portCables.get(p.id as string);
+        return {
+          id: p.id as string,
+          panelId: p.panel_id as string,
+          portNumber: Number(p.port_number ?? 0),
+          label: (p.label as string | null) ?? null,
+          cable: c
+            ? {
+                id: c.id,
+                code: c.code,
+                status: c.status,
+                notes: c.notes,
+                peerEndpointCode: c.peerEndpointId ? peerCodes.get(c.peerEndpointId) ?? null : null,
+              }
+            : null,
+        };
+      });
+    }
+
+
+
 
     // Floor plan + doc
     let floorPlan: {
