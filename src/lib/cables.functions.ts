@@ -124,6 +124,20 @@ export const updateCable = createServerFn({ method: "POST" })
       .eq("id", data.id);
 
     if (error) throw new Error(dbErrorMessage(error));
+    const shouldRecompute =
+      data.cableTypeId !== undefined ||
+      data.routeId !== undefined ||
+      data.fromEndpointId !== undefined ||
+      data.toEndpointId !== undefined ||
+      data.overrideLengthM !== undefined;
+    if (shouldRecompute) {
+      const { data: c } = await supabase
+        .from("cables")
+        .select(CABLE_RECOMPUTE_COLS)
+        .eq("id", data.id)
+        .maybeSingle();
+      if (c) await recomputeOne(supabase, c);
+    }
     return { ok: true };
   });
 

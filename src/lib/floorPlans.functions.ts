@@ -195,5 +195,7 @@ export const setCalibration = createServerFn({ method: "POST" })
       { onConflict: "floor_plan_id" },
     );
     if (error) throw new Error(dbErrorMessage(error));
+    const { recomputeCablesByFloorPlan } = await import("@/lib/cables.functions");
+    await recomputeCablesByFloorPlan(supabase, data.floorPlanId);
     return { ok: true };
   });
