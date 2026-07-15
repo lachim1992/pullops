@@ -90,6 +90,7 @@ const STATUS_META: Record<Status, { label: string; className: string }> = {
 
 function DefectsPage() {
   const { projectId } = Route.useParams();
+  const search = Route.useSearch();
   const qc = useQueryClient();
   const fetchList = useServerFn(listDefects);
   const fetchMembers = useServerFn(listProjectMembersLite);
@@ -98,6 +99,14 @@ function DefectsPage() {
   const [severityFilter, setSeverityFilter] = useState<"ALL" | Severity>("ALL");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "OPEN_ONLY" | Status>("OPEN_ONLY");
   const [createOpen, setCreateOpen] = useState(false);
+
+  useEffect(() => {
+    if (search.focus) {
+      setSelectedId(search.focus);
+      setStatusFilter("ALL");
+    }
+  }, [search.focus]);
+
 
   const list = useQuery({
     queryKey: ["defects", projectId],
