@@ -139,7 +139,7 @@ export const cs = {
     endpointsTotal: "Endpointů",
     defectsOpen: "Otevřené závady",
     defectsResolved: "Vyřešené",
-    phaseHint: "Každý kabel má 3 fáze: natažení → zakončení → měření",
+    phaseHint: "Každý kabel má 3 fáze: natažení → proměření → test",
   },
   projectHub: {
     loading: "Načítám projekt…",
