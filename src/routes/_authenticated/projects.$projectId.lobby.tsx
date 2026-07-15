@@ -62,7 +62,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const searchSchema = z.object({
-  tab: z.enum(["chat", "tasks", "photos"]).optional(),
+  tab: z.enum(["tasks", "photos"]).optional(),
 });
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/lobby")({
@@ -77,7 +77,7 @@ function LobbyPage() {
   const { projectId } = Route.useParams();
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
-  const tab = search.tab ?? "chat";
+  const tab = search.tab ?? "tasks";
   return (
     <AppShell projectId={projectId}>
       <div className="animate-fade-in space-y-5">
@@ -86,24 +86,21 @@ function LobbyPage() {
             Projekt / Lobby
           </div>
           <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight">
-            {tab === "tasks" ? "Úkoly" : tab === "photos" ? "Fotky lobby" : "Chat"}
+            {tab === "photos" ? "Fotky lobby" : "Úkoly"}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Živý chat s fotkami, úkoly týmu a lobby fotky.
+            Úkoly týmu a lobby fotky.
           </p>
         </header>
 
         <Tabs
           value={tab}
           onValueChange={(v) =>
-            navigate({ search: { tab: v as "chat" | "tasks" | "photos" }, replace: true })
+            navigate({ search: { tab: v as "tasks" | "photos" }, replace: true })
           }
           className="w-full"
         >
-          <TabsList className="grid w-full max-w-md grid-cols-3">
-            <TabsTrigger value="chat" className="gap-2">
-              <MessageSquare className="h-4 w-4" /> Chat
-            </TabsTrigger>
+          <TabsList className="grid w-full max-w-md grid-cols-2">
             <TabsTrigger value="tasks" className="gap-2">
               <ListChecks className="h-4 w-4" /> Úkoly
             </TabsTrigger>
@@ -111,9 +108,6 @@ function LobbyPage() {
               <Camera className="h-4 w-4" /> Fotky
             </TabsTrigger>
           </TabsList>
-          <TabsContent value="chat" className="mt-4 animate-fade-in">
-            <ChatTab projectId={projectId} />
-          </TabsContent>
           <TabsContent value="tasks" className="mt-4 animate-fade-in">
             <TasksTab projectId={projectId} />
           </TabsContent>
@@ -601,6 +595,7 @@ function TasksTab({ projectId }: { projectId: string }) {
   const [open, setOpen] = useState(false);
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+  const [doneCollapsed, setDoneCollapsed] = useState(true);
 
   const byColumn = useMemo(() => {
     const map = new Map<string, Task[]>();
@@ -671,82 +666,105 @@ function TasksTab({ projectId }: { projectId: string }) {
                 isOver && "bg-primary/5 border-primary/60",
               )}
             >
-              <div className="mb-2 flex items-center justify-between px-1">
-                <div className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-                  {col.label}
-                </div>
-                <Badge variant="outline" className="h-5 font-mono text-[10px]">
-                  {items.length}
-                </Badge>
-              </div>
-              <div className="space-y-2">
-                {items.map((t) => (
-                  <KanbanCard
-                    key={t.id}
-                    task={t}
-                    assigneeName={t.assignedTo ? memberMap.get(t.assignedTo) : null}
-                    onDragStart={() => setDragId(t.id)}
-                    onDragEnd={() => setDragId(null)}
-                    onDelete={async () => {
-                      await deleteFn({ data: { id: t.id } });
-                      qc.invalidateQueries({ queryKey: ["tasks", projectId] });
-                    }}
-                    onEdit={async (patch) => {
-                      await upsertFn({
-                        data: {
-                          id: t.id,
-                          projectId,
-                          title: patch.title ?? t.title,
-                          description: patch.description ?? t.description,
-                          dueDate: patch.dueDate ?? t.dueDate,
-                          assignedTo: patch.assignedTo ?? t.assignedTo,
-                          priority: (patch.priority ?? t.priority) as any,
-                          labels: patch.labels ?? t.labels,
-                          status: t.status as any,
-                        },
-                      });
-                      qc.invalidateQueries({ queryKey: ["tasks", projectId] });
-                    }}
-                    onAddCp={async (label) => {
-                      await upsertCp({
-                        data: {
-                          taskId: t.id,
-                          projectId,
-                          label,
-                          done: false,
-                          sortOrder: (t.checkpoints?.length ?? 0) + 1,
-                        },
-                      });
-                      qc.invalidateQueries({ queryKey: ["tasks", projectId] });
-                    }}
-                    onToggleCp={async (id, done) => {
-                      await toggleCp({ data: { id, done } });
-                      qc.invalidateQueries({ queryKey: ["tasks", projectId] });
-                    }}
-                    onDeleteCp={async (id) => {
-                      await deleteCp({ data: { id } });
-                      qc.invalidateQueries({ queryKey: ["tasks", projectId] });
-                    }}
-                    onStatusChange={async (status) => {
-                      if (status === t.status) return;
-                      const list = byColumn.get(status) ?? [];
-                      const newSort = list.length > 0 ? (list[list.length - 1].sortOrder ?? 0) + 10 : 10;
-                      try {
-                        await moveFn({ data: { id: t.id, status, sortOrder: newSort } });
-                        qc.invalidateQueries({ queryKey: ["tasks", projectId] });
-                      } catch (e) {
-                        toast.error(e instanceof Error ? e.message : "Chyba přesunu");
-                      }
-                    }}
-                    members={members.data ?? []}
-                  />
-                ))}
-                {items.length === 0 && (
-                  <div className="rounded-md border border-dashed border-border/40 p-4 text-center text-[11px] text-muted-foreground">
-                    Přetáhněte úkol sem
-                  </div>
-                )}
-              </div>
+              {(() => {
+                const isDone = col.key === "DONE";
+                const collapsed = isDone && doneCollapsed;
+                return (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => isDone && setDoneCollapsed((v) => !v)}
+                      className={cn(
+                        "mb-2 flex w-full items-center justify-between px-1",
+                        isDone && "cursor-pointer hover:opacity-80",
+                      )}
+                      aria-expanded={isDone ? !collapsed : undefined}
+                    >
+                      <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+                        {isDone && (
+                          <span className="inline-block w-3 text-center">
+                            {collapsed ? "▸" : "▾"}
+                          </span>
+                        )}
+                        {col.label}
+                      </div>
+                      <Badge variant="outline" className="h-5 font-mono text-[10px]">
+                        {items.length}
+                      </Badge>
+                    </button>
+                    {!collapsed && (
+                      <div className="space-y-2">
+                        {items.map((t) => (
+                          <KanbanCard
+                            key={t.id}
+                            task={t}
+                            assigneeName={t.assignedTo ? memberMap.get(t.assignedTo) : null}
+                            onDragStart={() => setDragId(t.id)}
+                            onDragEnd={() => setDragId(null)}
+                            onDelete={async () => {
+                              await deleteFn({ data: { id: t.id } });
+                              qc.invalidateQueries({ queryKey: ["tasks", projectId] });
+                            }}
+                            onEdit={async (patch) => {
+                              await upsertFn({
+                                data: {
+                                  id: t.id,
+                                  projectId,
+                                  title: patch.title ?? t.title,
+                                  description: patch.description ?? t.description,
+                                  dueDate: patch.dueDate ?? t.dueDate,
+                                  assignedTo: patch.assignedTo ?? t.assignedTo,
+                                  priority: (patch.priority ?? t.priority) as any,
+                                  labels: patch.labels ?? t.labels,
+                                  status: t.status as any,
+                                },
+                              });
+                              qc.invalidateQueries({ queryKey: ["tasks", projectId] });
+                            }}
+                            onAddCp={async (label) => {
+                              await upsertCp({
+                                data: {
+                                  taskId: t.id,
+                                  projectId,
+                                  label,
+                                  done: false,
+                                  sortOrder: (t.checkpoints?.length ?? 0) + 1,
+                                },
+                              });
+                              qc.invalidateQueries({ queryKey: ["tasks", projectId] });
+                            }}
+                            onToggleCp={async (id, done) => {
+                              await toggleCp({ data: { id, done } });
+                              qc.invalidateQueries({ queryKey: ["tasks", projectId] });
+                            }}
+                            onDeleteCp={async (id) => {
+                              await deleteCp({ data: { id } });
+                              qc.invalidateQueries({ queryKey: ["tasks", projectId] });
+                            }}
+                            onStatusChange={async (status) => {
+                              if (status === t.status) return;
+                              const list = byColumn.get(status) ?? [];
+                              const newSort = list.length > 0 ? (list[list.length - 1].sortOrder ?? 0) + 10 : 10;
+                              try {
+                                await moveFn({ data: { id: t.id, status, sortOrder: newSort } });
+                                qc.invalidateQueries({ queryKey: ["tasks", projectId] });
+                              } catch (e) {
+                                toast.error(e instanceof Error ? e.message : "Chyba přesunu");
+                              }
+                            }}
+                            members={members.data ?? []}
+                          />
+                        ))}
+                        {items.length === 0 && (
+                          <div className="rounded-md border border-dashed border-border/40 p-4 text-center text-[11px] text-muted-foreground">
+                            Přetáhněte úkol sem
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           );
         })}
