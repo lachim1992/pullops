@@ -191,14 +191,15 @@ function ProjectDetailPage() {
               ) : (
                 <HubTile
                   projectId={projectId}
-                  to="/projects/$projectId/lobby"
+                  to="/projects/$projectId/photos"
                   icon={Camera}
-                  title="Foto lobby"
+                  title="Fotoarchiv"
                   tone="chat"
-                  metric="→"
-                  metricLabel="fotogalerie"
+                  metric={home.data ? `${home.data.hub.photosTotal}` : "—"}
+                  metricLabel="fotek celkem"
                 />
               )}
+
             </div>
           </section>
 
