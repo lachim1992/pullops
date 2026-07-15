@@ -991,8 +991,9 @@ function PlanEditorPage() {
               title={plan.data?.plan.name ?? "Plán"}
               empty="Bez podkladového obrázku — vyberte podklad vpravo"
               fullscreenTargetRef={viewportRef}
+              contentRef={contentRef}
               contentClassName="origin-top-left"
-              contentStyle={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
+              contentStyle={{ transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom})` }}
             >
 
             <svg
