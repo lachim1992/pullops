@@ -6,23 +6,32 @@ import {
   AlertTriangle,
   Cable,
   Camera,
+  CheckCircle2,
   CheckSquare,
   ClipboardList,
+  Circle,
   FileText,
   FolderKanban,
   Loader2,
   MessageSquare,
+  PlayCircle,
   Route as RouteIcon,
   Users,
   Wrench,
+  Zap,
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { getProject } from "@/lib/projects.functions";
 import { getMyProjectCapabilities } from "@/lib/capabilities.functions";
-import { getProjectProgress, getProjectHome } from "@/lib/metrics.functions";
+import {
+  getProjectProgress,
+  getProjectHome,
+  getMyProjectDashboard,
+} from "@/lib/metrics.functions";
 import { useT } from "@/i18n";
+
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/")({
   head: () => ({
