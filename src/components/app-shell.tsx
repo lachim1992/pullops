@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import * as AccordionPrimitive from "@radix-ui/react-accordion";
 import { Link, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -15,6 +16,8 @@ import {
   LogOut,
   Menu,
   MessageSquare,
+  Minus,
+  Plus,
   Route as RouteIcon,
   ScrollText,
   Settings,
@@ -32,7 +35,6 @@ import {
   Accordion,
   AccordionContent,
   AccordionItem,
-  AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -78,6 +80,7 @@ export function AppShell({ children, projectId }: { children: ReactNode; project
       profileName={profile.data?.full_name || profile.data?.email || "…"}
       onNavigate={() => setMobileOpen(false)}
       onSignOut={signOut}
+      currentPath={currentPath}
       t={t}
     />
   );
@@ -160,6 +163,7 @@ function SidebarBody({
   profileName,
   onNavigate,
   onSignOut,
+  currentPath,
   t,
 }: {
   projectId?: string;
@@ -168,8 +172,10 @@ function SidebarBody({
   profileName: string;
   onNavigate: () => void;
   onSignOut: () => void;
+  currentPath: string;
   t: (k: string) => string;
 }) {
+  const activeBranch = getActiveBranch(currentPath, projectId);
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-2.5 border-b border-sidebar-border px-4 py-4">
@@ -207,12 +213,9 @@ function SidebarBody({
             </NavItem>
 
             <Accordion
-              type="multiple"
-              defaultValue={
-                canManage
-                  ? ["manage", "docs", "lobby", "pull", "completion"]
-                  : ["docs", "lobby", "pull", "completion"]
-              }
+              type="single"
+              collapsible
+              defaultValue={activeBranch}
               className="mt-2"
             >
               {canManage && (
@@ -362,23 +365,40 @@ function BranchItem({
 }) {
   return (
     <AccordionItem value={value} className="border-b-0">
-      <AccordionTrigger
-        className={cn(
-          "rounded-md px-2 py-1.5 font-mono text-[11px] uppercase tracking-[0.22em] text-sidebar-foreground/60",
-          "hover:bg-sidebar-accent/40 hover:text-sidebar-foreground hover:no-underline",
-          "[&[data-state=open]]:text-sidebar-foreground",
-        )}
-      >
-        <span className="flex items-center gap-2">
-          {icon}
-          {label}
-        </span>
-      </AccordionTrigger>
+      <AccordionPrimitive.Header className="flex">
+        <AccordionPrimitive.Trigger
+          className={cn(
+            "group flex flex-1 items-center justify-between rounded-md px-2 py-1.5 font-mono text-[11px] uppercase tracking-[0.22em] text-sidebar-foreground/60 transition-colors",
+            "hover:bg-sidebar-accent/40 hover:text-sidebar-foreground",
+            "[&[data-state=open]]:bg-sidebar-accent/30 [&[data-state=open]]:text-sidebar-foreground",
+          )}
+        >
+          <span className="flex items-center gap-2">
+            {icon}
+            {label}
+          </span>
+          <Plus className="h-3.5 w-3.5 shrink-0 transition-opacity group-data-[state=open]:hidden" />
+          <Minus className="hidden h-3.5 w-3.5 shrink-0 group-data-[state=open]:block" />
+        </AccordionPrimitive.Trigger>
+      </AccordionPrimitive.Header>
       <AccordionContent className="pb-1 pt-1">
         <div className="ml-1 space-y-0.5 border-l border-sidebar-border/50 pl-2">{children}</div>
       </AccordionContent>
     </AccordionItem>
   );
+}
+
+function getActiveBranch(pathname: string, projectId?: string): string | undefined {
+  if (!projectId) return undefined;
+  const base = `/projects/${projectId}`;
+  if (pathname === base) return undefined;
+  const rest = pathname.startsWith(base) ? pathname.slice(base.length) : "";
+  if (/^\/(cable-types|endpoint-kinds|patch-panels|cables|spools|members|settings)(\/|$)/.test(rest)) return "manage";
+  if (/^\/(plans|endpoints|documents)(\/|$)/.test(rest)) return "docs";
+  if (/^\/(lobby|photos)(\/|$)/.test(rest)) return "lobby";
+  if (/^\/(work|defects|protocols)(\/|$)/.test(rest)) return "pull";
+  if (/^\/(completion)(\/|$)/.test(rest)) return "completion";
+  return undefined;
 }
 
 type NavItemProps = {
