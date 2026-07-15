@@ -117,6 +117,13 @@ function ProjectDetailPage() {
             )}
           </motion.header>
 
+          {/* Personal dashboard — my tasks + today's activity */}
+          <section className="mb-5">
+            <PersonalDashboard data={myDash.data} loading={myDash.isLoading} projectId={projectId} />
+          </section>
+
+
+
           {/* Primary hub — bento 2x3 on mobile, 5 across on desktop */}
           <section className="mb-5">
             <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
