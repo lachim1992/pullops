@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { recomputeCablesByRoute } from "@/lib/cables.functions";
 import { dbErrorMessage } from "@/lib/dbErrors";
 
 const CreateInput = z.object({
@@ -135,6 +136,7 @@ export const updateRoute = createServerFn({ method: "POST" })
       .update(patch as never)
       .eq("id", data.id);
     if (error) throw new Error(dbErrorMessage(error));
+    if (data.manualLengthM !== undefined) await recomputeCablesByRoute(supabase, data.id);
     return { ok: true };
   });
 
@@ -155,7 +157,10 @@ export const updateRoutePoints = createServerFn({ method: "POST" })
       .delete()
       .eq("route_id", data.routeId);
     if (derr) throw new Error(dbErrorMessage(derr));
-    if (data.points.length === 0) return { ok: true };
+    if (data.points.length === 0) {
+      await recomputeCablesByRoute(supabase, data.routeId);
+      return { ok: true };
+    }
     const payload = data.points.map((p, i) => ({
       route_id: data.routeId,
       project_id: r.project_id,
@@ -166,6 +171,7 @@ export const updateRoutePoints = createServerFn({ method: "POST" })
     }));
     const { error } = await supabase.from("cable_route_points").insert(payload);
     if (error) throw new Error(dbErrorMessage(error));
+    await recomputeCablesByRoute(supabase, data.routeId);
     return { ok: true };
   });
 
