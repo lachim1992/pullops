@@ -80,6 +80,7 @@ export function AppShell({ children, projectId }: { children: ReactNode; project
       profileName={profile.data?.full_name || profile.data?.email || "…"}
       onNavigate={() => setMobileOpen(false)}
       onSignOut={signOut}
+      currentPath={currentPath}
       t={t}
     />
   );
