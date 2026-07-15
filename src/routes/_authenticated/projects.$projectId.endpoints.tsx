@@ -34,9 +34,9 @@ import { useEndpointKinds } from "@/hooks/useEndpointKinds";
 import { PlanCanvasSurface } from "@/components/plan-canvas-surface";
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/endpoints")({
-  validateSearch: (s: Record<string, unknown>) => ({
-    focus: typeof s.focus === "string" ? s.focus : undefined,
-  }),
+  validateSearch: (s: Record<string, unknown>): { focus?: string } =>
+    typeof s.focus === "string" ? { focus: s.focus } : {},
+
   head: () => ({
     meta: [{ title: "Endpointy · PullOps" }, { name: "robots", content: "noindex" }],
   }),
