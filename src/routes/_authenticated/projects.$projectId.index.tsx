@@ -47,6 +47,7 @@ function ProjectDetailPage() {
   const fetchCaps = useServerFn(getMyProjectCapabilities);
   const fetchProgress = useServerFn(getProjectProgress);
   const fetchHome = useServerFn(getProjectHome);
+  const fetchMyDash = useServerFn(getMyProjectDashboard);
 
   const project = useQuery({
     queryKey: ["project", projectId],
@@ -64,6 +65,12 @@ function ProjectDetailPage() {
     queryKey: ["project-home", projectId],
     queryFn: () => fetchHome({ data: { projectId } }),
   });
+  const myDash = useQuery({
+    queryKey: ["project-my-dashboard", projectId],
+    queryFn: () => fetchMyDash({ data: { projectId } }),
+    refetchInterval: 60_000,
+  });
+
   const canManage = caps.data?.canManage ?? false;
 
   return (
