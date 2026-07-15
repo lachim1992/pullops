@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Maximize2, Minimize2 } from "lucide-react";
+import { Expand, Maximize2, Minimize2, Shrink } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -14,6 +14,7 @@ type PlanCanvasSurfaceProps = {
   className?: string;
   contentClassName?: string;
   contentStyle?: React.CSSProperties;
+  contentRef?: React.Ref<HTMLDivElement>;
   empty?: React.ReactNode;
   allowFullscreen?: boolean;
   fullscreenTargetRef?: React.RefObject<HTMLElement | null>;
