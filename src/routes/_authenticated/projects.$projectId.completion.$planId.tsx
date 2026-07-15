@@ -84,6 +84,7 @@ function CompletionPlanEditor() {
   const dataFn = useServerFn(getCompletionPlan);
   const setEpFn = useServerFn(setEndpointCompletionStatus);
   const setPpFn = useServerFn(setPatchPanelCompletionStatus);
+  const setMeasuredFn = useServerFn(setCableMeasured);
   const unmarkFn = useServerFn(unmarkPlanReadyForCompletion);
   const capsFn = useServerFn(getMyProjectCapabilities);
 
@@ -99,12 +100,28 @@ function CompletionPlanEditor() {
 
   const [tab, setTab] = useState<Tab>("endpoints");
   const [selectedEndpointId, setSelectedEndpointId] = useState<string | null>(null);
+  const [measureTarget, setMeasureTarget] = useState<PortRow | null>(null);
+  const [measureNote, setMeasureNote] = useState("");
+  const [measureBusy, setMeasureBusy] = useState(false);
 
   const endpoints = q.data?.endpoints ?? [];
   const panels = q.data?.panels ?? [];
   const cables = q.data?.cables ?? [];
+  const ports: PortRow[] = q.data?.ports ?? [];
   const plan = q.data?.plan;
   const fp = q.data?.floorPlan;
+
+  const portsByPanel = useMemo(() => {
+    const m = new Map<string, PortRow[]>();
+    for (const p of ports) {
+      const arr = m.get(p.panelId) ?? [];
+      arr.push(p);
+      m.set(p.panelId, arr);
+    }
+    for (const arr of m.values()) arr.sort((a, b) => a.portNumber - b.portNumber);
+    return m;
+  }, [ports]);
+
 
   const cablesByEndpoint = useMemo(() => {
     const m = new Map<string, typeof cables>();
