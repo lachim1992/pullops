@@ -133,7 +133,7 @@ export const cs = {
     title: "Postup projektu",
     overall: "Celkový progres",
     pulled: "Nataženo",
-    terminated: "Zakončeno",
+    terminated: "Proměřeno",
     tested: "Změřeno",
     cablesTotal: "Kabelů celkem",
     endpointsTotal: "Endpointů",
