@@ -144,9 +144,36 @@ function CompletionIndex() {
           </section>
         )}
 
-        {plans.length > 0 && inCompletion.length === 0 && readyToMark.length === 0 && (
+        {manualCandidates.length > 0 && canManage && (
+          <section className="rounded-sm border border-border bg-card p-4">
+            <div className="mb-2 flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
+              <Send className="h-4 w-4" /> Poslat ručně z tahání (i nedokončené)
+            </div>
+            <p className="mb-3 text-xs text-muted-foreground">
+              Plány, které ještě nemají všechny kabely natažené. Můžeš je i tak převzít do kompletace –
+              použij, pokud část kabelů řešíš mimo standardní tok.
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {manualCandidates.map((p) => (
+                <div key={p.id} className="flex items-center justify-between rounded-sm border border-border bg-background p-2.5">
+                  <div className="min-w-0">
+                    <div className="truncate font-mono text-sm font-bold uppercase">{p.name}</div>
+                    <div className="truncate text-xs text-muted-foreground">
+                      {p.floorPlanName ?? "—"} · {p.pulledCables}/{p.totalCables} natažených
+                    </div>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={() => markReady(p.id, true)}>
+                    Poslat ručně
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {plans.length > 0 && inCompletion.length === 0 && readyToMark.length === 0 && manualCandidates.length === 0 && (
           <div className="rounded-sm border border-dashed border-border p-6 text-center text-xs text-muted-foreground">
-            Zatím žádný plán není 100 % natažený. Vraťte se, až v tahání dokončíte kabely nějakého plánu.
+            Žádné day plány v projektu.
           </div>
         )}
       </div>
