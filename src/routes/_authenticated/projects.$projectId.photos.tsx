@@ -63,10 +63,11 @@ const SOURCE_META: Record<PhotoSource, { label: string; className: string; icon:
     icon: FileText,
   },
   day_plan: {
-    label: "Tahání",
+    label: "Day plán",
     className: "border-[color:var(--accent)]/40 bg-[color:var(--accent)]/10 text-accent",
     icon: Cable,
   },
+
 };
 
 function PhotosArchivePage() {
