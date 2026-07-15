@@ -168,7 +168,7 @@ export const cs = {
     pullTitle: "Režim tahání",
     pullDesc: "Denní plán, tažení, cívky",
     completionTitle: "Kompletace",
-    completionDesc: "Zakončení, test, hotovo",
+    completionDesc: "Proměření, test, hotovo",
   },
   errors: {
     pageTitle: "Stránka se nenačetla",
