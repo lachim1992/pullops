@@ -163,6 +163,7 @@ function SidebarBody({
   profileName,
   onNavigate,
   onSignOut,
+  currentPath,
   t,
 }: {
   projectId?: string;
@@ -171,8 +172,10 @@ function SidebarBody({
   profileName: string;
   onNavigate: () => void;
   onSignOut: () => void;
+  currentPath: string;
   t: (k: string) => string;
 }) {
+  const activeBranch = getActiveBranch(currentPath, projectId);
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-2.5 border-b border-sidebar-border px-4 py-4">
