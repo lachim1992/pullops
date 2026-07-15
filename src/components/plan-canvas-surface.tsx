@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Maximize2, Minimize2 } from "lucide-react";
+import { Expand, Maximize2, Minimize2, Shrink } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -14,6 +14,7 @@ type PlanCanvasSurfaceProps = {
   className?: string;
   contentClassName?: string;
   contentStyle?: React.CSSProperties;
+  contentRef?: React.Ref<HTMLDivElement>;
   empty?: React.ReactNode;
   allowFullscreen?: boolean;
   fullscreenTargetRef?: React.RefObject<HTMLElement | null>;
@@ -31,6 +32,7 @@ export function PlanCanvasSurface({
   className,
   contentClassName,
   contentStyle,
+  contentRef,
   empty,
   allowFullscreen = true,
   fullscreenTargetRef,
@@ -41,6 +43,7 @@ export function PlanCanvasSurface({
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fullscreenSupported, setFullscreenSupported] = useState(false);
+  const [appFullscreen, setAppFullscreen] = useState(false);
 
   useEffect(() => {
     const el = outerRef.current;
@@ -81,6 +84,18 @@ export function PlanCanvasSurface({
     }
   }
 
+  function toggleAppFullscreen() {
+    const el = fullscreenTargetRef?.current ?? outerRef.current;
+    if (!el) return;
+    const cls = "plan-canvas-app-fullscreen";
+    setAppFullscreen((prev) => {
+      const next = !prev;
+      if (next) el.classList.add(cls);
+      else el.classList.remove(cls);
+      return next;
+    });
+  }
+
   const safeAspect = Number.isFinite(aspect) && aspect > 0 ? aspect : DEFAULT_ASPECT;
   const outerAspect = size.width > 0 && size.height > 0 ? size.width / size.height : safeAspect;
   const innerWidth = outerAspect > safeAspect ? size.height * safeAspect : size.width;
@@ -93,11 +108,13 @@ export function PlanCanvasSurface({
     >
       {documentUrl ? (
         <div
+          ref={contentRef}
           className={cn("plan-canvas-inner relative overflow-hidden bg-muted", contentClassName)}
           style={{
             width: innerWidth || "100%",
             height: innerHeight || "100%",
             transformOrigin: "0 0",
+            willChange: "transform",
             ...contentStyle,
           }}
         >
@@ -125,22 +142,41 @@ export function PlanCanvasSurface({
         </div>
       )}
       {overlay}
-      {allowFullscreen && fullscreenSupported && (
-        <Button
-          type="button"
-          size="icon"
-          variant="outline"
-          className="absolute bottom-2 right-2 z-30 h-8 w-8 border-border/70 bg-background/90 shadow-sm backdrop-blur"
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={(event) => {
-            event.stopPropagation();
-            void toggleFullscreen();
-          }}
-          title={isFullscreen ? "Ukončit full-screen" : "Zvětšit na full-screen"}
-          aria-label={isFullscreen ? "Ukončit full-screen" : "Zvětšit na full-screen"}
-        >
-          {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-        </Button>
+      {allowFullscreen && (
+        <div className="absolute bottom-2 right-2 z-30 flex gap-1">
+          <Button
+            type="button"
+            size="icon"
+            variant="outline"
+            className="h-8 w-8 border-border/70 bg-background/90 shadow-sm backdrop-blur"
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              toggleAppFullscreen();
+            }}
+            title={appFullscreen ? "Ukončit režim plné plochy" : "Plná plocha aplikace"}
+            aria-label={appFullscreen ? "Ukončit režim plné plochy" : "Plná plocha aplikace"}
+          >
+            {appFullscreen ? <Shrink className="h-4 w-4" /> : <Expand className="h-4 w-4" />}
+          </Button>
+          {fullscreenSupported && (
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              className="h-8 w-8 border-border/70 bg-background/90 shadow-sm backdrop-blur"
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation();
+                void toggleFullscreen();
+              }}
+              title={isFullscreen ? "Ukončit celou obrazovku prohlížeče" : "Celá obrazovka prohlížeče"}
+              aria-label={isFullscreen ? "Ukončit celou obrazovku prohlížeče" : "Celá obrazovka prohlížeče"}
+            >
+              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </Button>
+          )}
+        </div>
       )}
     </div>
   );

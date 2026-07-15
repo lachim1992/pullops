@@ -203,3 +203,16 @@
 .field-plan-viewer:fullscreen::backdrop {
   background: var(--background);
 }
+
+.plan-canvas-app-fullscreen {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  border-radius: 0 !important;
+  border: 0 !important;
+  z-index: 60 !important;
+  background: var(--background);
+}

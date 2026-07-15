@@ -241,12 +241,15 @@ function PlanEditorPage() {
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const viewportRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const panStateRef = useRef<{ startX: number; startY: number; ox: number; oy: number } | null>(
     null,
   );
   const spaceDownRef = useRef(false);
   const zoomRef = useRef(1);
   const panRef = useRef({ x: 0, y: 0 });
+  const rafRef = useRef<number | null>(null);
+  const commitRafRef = useRef<number | null>(null);
   useEffect(() => {
     zoomRef.current = zoom;
   }, [zoom]);
@@ -254,10 +257,45 @@ function PlanEditorPage() {
     panRef.current = pan;
   }, [pan]);
 
+  // Apply transform directly to DOM (bypasses React re-render during pan/zoom).
+  function applyTransformNow() {
+    const el = contentRef.current;
+    if (!el) return;
+    const p = panRef.current;
+    const z = zoomRef.current;
+    el.style.transform = `translate3d(${p.x}px, ${p.y}px, 0) scale(${z})`;
+  }
+  function scheduleApply() {
+    if (rafRef.current != null) return;
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null;
+      applyTransformNow();
+    });
+  }
+  // Commit refs → React state (throttled) so SVG stroke widths, etc. stay in sync.
+  function commitStateSoon() {
+    if (commitRafRef.current != null) cancelAnimationFrame(commitRafRef.current);
+    commitRafRef.current = requestAnimationFrame(() => {
+      commitRafRef.current = null;
+      setZoom(zoomRef.current);
+      setPan(panRef.current);
+    });
+  }
+  useEffect(() => {
+    return () => {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+      if (commitRafRef.current != null) cancelAnimationFrame(commitRafRef.current);
+    };
+  }, []);
+  // Keep DOM in sync when React state changes for reasons other than interaction (e.g. resetView).
+  useEffect(() => {
+    applyTransformNow();
+  }, [zoom, pan]);
+
   function clampZoom(z: number) {
     return Math.max(0.25, Math.min(12, z));
   }
-  function zoomAt(clientX: number, clientY: number, factor: number) {
+  function zoomAt(clientX: number, clientY: number, factor: number, commit = true) {
     const rect = viewportRef.current?.getBoundingClientRect();
     if (!rect) return;
     const px = clientX - rect.left;
@@ -270,8 +308,8 @@ function PlanEditorPage() {
     const newPan = { x: px - (px - p.x) * real, y: py - (py - p.y) * real };
     zoomRef.current = nz;
     panRef.current = newPan;
-    setZoom(nz);
-    setPan(newPan);
+    scheduleApply();
+    if (commit) commitStateSoon();
   }
 
   // Native non-passive wheel listener → smooth zoom without page scroll
@@ -282,33 +320,122 @@ function PlanEditorPage() {
       e.preventDefault();
       const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
       const factor = Math.exp(-dy * 0.0018);
-      zoomAt(e.clientX, e.clientY, factor);
+      // During rapid wheel spinning we skip commit; a trailing rAF commit is scheduled.
+      zoomAt(e.clientX, e.clientY, factor, true);
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
-  // Global pan handlers so drag doesn't get stuck when leaving the viewport
+  // Global pan handlers so drag doesn't get stuck when leaving the viewport.
+  // Uses direct DOM writes + rAF; no React re-render until mouseup.
   useEffect(() => {
     if (!isPanning) return;
     const onMove = (e: MouseEvent) => {
       const st = panStateRef.current;
       if (!st) return;
-      const np = { x: st.ox + (e.clientX - st.startX), y: st.oy + (e.clientY - st.startY) };
-      panRef.current = np;
-      setPan(np);
+      panRef.current = {
+        x: st.ox + (e.clientX - st.startX),
+        y: st.oy + (e.clientY - st.startY),
+      };
+      scheduleApply();
     };
     const onUp = () => {
       panStateRef.current = null;
       setIsPanning(false);
+      // Commit final pan into React state.
+      setPan({ ...panRef.current });
     };
-    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mousemove", onMove, { passive: true });
     window.addEventListener("mouseup", onUp);
     return () => {
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
     };
   }, [isPanning]);
+
+  // Touch support: single-finger pan, two-finger pinch zoom (mobile).
+  useEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return;
+    let mode: "none" | "pan" | "pinch" = "none";
+    let startX = 0;
+    let startY = 0;
+    let ox = 0;
+    let oy = 0;
+    let pinchStartDist = 0;
+    let pinchStartZoom = 1;
+    let pinchCenter = { x: 0, y: 0 };
+
+    const dist = (a: Touch, b: Touch) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+
+    const onStart = (e: TouchEvent) => {
+      if (e.touches.length === 1) {
+        // Only initiate touch-pan when target isn't an interactive SVG element.
+        const t = e.target as Element | null;
+        if (t && t instanceof SVGElement && t.tagName !== "svg") return;
+        mode = "pan";
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        ox = panRef.current.x;
+        oy = panRef.current.y;
+      } else if (e.touches.length === 2) {
+        mode = "pinch";
+        pinchStartDist = dist(e.touches[0], e.touches[1]);
+        pinchStartZoom = zoomRef.current;
+        const rect = el.getBoundingClientRect();
+        pinchCenter = {
+          x: (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left,
+          y: (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top,
+        };
+        e.preventDefault();
+      }
+    };
+    const onMove = (e: TouchEvent) => {
+      if (mode === "pan" && e.touches.length === 1) {
+        panRef.current = {
+          x: ox + (e.touches[0].clientX - startX),
+          y: oy + (e.touches[0].clientY - startY),
+        };
+        scheduleApply();
+        e.preventDefault();
+      } else if (mode === "pinch" && e.touches.length === 2 && pinchStartDist > 0) {
+        const d = dist(e.touches[0], e.touches[1]);
+        const nz = clampZoom(pinchStartZoom * (d / pinchStartDist));
+        const z = zoomRef.current;
+        if (nz !== z) {
+          const real = nz / z;
+          const p = panRef.current;
+          panRef.current = {
+            x: pinchCenter.x - (pinchCenter.x - p.x) * real,
+            y: pinchCenter.y - (pinchCenter.y - p.y) * real,
+          };
+          zoomRef.current = nz;
+          scheduleApply();
+        }
+        e.preventDefault();
+      }
+    };
+    const onEnd = (e: TouchEvent) => {
+      if (e.touches.length === 0) {
+        if (mode !== "none") {
+          setPan({ ...panRef.current });
+          setZoom(zoomRef.current);
+        }
+        mode = "none";
+      }
+    };
+    el.addEventListener("touchstart", onStart, { passive: false });
+    el.addEventListener("touchmove", onMove, { passive: false });
+    el.addEventListener("touchend", onEnd);
+    el.addEventListener("touchcancel", onEnd);
+    return () => {
+      el.removeEventListener("touchstart", onStart);
+      el.removeEventListener("touchmove", onMove);
+      el.removeEventListener("touchend", onEnd);
+      el.removeEventListener("touchcancel", onEnd);
+    };
+  }, []);
 
   // Space bar → hold to pan with left mouse
   useEffect(() => {
@@ -864,8 +991,9 @@ function PlanEditorPage() {
               title={plan.data?.plan.name ?? "Plán"}
               empty="Bez podkladového obrázku — vyberte podklad vpravo"
               fullscreenTargetRef={viewportRef}
+              contentRef={contentRef}
               contentClassName="origin-top-left"
-              contentStyle={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
+              contentStyle={{ transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom})` }}
             >
 
             <svg
