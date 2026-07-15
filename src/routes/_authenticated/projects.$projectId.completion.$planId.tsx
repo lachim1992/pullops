@@ -297,10 +297,107 @@ function CompletionPlanEditor() {
             </div>
           </section>
         )}
+
+        {tab === "measurement" && (
+          <section className="space-y-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                Měření kabelů podle portů
+              </div>
+              <div className="font-mono text-xs text-muted-foreground">
+                {measuredCount}/{totalWithCable} proměřeno
+              </div>
+            </div>
+            {!canManage && (
+              <div className="rounded-sm border border-dashed p-3 text-center text-xs text-muted-foreground">
+                Měření mohou zaznamenávat jen technici a projektoví manažeři. Můžeš pouze prohlížet.
+              </div>
+            )}
+            {panels.length === 0 && (
+              <div className="rounded-sm border border-dashed p-6 text-center text-xs text-muted-foreground">
+                Na patře plánu nejsou žádné patch panely.
+              </div>
+            )}
+            <div className="grid gap-3 md:grid-cols-2">
+              {panels.map((p) => {
+                const rows = portsByPanel.get(p.id) ?? [];
+                return (
+                  <MeasurementPanelCard
+                    key={p.id}
+                    panel={p}
+                    ports={rows}
+                    canEdit={canManage}
+                    onMeasure={(port) => {
+                      setMeasureTarget(port);
+                      setMeasureNote(port.cable?.notes ?? "");
+                    }}
+                  />
+                );
+              })}
+            </div>
+          </section>
+        )}
       </div>
+
+      <Dialog
+        open={measureTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setMeasureTarget(null);
+            setMeasureNote("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Proměřeno?</DialogTitle>
+            <DialogDescription>
+              {measureTarget?.cable ? (
+                <>
+                  Označit kabel <span className="font-mono font-bold">{measureTarget.cable.code}</span>{" "}
+                  na portu <span className="font-mono font-bold">{measureTarget.portNumber}</span> jako
+                  proměřený?
+                </>
+              ) : (
+                "Port bez kabelu nelze proměřit."
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <label className="font-mono text-[10px] uppercase text-muted-foreground">
+              Poznámka (volitelná)
+            </label>
+            <Textarea
+              value={measureNote}
+              onChange={(e) => setMeasureNote(e.target.value)}
+              placeholder="Např. naměřené hodnoty, poznámky k měření…"
+              rows={3}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setMeasureTarget(null);
+                setMeasureNote("");
+              }}
+              disabled={measureBusy}
+            >
+              Zrušit
+            </Button>
+            <Button
+              onClick={confirmMeasure}
+              disabled={measureBusy || !measureTarget?.cable || !canManage}
+            >
+              {measureBusy ? "Ukládám…" : "Potvrdit proměřeno"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
+
 
 function TabBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
