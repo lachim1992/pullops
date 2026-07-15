@@ -585,6 +585,7 @@ export type ProjectHome = {
     completionTotal: number;
     defectsOpen: number;
     protocolsTotal: number;
+    photosTotal: number;
   };
   todaysPlans: Array<{ id: string; name: string; totalCables: number }>;
   recentActivity: Array<{
@@ -594,6 +595,7 @@ export type ProjectHome = {
     excerpt: string;
   }>;
 };
+
 
 export const getProjectHome = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
