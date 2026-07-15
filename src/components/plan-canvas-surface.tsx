@@ -142,22 +142,41 @@ export function PlanCanvasSurface({
         </div>
       )}
       {overlay}
-      {allowFullscreen && fullscreenSupported && (
-        <Button
-          type="button"
-          size="icon"
-          variant="outline"
-          className="absolute bottom-2 right-2 z-30 h-8 w-8 border-border/70 bg-background/90 shadow-sm backdrop-blur"
-          onPointerDown={(event) => event.stopPropagation()}
-          onClick={(event) => {
-            event.stopPropagation();
-            void toggleFullscreen();
-          }}
-          title={isFullscreen ? "Ukončit full-screen" : "Zvětšit na full-screen"}
-          aria-label={isFullscreen ? "Ukončit full-screen" : "Zvětšit na full-screen"}
-        >
-          {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-        </Button>
+      {allowFullscreen && (
+        <div className="absolute bottom-2 right-2 z-30 flex gap-1">
+          <Button
+            type="button"
+            size="icon"
+            variant="outline"
+            className="h-8 w-8 border-border/70 bg-background/90 shadow-sm backdrop-blur"
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              toggleAppFullscreen();
+            }}
+            title={appFullscreen ? "Ukončit režim plné plochy" : "Plná plocha aplikace"}
+            aria-label={appFullscreen ? "Ukončit režim plné plochy" : "Plná plocha aplikace"}
+          >
+            {appFullscreen ? <Shrink className="h-4 w-4" /> : <Expand className="h-4 w-4" />}
+          </Button>
+          {fullscreenSupported && (
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              className="h-8 w-8 border-border/70 bg-background/90 shadow-sm backdrop-blur"
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation();
+                void toggleFullscreen();
+              }}
+              title={isFullscreen ? "Ukončit celou obrazovku prohlížeče" : "Celá obrazovka prohlížeče"}
+              aria-label={isFullscreen ? "Ukončit celou obrazovku prohlížeče" : "Celá obrazovka prohlížeče"}
+            >
+              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </Button>
+          )}
+        </div>
       )}
     </div>
   );
