@@ -80,9 +80,11 @@ function PhotosArchivePage() {
     queryFn: () => fetchAll({ data: { projectId } }),
   });
 
+  const photos = query.data?.photos ?? [];
+  const warnings = query.data?.warnings ?? [];
+
   const filtered = useMemo(() => {
-    const rows = query.data ?? [];
-    return rows.filter((p) => {
+    return photos.filter((p) => {
       if (filter !== "all" && p.source !== filter) return false;
       if (q.trim()) {
         const t = q.toLowerCase();
@@ -91,7 +93,7 @@ function PhotosArchivePage() {
       }
       return true;
     });
-  }, [query.data, filter, q]);
+  }, [photos, filter, q]);
 
   const counts = useMemo(() => {
     const c: Record<PhotoSource | "all", number> = {
@@ -102,12 +104,13 @@ function PhotosArchivePage() {
       protocol: 0,
       day_plan: 0,
     };
-    for (const p of query.data ?? []) {
+    for (const p of photos) {
       c.all++;
       c[p.source]++;
     }
     return c;
-  }, [query.data]);
+  }, [photos]);
+
 
   return (
     <AppShell projectId={projectId}>
