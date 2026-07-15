@@ -2872,6 +2872,7 @@ export type Database = {
         }
         Returns: string
       }
+      delete_project_tx: { Args: { p_project_id: string }; Returns: undefined }
       has_org_role: {
         Args: {
           _organization_id: string

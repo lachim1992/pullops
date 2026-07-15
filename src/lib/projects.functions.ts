@@ -206,6 +206,21 @@ export const removeProjectMember = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const deleteProject = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({ id: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    const supabase = context.supabase as unknown as {
+      rpc: (
+        name: string,
+        params: Record<string, unknown>,
+      ) => Promise<{ error: { message: string } | null }>;
+    };
+    const { error } = await supabase.rpc("delete_project_tx", { p_project_id: data.id });
+    if (error) throw new Error(dbErrorMessage(error));
+    return { ok: true };
+  });
+
 export const setProjectRole = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => SetProjectRoleInput.parse(data))

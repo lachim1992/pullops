@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { createFileRoute, useParams } from "@tanstack/react-router";
+import { createFileRoute, useParams, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getProject, updateProject } from "@/lib/projects.functions";
+import { deleteProject, getProject, updateProject } from "@/lib/projects.functions";
 
 const STATUSES = ["planning", "active", "on_hold", "completed", "archived"] as const;
 
@@ -30,8 +30,11 @@ export const Route = createFileRoute("/_authenticated/projects/$projectId/settin
 
 function SettingsPage() {
   const { projectId } = useParams({ from: "/_authenticated/projects/$projectId/settings" });
+  const navigate = useNavigate();
   const fetchProject = useServerFn(getProject);
   const updateFn = useServerFn(updateProject);
+  const deleteFn = useServerFn(deleteProject);
+  const [deleting, setDeleting] = useState(false);
   const project = useQuery({
     queryKey: ["project", projectId],
     queryFn: () => fetchProject({ data: { id: projectId } }),
@@ -198,6 +201,50 @@ function SettingsPage() {
           Uložit
         </Button>
       </form>
+
+      <section className="mt-10 rounded-sm border border-destructive/50 bg-destructive/5 p-4">
+        <h2 className="font-mono text-sm font-bold uppercase tracking-widest text-destructive">
+          Nebezpečná zóna
+        </h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Smazání projektu je nevratné. Odstraní všechna data: plány, endpointy, kabely, patch panely,
+          dokumenty, protokoly, defekty, day plány, spulky i členy. Audit události zůstanou zachovány.
+        </p>
+        <Button
+          type="button"
+          variant="destructive"
+          size="sm"
+          className="mt-3"
+          disabled={deleting}
+          onClick={async () => {
+            const name = String((form?.name as string) ?? project.data?.name ?? "");
+            const answer = window.prompt(
+              `Pro potvrzení smazání napiš přesně název projektu:\n\n${name}`,
+            );
+            if (answer == null) return;
+            if (answer.trim() !== name.trim()) {
+              toast.error("Název nesouhlasí, mazání zrušeno");
+              return;
+            }
+            setDeleting(true);
+            try {
+              await deleteFn({ data: { id: projectId } });
+              toast.success("Projekt smazán");
+              navigate({ to: "/dashboard" });
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : "Chyba");
+              setDeleting(false);
+            }
+          }}
+        >
+          {deleting ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Trash2 className="mr-2 h-4 w-4" />
+          )}
+          Smazat projekt
+        </Button>
+      </section>
     </AppShell>
   );
 }
