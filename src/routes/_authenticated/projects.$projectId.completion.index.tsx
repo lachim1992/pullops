@@ -34,6 +34,7 @@ function CompletionIndex() {
 
   const plans = q.data?.plans ?? [];
   const readyToMark = plans.filter((p) => p.allPulled && !p.completionReady);
+  const manualCandidates = plans.filter((p) => !p.allPulled && !p.completionReady);
   const inCompletion = plans.filter((p) => p.completionReady);
 
   async function markReady(planId: string, goTo: boolean) {
