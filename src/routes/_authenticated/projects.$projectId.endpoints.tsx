@@ -61,7 +61,6 @@ function EndpointsPage() {
 
   const kindsQuery = useEndpointKinds(projectId);
 
-  const kindsQuery = useEndpointKinds(projectId);
   const kindMap = useMemo(() => {
     const m = new Map<string, { label: string; color: string }>();
     (kindsQuery.data ?? []).forEach((k) =>
