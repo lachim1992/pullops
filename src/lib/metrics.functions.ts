@@ -625,7 +625,7 @@ export const getProjectHome = createServerFn({ method: "GET" })
           .order("sort_order", { ascending: true }),
         supabase
           .from("project_chat_messages" as never)
-          .select("id, body, author_id, created_at")
+          .select("id, body, user_id, created_at")
           .eq("project_id", projectId)
           .order("created_at", { ascending: false })
           .limit(5),
@@ -669,10 +669,10 @@ export const getProjectHome = createServerFn({ method: "GET" })
     const msgs = (chatMsgs.data as Array<{
       id: string;
       body: string;
-      author_id: string;
+      user_id: string;
       created_at: string;
     }> | null) ?? [];
-    const authorIds = Array.from(new Set(msgs.map((m) => m.author_id).filter(Boolean)));
+    const authorIds = Array.from(new Set(msgs.map((m) => m.user_id).filter(Boolean)));
     const nameById = new Map<string, string>();
     if (authorIds.length > 0) {
       const { data: profs } = await supabase
@@ -700,7 +700,7 @@ export const getProjectHome = createServerFn({ method: "GET" })
       recentActivity: msgs.map((m) => ({
         id: m.id,
         createdAt: m.created_at,
-        author: nameById.get(m.author_id) || "—",
+        author: nameById.get(m.user_id) || "—",
         excerpt: (m.body ?? "").slice(0, 120),
       })),
     };
