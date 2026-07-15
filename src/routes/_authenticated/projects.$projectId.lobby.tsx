@@ -61,7 +61,6 @@ import {
 } from "@/lib/lobby.functions";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/_authenticated/projects/$projectId/lobby")({
 const searchSchema = z.object({
   tab: z.enum(["chat", "tasks", "photos"]).optional(),
 });
