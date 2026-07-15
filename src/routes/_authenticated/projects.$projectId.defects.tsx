@@ -61,9 +61,9 @@ import {
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/defects")({
-  validateSearch: (s: Record<string, unknown>) => ({
-    focus: typeof s.focus === "string" ? s.focus : undefined,
-  }),
+  validateSearch: (s: Record<string, unknown>): { focus?: string } =>
+    typeof s.focus === "string" ? { focus: s.focus } : {},
+
   head: () => ({
     meta: [{ title: "Závady · PullOps" }, { name: "robots", content: "noindex" }],
   }),
