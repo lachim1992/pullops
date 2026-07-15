@@ -165,6 +165,31 @@ function CompletionPlanEditor() {
     }
   }
 
+  async function confirmMeasure() {
+    if (!measureTarget?.cable) return;
+    setMeasureBusy(true);
+    try {
+      await setMeasuredFn({
+        data: {
+          cableId: measureTarget.cable.id,
+          note: measureNote.trim().length > 0 ? measureNote.trim() : null,
+        },
+      });
+      toast.success(`Port ${measureTarget.portNumber} proměřen`);
+      setMeasureTarget(null);
+      setMeasureNote("");
+      await qc.invalidateQueries({ queryKey: ["completion-plan", planId] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Chyba");
+    } finally {
+      setMeasureBusy(false);
+    }
+  }
+
+  const measuredCount = ports.filter((p) => p.cable && MEASURED_STATUSES.has(p.cable.status)).length;
+  const totalWithCable = ports.filter((p) => p.cable).length;
+
+
   return (
     <AppShell projectId={projectId}>
       <div className="animate-fade-in space-y-4">
