@@ -32,6 +32,7 @@ export function PlanCanvasSurface({
   className,
   contentClassName,
   contentStyle,
+  contentRef,
   empty,
   allowFullscreen = true,
   fullscreenTargetRef,
@@ -42,6 +43,7 @@ export function PlanCanvasSurface({
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fullscreenSupported, setFullscreenSupported] = useState(false);
+  const [appFullscreen, setAppFullscreen] = useState(false);
 
   useEffect(() => {
     const el = outerRef.current;
