@@ -706,3 +706,100 @@ export const getProjectHome = createServerFn({ method: "GET" })
     };
   });
 
+// ============================================================================
+// Personal project dashboard — my tasks by status + today's activity
+// ============================================================================
+
+export type MyProjectDashboard = {
+  tasks: {
+    today: { todo: number; inProgress: number; done: number };
+    total: { todo: number; inProgress: number; done: number };
+  };
+  activity: {
+    pull: { pulled: number; terminated: number; tested: number; done: number };
+    completion: { endpoints: number; panels: number };
+  };
+};
+
+export const getMyProjectDashboard = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ projectId: uuid }).parse(d))
+  .handler(async ({ data, context }): Promise<MyProjectDashboard> => {
+    const { supabase, userId } = context;
+    const projectId = data.projectId;
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+
+    const [tasksRes, pullRes, epRes, panelRes] = await Promise.all([
+      supabase
+        .from("project_tasks")
+        .select("status, updated_at, created_at")
+        .eq("project_id", projectId)
+        .eq("assigned_to", userId),
+      supabase
+        .from("pull_tasks")
+        .select("started_at, terminated_at, tested_at, done_at")
+        .eq("project_id", projectId)
+        .or(
+          `started_at.gte.${startOfDay},terminated_at.gte.${startOfDay},tested_at.gte.${startOfDay},done_at.gte.${startOfDay}`,
+        ),
+      supabase
+        .from("endpoints")
+        .select("completion_status, updated_at" as never)
+        .eq("project_id", projectId)
+        .gte("updated_at", startOfDay),
+      supabase
+        .from("patch_panels")
+        .select("completion_status, updated_at" as never)
+        .eq("project_id", projectId)
+        .gte("updated_at", startOfDay),
+    ]);
+
+    const bucket = (s: string): "todo" | "inProgress" | "done" | null => {
+      if (s === "TODO") return "todo";
+      if (s === "IN_PROGRESS" || s === "REVIEW") return "inProgress";
+      if (s === "DONE") return "done";
+      return null;
+    };
+
+    const total = { todo: 0, inProgress: 0, done: 0 };
+    const today = { todo: 0, inProgress: 0, done: 0 };
+    for (const t of tasksRes.data ?? []) {
+      const b = bucket(t.status as string);
+      if (!b) continue;
+      total[b]++;
+      const ts = (t.updated_at ?? t.created_at) as string | null;
+      if (ts && ts >= startOfDay) today[b]++;
+    }
+
+    let pulled = 0,
+      terminated = 0,
+      tested = 0,
+      done = 0;
+    for (const r of (pullRes.data ?? []) as Array<{
+      started_at: string | null;
+      terminated_at: string | null;
+      tested_at: string | null;
+      done_at: string | null;
+    }>) {
+      if (r.started_at && r.started_at >= startOfDay) pulled++;
+      if (r.terminated_at && r.terminated_at >= startOfDay) terminated++;
+      if (r.tested_at && r.tested_at >= startOfDay) tested++;
+      if (r.done_at && r.done_at >= startOfDay) done++;
+    }
+
+    const eps = (epRes.data as Array<{ completion_status: string }> | null) ?? [];
+    const panels = (panelRes.data as Array<{ completion_status: string }> | null) ?? [];
+    const epsChanged = eps.filter((e) => e.completion_status !== "PENDING").length;
+    const panelsChanged = panels.filter((p) => p.completion_status !== "PENDING").length;
+
+    return {
+      tasks: { today, total },
+      activity: {
+        pull: { pulled, terminated, tested, done },
+        completion: { endpoints: epsChanged, panels: panelsChanged },
+      },
+    };
+  });
+
+
