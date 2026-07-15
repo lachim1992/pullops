@@ -384,16 +384,18 @@ function BranchItem({
 type NavItemProps = {
   to: string;
   params?: Record<string, string>;
+  search?: Record<string, unknown>;
   icon: typeof Cable;
   children: ReactNode;
   onClick?: () => void;
 };
 
-function NavItem({ to, params, icon: Icon, children, onClick }: NavItemProps) {
+function NavItem({ to, params, search, icon: Icon, children, onClick }: NavItemProps) {
   return (
     <Link
       to={to as never}
       params={params as never}
+      search={search as never}
       onClick={onClick}
       className={cn(
         "flex items-center gap-2 rounded-md px-2 py-1.5 text-sidebar-foreground/80 transition-all duration-150",
