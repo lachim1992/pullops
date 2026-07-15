@@ -449,6 +449,9 @@ export const convertDefectToTask = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     if (!def) throw new Error("Závada nenalezena");
     const assigned = data.assignedTo ?? (def as any).assigned_to ?? null;
+    if (assigned) {
+      await assertProjectMember(supabase, (def as any).project_id, assigned);
+    }
     const { data: row, error: err2 } = await supabase
       .from("project_tasks")
       .insert({
