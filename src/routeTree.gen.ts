@@ -28,6 +28,7 @@ import { Route as AuthenticatedProjectsProjectIdSpoolsRouteImport } from './rout
 import { Route as AuthenticatedProjectsProjectIdSettingsRouteImport } from './routes/_authenticated/projects.$projectId.settings'
 import { Route as AuthenticatedProjectsProjectIdProtocolsRouteImport } from './routes/_authenticated/projects.$projectId.protocols'
 import { Route as AuthenticatedProjectsProjectIdPlansRouteImport } from './routes/_authenticated/projects.$projectId.plans'
+import { Route as AuthenticatedProjectsProjectIdPhotosRouteImport } from './routes/_authenticated/projects.$projectId.photos'
 import { Route as AuthenticatedProjectsProjectIdPatchPanelsRouteImport } from './routes/_authenticated/projects.$projectId.patch-panels'
 import { Route as AuthenticatedProjectsProjectIdMembersRouteImport } from './routes/_authenticated/projects.$projectId.members'
 import { Route as AuthenticatedProjectsProjectIdLobbyRouteImport } from './routes/_authenticated/projects.$projectId.lobby'
@@ -150,6 +151,12 @@ const AuthenticatedProjectsProjectIdPlansRoute =
   AuthenticatedProjectsProjectIdPlansRouteImport.update({
     id: '/projects/$projectId/plans',
     path: '/projects/$projectId/plans',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedProjectsProjectIdPhotosRoute =
+  AuthenticatedProjectsProjectIdPhotosRouteImport.update({
+    id: '/projects/$projectId/photos',
+    path: '/projects/$projectId/photos',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedProjectsProjectIdPatchPanelsRoute =
@@ -297,6 +304,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId/lobby': typeof AuthenticatedProjectsProjectIdLobbyRoute
   '/projects/$projectId/members': typeof AuthenticatedProjectsProjectIdMembersRoute
   '/projects/$projectId/patch-panels': typeof AuthenticatedProjectsProjectIdPatchPanelsRouteWithChildren
+  '/projects/$projectId/photos': typeof AuthenticatedProjectsProjectIdPhotosRoute
   '/projects/$projectId/plans': typeof AuthenticatedProjectsProjectIdPlansRouteWithChildren
   '/projects/$projectId/protocols': typeof AuthenticatedProjectsProjectIdProtocolsRoute
   '/projects/$projectId/settings': typeof AuthenticatedProjectsProjectIdSettingsRoute
@@ -334,6 +342,7 @@ export interface FileRoutesByTo {
   '/projects/$projectId/endpoints': typeof AuthenticatedProjectsProjectIdEndpointsRoute
   '/projects/$projectId/lobby': typeof AuthenticatedProjectsProjectIdLobbyRoute
   '/projects/$projectId/members': typeof AuthenticatedProjectsProjectIdMembersRoute
+  '/projects/$projectId/photos': typeof AuthenticatedProjectsProjectIdPhotosRoute
   '/projects/$projectId/protocols': typeof AuthenticatedProjectsProjectIdProtocolsRoute
   '/projects/$projectId/settings': typeof AuthenticatedProjectsProjectIdSettingsRoute
   '/projects/$projectId/spools': typeof AuthenticatedProjectsProjectIdSpoolsRoute
@@ -375,6 +384,7 @@ export interface FileRoutesById {
   '/_authenticated/projects/$projectId/lobby': typeof AuthenticatedProjectsProjectIdLobbyRoute
   '/_authenticated/projects/$projectId/members': typeof AuthenticatedProjectsProjectIdMembersRoute
   '/_authenticated/projects/$projectId/patch-panels': typeof AuthenticatedProjectsProjectIdPatchPanelsRouteWithChildren
+  '/_authenticated/projects/$projectId/photos': typeof AuthenticatedProjectsProjectIdPhotosRoute
   '/_authenticated/projects/$projectId/plans': typeof AuthenticatedProjectsProjectIdPlansRouteWithChildren
   '/_authenticated/projects/$projectId/protocols': typeof AuthenticatedProjectsProjectIdProtocolsRoute
   '/_authenticated/projects/$projectId/settings': typeof AuthenticatedProjectsProjectIdSettingsRoute
@@ -417,6 +427,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/lobby'
     | '/projects/$projectId/members'
     | '/projects/$projectId/patch-panels'
+    | '/projects/$projectId/photos'
     | '/projects/$projectId/plans'
     | '/projects/$projectId/protocols'
     | '/projects/$projectId/settings'
@@ -454,6 +465,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/endpoints'
     | '/projects/$projectId/lobby'
     | '/projects/$projectId/members'
+    | '/projects/$projectId/photos'
     | '/projects/$projectId/protocols'
     | '/projects/$projectId/settings'
     | '/projects/$projectId/spools'
@@ -494,6 +506,7 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/$projectId/lobby'
     | '/_authenticated/projects/$projectId/members'
     | '/_authenticated/projects/$projectId/patch-panels'
+    | '/_authenticated/projects/$projectId/photos'
     | '/_authenticated/projects/$projectId/plans'
     | '/_authenticated/projects/$projectId/protocols'
     | '/_authenticated/projects/$projectId/settings'
@@ -656,6 +669,13 @@ declare module '@tanstack/react-router' {
       path: '/projects/$projectId/plans'
       fullPath: '/projects/$projectId/plans'
       preLoaderRoute: typeof AuthenticatedProjectsProjectIdPlansRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/projects/$projectId/photos': {
+      id: '/_authenticated/projects/$projectId/photos'
+      path: '/projects/$projectId/photos'
+      fullPath: '/projects/$projectId/photos'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdPhotosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/projects/$projectId/patch-panels': {
@@ -892,6 +912,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedProjectsProjectIdLobbyRoute: typeof AuthenticatedProjectsProjectIdLobbyRoute
   AuthenticatedProjectsProjectIdMembersRoute: typeof AuthenticatedProjectsProjectIdMembersRoute
   AuthenticatedProjectsProjectIdPatchPanelsRoute: typeof AuthenticatedProjectsProjectIdPatchPanelsRouteWithChildren
+  AuthenticatedProjectsProjectIdPhotosRoute: typeof AuthenticatedProjectsProjectIdPhotosRoute
   AuthenticatedProjectsProjectIdPlansRoute: typeof AuthenticatedProjectsProjectIdPlansRouteWithChildren
   AuthenticatedProjectsProjectIdProtocolsRoute: typeof AuthenticatedProjectsProjectIdProtocolsRoute
   AuthenticatedProjectsProjectIdSettingsRoute: typeof AuthenticatedProjectsProjectIdSettingsRoute
@@ -927,6 +948,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedProjectsProjectIdMembersRoute,
   AuthenticatedProjectsProjectIdPatchPanelsRoute:
     AuthenticatedProjectsProjectIdPatchPanelsRouteWithChildren,
+  AuthenticatedProjectsProjectIdPhotosRoute:
+    AuthenticatedProjectsProjectIdPhotosRoute,
   AuthenticatedProjectsProjectIdPlansRoute:
     AuthenticatedProjectsProjectIdPlansRouteWithChildren,
   AuthenticatedProjectsProjectIdProtocolsRoute:

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { z } from "zod";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -60,7 +61,12 @@ import {
 } from "@/lib/lobby.functions";
 import { cn } from "@/lib/utils";
 
+const searchSchema = z.object({
+  tab: z.enum(["chat", "tasks", "photos"]).optional(),
+});
+
 export const Route = createFileRoute("/_authenticated/projects/$projectId/lobby")({
+  validateSearch: searchSchema,
   head: () => ({
     meta: [{ title: "Lobby · PullOps" }, { name: "robots", content: "noindex" }],
   }),
@@ -69,6 +75,9 @@ export const Route = createFileRoute("/_authenticated/projects/$projectId/lobby"
 
 function LobbyPage() {
   const { projectId } = Route.useParams();
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const tab = search.tab ?? "chat";
   return (
     <AppShell projectId={projectId}>
       <div className="animate-fade-in space-y-5">
@@ -76,47 +85,47 @@ function LobbyPage() {
           <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
             Projekt / Lobby
           </div>
-          <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight">Lobby</h1>
+          <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight">
+            {tab === "tasks" ? "Úkoly" : tab === "photos" ? "Fotky lobby" : "Chat"}
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Živý chat s fotkami, úkoly týmu a dokumentace projektu.
+            Živý chat s fotkami, úkoly týmu a lobby fotky.
           </p>
         </header>
 
-        <Tabs defaultValue="comm" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="comm" className="gap-2">
-              <MessageSquare className="h-4 w-4" /> Chat & fotky
+        <Tabs
+          value={tab}
+          onValueChange={(v) =>
+            navigate({ search: { tab: v as "chat" | "tasks" | "photos" }, replace: true })
+          }
+          className="w-full"
+        >
+          <TabsList className="grid w-full max-w-md grid-cols-3">
+            <TabsTrigger value="chat" className="gap-2">
+              <MessageSquare className="h-4 w-4" /> Chat
             </TabsTrigger>
             <TabsTrigger value="tasks" className="gap-2">
-              <ListChecks className="h-4 w-4" /> Správa úkolů
+              <ListChecks className="h-4 w-4" /> Úkoly
+            </TabsTrigger>
+            <TabsTrigger value="photos" className="gap-2">
+              <Camera className="h-4 w-4" /> Fotky
             </TabsTrigger>
           </TabsList>
-          <TabsContent value="comm" className="mt-4 animate-fade-in">
-            <Tabs defaultValue="chat" className="w-full">
-              <TabsList className="grid w-full max-w-xs grid-cols-2">
-                <TabsTrigger value="chat" className="gap-2">
-                  <MessageSquare className="h-4 w-4" /> Chat
-                </TabsTrigger>
-                <TabsTrigger value="photos" className="gap-2">
-                  <Camera className="h-4 w-4" /> Fotky
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value="chat" className="mt-4 animate-fade-in">
-                <ChatTab projectId={projectId} />
-              </TabsContent>
-              <TabsContent value="photos" className="mt-4 animate-fade-in">
-                <PhotosTab projectId={projectId} />
-              </TabsContent>
-            </Tabs>
+          <TabsContent value="chat" className="mt-4 animate-fade-in">
+            <ChatTab projectId={projectId} />
           </TabsContent>
           <TabsContent value="tasks" className="mt-4 animate-fade-in">
             <TasksTab projectId={projectId} />
+          </TabsContent>
+          <TabsContent value="photos" className="mt-4 animate-fade-in">
+            <PhotosTab projectId={projectId} />
           </TabsContent>
         </Tabs>
       </div>
     </AppShell>
   );
 }
+
 
 // ================ CHAT ================
 type ChatMsg = {
