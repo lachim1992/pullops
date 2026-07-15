@@ -235,12 +235,13 @@ function PhotoCard({ p }: { p: ArchivePhoto }) {
         </div>
         <div className="mt-1.5 flex items-center justify-between gap-1">
           <Button asChild size="sm" variant="ghost" className="h-6 px-1.5 text-[10px]">
-            <Link to={p.linkTo}>
+            <a href={p.linkTo}>
               <ExternalLink className="mr-1 h-3 w-3" />
               {p.linkLabel}
-            </Link>
+            </a>
           </Button>
         </div>
+
       </div>
     </div>
   );
