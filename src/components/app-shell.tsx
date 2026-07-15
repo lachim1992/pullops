@@ -16,6 +16,8 @@ import {
   LogOut,
   Menu,
   MessageSquare,
+  Minus,
+  Plus,
   Route as RouteIcon,
   ScrollText,
   Settings,
