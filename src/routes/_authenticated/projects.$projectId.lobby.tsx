@@ -62,7 +62,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const searchSchema = z.object({
-  tab: z.enum(["chat", "tasks", "photos"]).optional(),
+  tab: z.enum(["tasks", "photos"]).optional(),
 });
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/lobby")({
