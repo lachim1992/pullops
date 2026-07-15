@@ -263,12 +263,47 @@ function MiniMap({
   onSetStatus: (endpointId: string, status: EndpointCompletionStatus) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const panRef = useRef<{ startX: number; startY: number; tx0: number; ty0: number } | null>(null);
+  const viewRef = useRef({ tx: 0, ty: 0, s: 1 });
   const [view, setView] = useState({ tx: 0, ty: 0, s: 1 });
+  const rafRef = useRef<number | null>(null);
+  const commitRafRef = useRef<number | null>(null);
   const selectedEndpoint = endpoints.find((ep) => ep.id === selectedEndpointId) ?? null;
   const selectedCables = selectedEndpoint
     ? cables.filter((c) => c.fromEndpointId === selectedEndpoint.id || c.toEndpointId === selectedEndpoint.id)
     : [];
+
+  const applyTransformNow = () => {
+    const el = contentRef.current;
+    if (!el) return;
+    const v = viewRef.current;
+    el.style.transform = `translate3d(${v.tx}px, ${v.ty}px, 0) scale(${v.s})`;
+  };
+  const scheduleApply = () => {
+    if (rafRef.current != null) return;
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null;
+      applyTransformNow();
+    });
+  };
+  const commitStateSoon = () => {
+    if (commitRafRef.current != null) cancelAnimationFrame(commitRafRef.current);
+    commitRafRef.current = requestAnimationFrame(() => {
+      commitRafRef.current = null;
+      setView({ ...viewRef.current });
+    });
+  };
+  useEffect(() => {
+    viewRef.current = view;
+    applyTransformNow();
+  }, [view]);
+  useEffect(() => {
+    return () => {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+      if (commitRafRef.current != null) cancelAnimationFrame(commitRafRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -279,32 +314,117 @@ function MiniMap({
       const mx = e.clientX - rect.left;
       const my = e.clientY - rect.top;
       const factor = Math.exp(-(e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY) * 0.0018);
-      setView((v) => {
-        const ns = Math.min(12, Math.max(0.5, v.s * factor));
-        const k = ns / v.s;
-        return { tx: mx - k * (mx - v.tx), ty: my - k * (my - v.ty), s: ns };
-      });
+      const v = viewRef.current;
+      const ns = Math.min(12, Math.max(0.5, v.s * factor));
+      if (ns === v.s) return;
+      const k = ns / v.s;
+      viewRef.current = { tx: mx - k * (mx - v.tx), ty: my - k * (my - v.ty), s: ns };
+      scheduleApply();
+      commitStateSoon();
     };
     el.addEventListener("wheel", handler, { passive: false });
     return () => el.removeEventListener("wheel", handler);
   }, []);
 
+  // Touch pinch + pan
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    let mode: "none" | "pan" | "pinch" = "none";
+    let sx = 0;
+    let sy = 0;
+    let ox = 0;
+    let oy = 0;
+    let pinchDist = 0;
+    let pinchZoom = 1;
+    let pinchCenter = { x: 0, y: 0 };
+    const dist = (a: Touch, b: Touch) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+    const onStart = (e: TouchEvent) => {
+      if (e.touches.length === 1) {
+        const t = e.target as Element | null;
+        if (t && t instanceof SVGElement && t.tagName !== "svg") return;
+        mode = "pan";
+        sx = e.touches[0].clientX;
+        sy = e.touches[0].clientY;
+        ox = viewRef.current.tx;
+        oy = viewRef.current.ty;
+      } else if (e.touches.length === 2) {
+        mode = "pinch";
+        pinchDist = dist(e.touches[0], e.touches[1]);
+        pinchZoom = viewRef.current.s;
+        const rect = el.getBoundingClientRect();
+        pinchCenter = {
+          x: (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left,
+          y: (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top,
+        };
+        e.preventDefault();
+      }
+    };
+    const onMove = (e: TouchEvent) => {
+      if (mode === "pan" && e.touches.length === 1) {
+        viewRef.current = {
+          ...viewRef.current,
+          tx: ox + (e.touches[0].clientX - sx),
+          ty: oy + (e.touches[0].clientY - sy),
+        };
+        scheduleApply();
+        e.preventDefault();
+      } else if (mode === "pinch" && e.touches.length === 2 && pinchDist > 0) {
+        const d = dist(e.touches[0], e.touches[1]);
+        const ns = Math.min(12, Math.max(0.5, pinchZoom * (d / pinchDist)));
+        const v = viewRef.current;
+        if (ns !== v.s) {
+          const k = ns / v.s;
+          viewRef.current = {
+            tx: pinchCenter.x - k * (pinchCenter.x - v.tx),
+            ty: pinchCenter.y - k * (pinchCenter.y - v.ty),
+            s: ns,
+          };
+          scheduleApply();
+        }
+        e.preventDefault();
+      }
+    };
+    const onEnd = (e: TouchEvent) => {
+      if (e.touches.length === 0) {
+        if (mode !== "none") setView({ ...viewRef.current });
+        mode = "none";
+      }
+    };
+    el.addEventListener("touchstart", onStart, { passive: false });
+    el.addEventListener("touchmove", onMove, { passive: false });
+    el.addEventListener("touchend", onEnd);
+    el.addEventListener("touchcancel", onEnd);
+    return () => {
+      el.removeEventListener("touchstart", onStart);
+      el.removeEventListener("touchmove", onMove);
+      el.removeEventListener("touchend", onEnd);
+      el.removeEventListener("touchcancel", onEnd);
+    };
+  }, []);
+
   const onPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (event.pointerType === "mouse" && event.button !== 0 && event.button !== 1) return;
+    if (event.pointerType !== "mouse") return;
+    if (event.button !== 0 && event.button !== 1) return;
     const target = event.target as SVGElement | HTMLElement;
     if (target instanceof SVGElement && target.tagName !== "svg") return;
     event.currentTarget.setPointerCapture(event.pointerId);
-    panRef.current = { startX: event.clientX, startY: event.clientY, tx0: view.tx, ty0: view.ty };
+    panRef.current = { startX: event.clientX, startY: event.clientY, tx0: viewRef.current.tx, ty0: viewRef.current.ty };
   };
   const onPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
     if (!panRef.current) return;
-    setView((v) => ({
-      ...v,
-      tx: panRef.current!.tx0 + event.clientX - panRef.current!.startX,
-      ty: panRef.current!.ty0 + event.clientY - panRef.current!.startY,
-    }));
+    if (event.pointerType !== "mouse") return;
+    viewRef.current = {
+      ...viewRef.current,
+      tx: panRef.current.tx0 + event.clientX - panRef.current.startX,
+      ty: panRef.current.ty0 + event.clientY - panRef.current.startY,
+    };
+    scheduleApply();
   };
   const onPointerUp = () => {
+    if (panRef.current) {
+      setView({ ...viewRef.current });
+    }
     panRef.current = null;
   };
   const zoomBy = (factor: number) => setView((v) => ({ ...v, s: Math.min(12, Math.max(0.5, v.s * factor)) }));
@@ -324,8 +444,9 @@ function MiniMap({
         title="Plán"
         empty={<Layers className="h-10 w-10" />}
         fullscreenTargetRef={containerRef}
+        contentRef={contentRef}
         contentClassName="origin-top-left"
-        contentStyle={{ transform: `translate(${view.tx}px, ${view.ty}px) scale(${view.s})` }}
+        contentStyle={{ transform: `translate3d(${view.tx}px, ${view.ty}px, 0) scale(${view.s})` }}
         overlay={
           <>
             <div className="pointer-events-none absolute right-3 top-3 z-20 flex flex-col gap-1">
