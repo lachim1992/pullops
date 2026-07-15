@@ -150,23 +150,23 @@ function DashboardPage() {
         <DashboardSkeleton />
       ) : (
         <>
+          {/* ── Projects table (FIRST, active first) ────────────────── */}
+          <ProjectsTable projects={dash.data!.topProjects} />
+
           {/* ── HERO progress row ───────────────────────────────────── */}
           <HeroProgress kpis={k} orgName={activeOrg?.name ?? ""} />
 
-          {/* ── KPI strip: horizontal scroll on mobile, grid on desktop ── */}
+          {/* ── KPI strip ────────────────────────────────────────────── */}
           <KpiStrip kpis={k} />
 
           {/* ── Fun / gamification ridge ─────────────────────────────── */}
           <FunRidge fun={dash.data!.fun} kpis={k} />
 
-          {/* ── Chart + activity (stack on mobile, 2col on desktop) ─── */}
+          {/* ── Chart + activity ─────────────────────────────────────── */}
           <section className="mt-6 grid gap-4 lg:grid-cols-3">
             <TrendChart daily={dash.data!.daily} />
             <ActivityFeed activity={dash.data!.activity} />
           </section>
-
-          {/* ── Projects (horizontal snap on mobile, grid on desktop) ── */}
-          <TopProjects projects={dash.data!.topProjects} />
         </>
       )}
     </AppShell>
