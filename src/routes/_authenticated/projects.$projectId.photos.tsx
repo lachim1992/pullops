@@ -38,7 +38,7 @@ const FILTERS: Array<{ key: PhotoSource | "all"; label: string; icon: typeof Cam
   { key: "endpoint", label: "Endpointy", icon: MapPin },
   { key: "defect", label: "Závady", icon: AlertTriangle },
   { key: "protocol", label: "Protokoly", icon: FileText },
-  { key: "day_plan", label: "Tahání", icon: Cable },
+  { key: "day_plan", label: "Day plány", icon: Cable },
 ];
 
 const SOURCE_META: Record<PhotoSource, { label: string; className: string; icon: typeof Camera }> = {
