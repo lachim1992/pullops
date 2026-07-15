@@ -21,6 +21,32 @@ async function projectCtx(supabase: any, projectId: string) {
   return data as { organization_id: string };
 }
 
+async function isProjectMember(
+  supabase: any,
+  projectId: string,
+  userId: string,
+): Promise<boolean> {
+  if (!userId || !projectId) return false;
+  const { data, error } = await supabase
+    .from("project_members")
+    .select("user_id")
+    .eq("project_id", projectId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return !!data;
+}
+
+async function assertProjectMember(
+  supabase: any,
+  projectId: string,
+  userId: string,
+): Promise<void> {
+  if (!(await isProjectMember(supabase, projectId, userId))) {
+    throw new Error("Uživatel není členem tohoto projektu.");
+  }
+}
+
 async function notify(
   supabase: any,
   args: {
@@ -164,6 +190,9 @@ export const upsertDefect = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const ctx = await projectCtx(supabase, data.projectId);
+    if (data.assignedTo) {
+      await assertProjectMember(supabase, data.projectId, data.assignedTo);
+    }
     const patch = {
       project_id: data.projectId,
       organization_id: ctx.organization_id,
@@ -266,6 +295,16 @@ export const assignDefect = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: uuid, assignedTo: uuid.nullable() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    const { data: defBefore, error: errBefore } = await supabase
+      .from("defects")
+      .select("project_id")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (errBefore) throw new Error(errBefore.message);
+    if (!defBefore) throw new Error("Závada nenalezena");
+    if (data.assignedTo) {
+      await assertProjectMember(supabase, (defBefore as any).project_id, data.assignedTo);
+    }
     const { data: def, error } = await supabase
       .from("defects")
       .update({ assigned_to: data.assignedTo } as never)
@@ -312,12 +351,13 @@ export const addDefectComment = createServerFn({ method: "POST" })
       .select("id")
       .single();
     if (error) throw new Error(error.message);
-    // Notify the other party
+    // Notify the other party — only if they are still project members
     const others = new Set<string>();
     for (const uid of [(def as any).assigned_to, (def as any).reported_by]) {
       if (uid && uid !== userId) others.add(uid);
     }
     for (const uid of others) {
+      if (!(await isProjectMember(supabase, (def as any).project_id, uid))) continue;
       await notify(supabase, {
         userId: uid,
         projectId: (def as any).project_id,
@@ -409,6 +449,9 @@ export const convertDefectToTask = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     if (!def) throw new Error("Závada nenalezena");
     const assigned = data.assignedTo ?? (def as any).assigned_to ?? null;
+    if (assigned) {
+      await assertProjectMember(supabase, (def as any).project_id, assigned);
+    }
     const { data: row, error: err2 } = await supabase
       .from("project_tasks")
       .insert({
