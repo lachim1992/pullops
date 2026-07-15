@@ -150,23 +150,23 @@ function DashboardPage() {
         <DashboardSkeleton />
       ) : (
         <>
+          {/* ── Projects table (FIRST, active first) ────────────────── */}
+          <ProjectsTable projects={dash.data!.topProjects} />
+
           {/* ── HERO progress row ───────────────────────────────────── */}
           <HeroProgress kpis={k} orgName={activeOrg?.name ?? ""} />
 
-          {/* ── KPI strip: horizontal scroll on mobile, grid on desktop ── */}
+          {/* ── KPI strip ────────────────────────────────────────────── */}
           <KpiStrip kpis={k} />
 
           {/* ── Fun / gamification ridge ─────────────────────────────── */}
           <FunRidge fun={dash.data!.fun} kpis={k} />
 
-          {/* ── Chart + activity (stack on mobile, 2col on desktop) ─── */}
+          {/* ── Chart + activity ─────────────────────────────────────── */}
           <section className="mt-6 grid gap-4 lg:grid-cols-3">
             <TrendChart daily={dash.data!.daily} />
             <ActivityFeed activity={dash.data!.activity} />
           </section>
-
-          {/* ── Projects (horizontal snap on mobile, grid on desktop) ── */}
-          <TopProjects projects={dash.data!.topProjects} />
         </>
       )}
     </AppShell>
@@ -556,92 +556,311 @@ function ActivityFeed({ activity }: { activity: OrgDashboard["activity"] }) {
 
 /* ────────────────────────────────────────────────────────────────────── */
 
-function TopProjects({ projects }: { projects: OrgDashboard["topProjects"] }) {
+function ProjectsTable({ projects }: { projects: OrgDashboard["topProjects"] }) {
+  const [sortKey, setSortKey] = useState<
+    "smart" | "name" | "progress" | "meters" | "cables" | "defects"
+  >("smart");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [q, setQ] = useState("");
+
+  const isActive = (s: string) => {
+    const v = s.toLowerCase();
+    return v === "active" || v === "in_progress" || v === "aktivní" || v === "running";
+  };
+  const isDone = (s: string) => {
+    const v = s.toLowerCase();
+    return v === "completed" || v === "done" || v === "archived" || v === "closed";
+  };
+  const statusRank = (s: string) => (isActive(s) ? 0 : isDone(s) ? 2 : 1);
+
+  const filtered = projects.filter(
+    (p) =>
+      !q.trim() ||
+      p.name.toLowerCase().includes(q.toLowerCase()) ||
+      p.code.toLowerCase().includes(q.toLowerCase()),
+  );
+
+  const sorted = [...filtered].sort((a, b) => {
+    if (sortKey === "smart") {
+      const r = statusRank(a.status) - statusRank(b.status);
+      if (r !== 0) return r;
+      return b.progressPct - a.progressPct;
+    }
+    const dir = sortDir === "asc" ? 1 : -1;
+    switch (sortKey) {
+      case "name":
+        return a.name.localeCompare(b.name, "cs") * dir;
+      case "progress":
+        return (a.progressPct - b.progressPct) * dir;
+      case "meters":
+        return (a.meters - b.meters) * dir;
+      case "cables":
+        return (a.cablesTotal - b.cablesTotal) * dir;
+      case "defects":
+        return (a.openDefects - b.openDefects) * dir;
+    }
+  });
+
+  function toggleSort(k: typeof sortKey) {
+    if (k === sortKey) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(k);
+      setSortDir("desc");
+    }
+  }
+
+  const activeCount = projects.filter((p) => isActive(p.status)).length;
+
   return (
-    <section className="mt-6">
-      <div className="mb-3 flex items-center gap-3">
+    <section className="mb-6">
+      <div className="mb-3 flex flex-wrap items-center gap-3">
         <h2 className="font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
           Projekty
         </h2>
+        <Badge
+          variant="outline"
+          className="border-[color:var(--accent)]/40 font-mono text-[9px] text-accent"
+        >
+          {activeCount} aktivní · {projects.length} celkem
+        </Badge>
         <div className="hairline-gold h-px flex-1" />
+        <Input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Hledat…"
+          className="h-8 w-full max-w-xs text-xs"
+        />
       </div>
+
       {projects.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border/70 bg-card/30 p-12 text-center text-sm text-muted-foreground">
           Zatím žádné projekty.
         </div>
       ) : (
-        <motion.div
-          initial="hidden"
-          animate="show"
-          variants={{ hidden: {}, show: { transition: { staggerChildren: 0.04 } } }}
-          className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:snap-none sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3"
-        >
-          {projects.map((p) => (
-            <motion.div
-              key={p.id}
-              variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}
-              className="min-w-[17rem] shrink-0 snap-start sm:min-w-0"
-            >
-              <Link
-                to="/projects/$projectId"
-                params={{ projectId: p.id }}
-                className="group relative block h-full overflow-hidden rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur transition-all hover:-translate-y-0.5 hover:border-[color:var(--accent)]/50 hover:shadow-[0_20px_50px_-30px_var(--accent)]"
-              >
-                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[color:var(--accent)]/60 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
-                <div className="flex items-start justify-between gap-2">
-                  <div className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-[color:var(--accent)]/30 bg-[color:var(--accent)]/10 text-accent">
-                    <FolderKanban className="h-4 w-4" />
-                  </div>
-                  <div className="flex flex-wrap justify-end gap-1">
-                    {p.is_demo && (
-                      <Badge
-                        variant="outline"
-                        className="border-[color:var(--accent)]/40 font-mono text-[9px] text-accent"
-                      >
-                        DEMO
-                      </Badge>
-                    )}
-                    <Badge variant="secondary" className="font-mono text-[9px]">
-                      {p.status}
-                    </Badge>
-                  </div>
-                </div>
-                <div className="mt-3 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-                  {p.code}
-                </div>
-                <div className="mt-0.5 truncate font-display text-base font-semibold tracking-tight">
-                  {p.name}
-                </div>
-                <div className="mt-3">
-                  <div className="mb-1 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                    <span>Postup</span>
-                    <span className="text-accent">{p.progressPct}%</span>
-                  </div>
-                  <Progress value={p.progressPct} className="h-1.5" />
-                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
-                    <span className="inline-flex items-center gap-1">
-                      <Ruler className="h-3 w-3" />
-                      {formatNumber(p.meters)} m
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <Cable className="h-3 w-3" />
-                      {p.cablesTotal}
-                    </span>
-                    {p.openDefects > 0 && (
-                      <span className="inline-flex items-center gap-1 text-amber-500">
-                        <AlertTriangle className="h-3 w-3" />
-                        {p.openDefects}
+        <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/40 backdrop-blur">
+          {/* Desktop / tablet: real table */}
+          <div className="hidden md:block">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border/60 bg-muted/30 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+                  <Th
+                    active={sortKey === "name"}
+                    dir={sortDir}
+                    onClick={() => toggleSort("name")}
+                    className="w-[36%]"
+                  >
+                    Projekt
+                  </Th>
+                  <Th
+                    active={sortKey === "progress" || sortKey === "smart"}
+                    dir={sortDir}
+                    onClick={() => toggleSort("progress")}
+                    className="w-[24%]"
+                  >
+                    Postup
+                  </Th>
+                  <Th
+                    active={sortKey === "meters"}
+                    dir={sortDir}
+                    onClick={() => toggleSort("meters")}
+                    className="w-[12%] text-right"
+                  >
+                    Metry
+                  </Th>
+                  <Th
+                    active={sortKey === "cables"}
+                    dir={sortDir}
+                    onClick={() => toggleSort("cables")}
+                    className="w-[10%] text-right"
+                  >
+                    Kabely
+                  </Th>
+                  <Th
+                    active={sortKey === "defects"}
+                    dir={sortDir}
+                    onClick={() => toggleSort("defects")}
+                    className="w-[10%] text-right"
+                  >
+                    Závady
+                  </Th>
+                  <th className="w-[8%] px-3 py-2 text-right"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.map((p, i) => (
+                  <ProjectRow key={p.id} p={p} even={i % 2 === 0} isActive={isActive(p.status)} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile: compact stacked rows */}
+          <ul className="divide-y divide-border/60 md:hidden">
+            {sorted.map((p) => (
+              <li key={p.id}>
+                <Link
+                  to="/projects/$projectId"
+                  params={{ projectId: p.id }}
+                  className="group flex items-center gap-3 px-3 py-3 transition-colors hover:bg-muted/30 active:bg-muted/40"
+                >
+                  <div
+                    className={`h-8 w-1 shrink-0 rounded-full ${
+                      isActive(p.status)
+                        ? "bg-[color:var(--accent)]"
+                        : isDone(p.status)
+                          ? "bg-emerald-500/60"
+                          : "bg-border"
+                    }`}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="truncate font-display text-sm font-semibold tracking-tight">
+                        {p.name}
                       </span>
-                    )}
-                    <ChevronRight className="ml-auto h-3.5 w-3.5 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5 group-hover:text-accent" />
+                      {p.is_demo && (
+                        <Badge
+                          variant="outline"
+                          className="border-[color:var(--accent)]/40 px-1 py-0 font-mono text-[8px] text-accent"
+                        >
+                          DEMO
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                      {p.code} · {p.status}
+                    </div>
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <Progress value={p.progressPct} className="h-1 flex-1" />
+                      <span className="font-mono text-[10px] text-accent">{p.progressPct}%</span>
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] text-muted-foreground">
+                      <span className="inline-flex items-center gap-1">
+                        <Ruler className="h-3 w-3" />
+                        {formatNumber(p.meters)} m
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <Cable className="h-3 w-3" />
+                        {p.cablesTotal}
+                      </span>
+                      {p.openDefects > 0 && (
+                        <span className="inline-flex items-center gap-1 text-amber-500">
+                          <AlertTriangle className="h-3 w-3" />
+                          {p.openDefects}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </Link>
-            </motion.div>
-          ))}
-        </motion.div>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5 group-hover:text-accent" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </section>
+  );
+}
+
+function Th({
+  children,
+  onClick,
+  active,
+  dir,
+  className,
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+  active?: boolean;
+  dir?: "asc" | "desc";
+  className?: string;
+}) {
+  return (
+    <th className={`px-3 py-2 text-left ${className ?? ""}`}>
+      <button
+        type="button"
+        onClick={onClick}
+        className={`inline-flex items-center gap-1 transition-colors hover:text-accent ${
+          active ? "text-accent" : ""
+        }`}
+      >
+        {children}
+        {active && <span className="text-[9px]">{dir === "asc" ? "▲" : "▼"}</span>}
+      </button>
+    </th>
+  );
+}
+
+function ProjectRow({
+  p,
+  even,
+  isActive,
+}: {
+  p: OrgDashboard["topProjects"][number];
+  even: boolean;
+  isActive: boolean;
+}) {
+  const navigate = useNavigate();
+  return (
+    <tr
+      onClick={() => navigate({ to: "/projects/$projectId", params: { projectId: p.id } })}
+      className={`group cursor-pointer border-b border-border/40 transition-colors last:border-0 hover:bg-muted/30 ${
+        even ? "bg-transparent" : "bg-muted/10"
+      }`}
+    >
+      <td className="px-3 py-2.5">
+        <div className="flex items-center gap-2.5">
+          <div
+            className={`h-8 w-1 shrink-0 rounded-full ${
+              isActive ? "bg-[color:var(--accent)]" : "bg-border"
+            }`}
+          />
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="truncate font-display text-sm font-semibold tracking-tight group-hover:text-accent">
+                {p.name}
+              </span>
+              {p.is_demo && (
+                <Badge
+                  variant="outline"
+                  className="border-[color:var(--accent)]/40 px-1 py-0 font-mono text-[8px] text-accent"
+                >
+                  DEMO
+                </Badge>
+              )}
+            </div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+              {p.code} · {p.status}
+            </div>
+          </div>
+        </div>
+      </td>
+      <td className="px-3 py-2.5">
+        <div className="flex items-center gap-2">
+          <Progress value={p.progressPct} className="h-1.5 flex-1" />
+          <span className="w-9 shrink-0 text-right font-mono text-[11px] text-accent">
+            {p.progressPct}%
+          </span>
+        </div>
+      </td>
+      <td className="px-3 py-2.5 text-right font-mono text-xs tabular-nums">
+        {formatNumber(p.meters)}
+      </td>
+      <td className="px-3 py-2.5 text-right font-mono text-xs tabular-nums">{p.cablesTotal}</td>
+      <td className="px-3 py-2.5 text-right">
+        {p.openDefects > 0 ? (
+          <span className="inline-flex items-center gap-1 font-mono text-xs text-amber-500">
+            <AlertTriangle className="h-3 w-3" />
+            {p.openDefects}
+          </span>
+        ) : (
+          <span className="font-mono text-xs text-muted-foreground">—</span>
+        )}
+      </td>
+      <td className="px-3 py-2.5 text-right">
+        <ChevronRight className="ml-auto h-4 w-4 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5 group-hover:text-accent" />
+      </td>
+    </tr>
   );
 }
 
