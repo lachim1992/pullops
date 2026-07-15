@@ -365,23 +365,40 @@ function BranchItem({
 }) {
   return (
     <AccordionItem value={value} className="border-b-0">
-      <AccordionTrigger
-        className={cn(
-          "rounded-md px-2 py-1.5 font-mono text-[11px] uppercase tracking-[0.22em] text-sidebar-foreground/60",
-          "hover:bg-sidebar-accent/40 hover:text-sidebar-foreground hover:no-underline",
-          "[&[data-state=open]]:text-sidebar-foreground",
-        )}
-      >
-        <span className="flex items-center gap-2">
-          {icon}
-          {label}
-        </span>
-      </AccordionTrigger>
+      <AccordionPrimitive.Header className="flex">
+        <AccordionPrimitive.Trigger
+          className={cn(
+            "group flex flex-1 items-center justify-between rounded-md px-2 py-1.5 font-mono text-[11px] uppercase tracking-[0.22em] text-sidebar-foreground/60 transition-colors",
+            "hover:bg-sidebar-accent/40 hover:text-sidebar-foreground",
+            "[&[data-state=open]]:bg-sidebar-accent/30 [&[data-state=open]]:text-sidebar-foreground",
+          )}
+        >
+          <span className="flex items-center gap-2">
+            {icon}
+            {label}
+          </span>
+          <Plus className="h-3.5 w-3.5 shrink-0 transition-opacity group-data-[state=open]:hidden" />
+          <Minus className="hidden h-3.5 w-3.5 shrink-0 group-data-[state=open]:block" />
+        </AccordionPrimitive.Trigger>
+      </AccordionPrimitive.Header>
       <AccordionContent className="pb-1 pt-1">
         <div className="ml-1 space-y-0.5 border-l border-sidebar-border/50 pl-2">{children}</div>
       </AccordionContent>
     </AccordionItem>
   );
+}
+
+function getActiveBranch(pathname: string, projectId?: string): string | undefined {
+  if (!projectId) return undefined;
+  const base = `/projects/${projectId}`;
+  if (pathname === base) return undefined;
+  const rest = pathname.startsWith(base) ? pathname.slice(base.length) : "";
+  if (/^\/(cable-types|endpoint-kinds|patch-panels|cables|spools|members|settings)(\/|$)/.test(rest)) return "manage";
+  if (/^\/(plans|endpoints|documents)(\/|$)/.test(rest)) return "docs";
+  if (/^\/(lobby|photos)(\/|$)/.test(rest)) return "lobby";
+  if (/^\/(work|defects|protocols)(\/|$)/.test(rest)) return "pull";
+  if (/^\/(completion)(\/|$)/.test(rest)) return "completion";
+  return undefined;
 }
 
 type NavItemProps = {
