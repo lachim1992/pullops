@@ -876,7 +876,10 @@ function ProjectRow({
         )}
       </td>
       <td className="px-3 py-2.5 text-right">
-        <ChevronRight className="ml-auto h-4 w-4 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5 group-hover:text-accent" />
+        <div className="flex items-center justify-end gap-1">
+          <ProjectRowMenu projectId={p.id} projectName={p.name} />
+          <ChevronRight className="h-4 w-4 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5 group-hover:text-accent" />
+        </div>
       </td>
     </tr>
   );
