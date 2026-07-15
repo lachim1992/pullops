@@ -414,9 +414,7 @@ export const getOrgDashboard = createServerFn({ method: "GET" })
     // ── pull tasks ──────────────────────────────────────────────────────────
     const tasks = tasksRes.data ?? [];
     const FINAL = new Set(["DONE", "CANCELLED", "TESTED"]);
-    const myOpenTasks = tasks.filter(
-      (t) => !FINAL.has(t.status as string) && (t as { assigned_to?: string }).assigned_to === userId,
-    ).length;
+    const myOpenTasks = tasks.filter((t) => !FINAL.has(t.status as string)).length;
 
     // Build 14-day trend from terminated_at + tested_at
     const daily = buildEmptyDaily(14);
