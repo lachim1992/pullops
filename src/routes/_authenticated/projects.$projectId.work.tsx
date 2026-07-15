@@ -11,7 +11,6 @@ import {
   MapPinned,
   PackageOpen,
   RefreshCw,
-  Send,
   Server,
 } from "lucide-react";
 
@@ -21,11 +20,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PlanCanvasSurface } from "@/components/plan-canvas-surface";
 import { getPullModeData, setCablePullStatus } from "@/lib/pullTasks.functions";
-import {
-  listCompletionOverview,
-  markPlanReadyForCompletion,
-} from "@/lib/completionPlans.functions";
-import { getMyProjectCapabilities } from "@/lib/capabilities.functions";
 import { endpointKindInfo } from "@/lib/endpointKinds";
 import type { NormPoint } from "@/lib/length";
 
