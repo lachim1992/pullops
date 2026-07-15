@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { recomputeCablesByIds } from "@/lib/cables.functions";
 import { dbErrorMessage } from "@/lib/dbErrors";
 
 export const listEndpointCables = createServerFn({ method: "GET" })
@@ -172,5 +173,6 @@ export const assignRouteToEndpointCables = createServerFn({ method: "POST" })
       .update({ route_id: data.routeId })
       .in("id", ids);
     if (error) throw new Error(dbErrorMessage(error));
+    await recomputeCablesByIds(supabase, ids as string[]);
     return { ok: true, count: ids.length };
   });
