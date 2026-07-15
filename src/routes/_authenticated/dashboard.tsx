@@ -887,6 +887,107 @@ function ProjectRow({
   );
 }
 
+function ProjectRowMenu({ projectId, projectName }: { projectId: string; projectName: string }) {
+  const [open, setOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmName, setConfirmName] = useState("");
+  const queryClient = useQueryClient();
+  const deleteFn = useServerFn(deleteProject);
+
+  const stop = (e: React.SyntheticEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+  };
+
+  async function handleDelete() {
+    if (confirmName.trim() !== projectName.trim()) {
+      toast.error("Název nesouhlasí");
+      return;
+    }
+    setDeleting(true);
+    try {
+      await deleteFn({ data: { id: projectId } });
+      toast.success("Projekt smazán");
+      await queryClient.invalidateQueries({ queryKey: ["org-dashboard"] });
+      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+      setOpen(false);
+      setConfirmName("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Chyba při mazání");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild onClick={stop}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            aria-label="Možnosti projektu"
+          >
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" onClick={stop}>
+          <DropdownMenuItem
+            className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+            onSelect={(e) => {
+              e.preventDefault();
+              setOpen(true);
+            }}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Smazat projekt
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <AlertDialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setConfirmName(""); }}>
+        <AlertDialogContent onClick={stop}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Smazat projekt?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tato akce je nevratná. Odstraní všechna data projektu: plány, endpointy, kabely,
+              patch panely, dokumenty, protokoly, závady, day plány, špulky i členy. Audit události
+              zůstanou zachovány.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor={`confirm-${projectId}`} className="text-xs text-muted-foreground">
+              Pro potvrzení napiš přesný název projektu: <span className="font-mono text-foreground">{projectName}</span>
+            </Label>
+            <Input
+              id={`confirm-${projectId}`}
+              value={confirmName}
+              onChange={(e) => setConfirmName(e.target.value)}
+              placeholder={projectName}
+              autoComplete="off"
+              autoFocus
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Zrušit</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); void handleDelete(); }}
+              disabled={deleting || confirmName.trim() !== projectName.trim()}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
+              Smazat
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}
+
+
+
 /* ────────────────────────────────────────────────────────────────────── */
 
 function DashboardSkeleton() {
