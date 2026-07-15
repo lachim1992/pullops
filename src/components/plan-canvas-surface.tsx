@@ -84,6 +84,18 @@ export function PlanCanvasSurface({
     }
   }
 
+  function toggleAppFullscreen() {
+    const el = fullscreenTargetRef?.current ?? outerRef.current;
+    if (!el) return;
+    const cls = "plan-canvas-app-fullscreen";
+    setAppFullscreen((prev) => {
+      const next = !prev;
+      if (next) el.classList.add(cls);
+      else el.classList.remove(cls);
+      return next;
+    });
+  }
+
   const safeAspect = Number.isFinite(aspect) && aspect > 0 ? aspect : DEFAULT_ASPECT;
   const outerAspect = size.width > 0 && size.height > 0 ? size.width / size.height : safeAspect;
   const innerWidth = outerAspect > safeAspect ? size.height * safeAspect : size.width;
