@@ -190,6 +190,9 @@ export const upsertDefect = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const ctx = await projectCtx(supabase, data.projectId);
+    if (data.assignedTo) {
+      await assertProjectMember(supabase, data.projectId, data.assignedTo);
+    }
     const patch = {
       project_id: data.projectId,
       organization_id: ctx.organization_id,
