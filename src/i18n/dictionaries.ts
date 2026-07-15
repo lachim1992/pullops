@@ -98,7 +98,7 @@ export const cs = {
     pulling: "Tahání",
     defects: "Závady",
     protocols: "Protokoly",
-    completion: "Zakončení & test",
+    completion: "Proměření & test",
     pickProject: "Vyberte projekt na Přehledu",
   },
   dashboard: {
