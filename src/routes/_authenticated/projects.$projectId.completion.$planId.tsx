@@ -498,6 +498,101 @@ function CompletionPlanEditor() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Search sheet — mobile-first bottom sheet */}
+      <Sheet open={searchOpen} onOpenChange={setSearchOpen}>
+        <SheetContent
+          side="bottom"
+          className="flex h-[85vh] flex-col gap-0 p-0 sm:h-[80vh]"
+        >
+          <SheetHeader className="border-b border-border px-4 py-3">
+            <SheetTitle className="font-mono text-sm uppercase">Hledat kabel</SheetTitle>
+          </SheetHeader>
+          <div className="border-b border-border px-3 py-2">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                autoFocus
+                value={searchQ}
+                onChange={(e) => setSearchQ(e.target.value)}
+                placeholder="Kód kabelu, endpoint, PP/port…"
+                enterKeyHint="search"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                className="h-11 pl-9 pr-9 font-mono text-base"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && searchResults[0]) {
+                    e.preventDefault();
+                    pickSearchResult(searchResults[0].port);
+                  }
+                }}
+              />
+              {searchQ.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQ("")}
+                  className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-sm text-muted-foreground hover:text-foreground"
+                  aria-label="Vymazat"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            <div className="mt-1.5 flex items-center justify-between font-mono text-[10px] uppercase text-muted-foreground">
+              <span>{searchQ.trim().length === 0 ? "Zadej alespoň 1 znak" : `${searchResults.length} výsledků`}</span>
+              <span>{searchIndex.length} kabelů celkem</span>
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto overscroll-contain">
+            {searchQ.trim().length === 0 ? (
+              <div className="p-6 text-center text-xs text-muted-foreground">
+                Napiš část kódu kabelu, endpointu (např. „CSO08"), nebo „PP2/17".
+              </div>
+            ) : searchResults.length === 0 ? (
+              <div className="p-6 text-center text-xs text-muted-foreground">
+                Nic nenalezeno.
+              </div>
+            ) : (
+              <ul className="divide-y divide-border">
+                {searchResults.map(({ port, panelCode }) => {
+                  const cable = port.cable!;
+                  const isMeasured = MEASURED_STATUSES.has(cable.status);
+                  return (
+                    <li key={port.id}>
+                      <button
+                        type="button"
+                        onClick={() => pickSearchResult(port)}
+                        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/40 active:bg-muted"
+                      >
+                        <span
+                          className={cn(
+                            "h-2 w-2 shrink-0 rounded-full",
+                            isMeasured
+                              ? "bg-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.9)]"
+                              : "bg-amber-400 shadow-[0_0_6px_rgba(245,158,11,0.9)]",
+                          )}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate font-mono text-sm font-bold">
+                            {cable.code}
+                          </div>
+                          <div className="truncate text-[11px] text-muted-foreground">
+                            {cable.peerEndpointCode ?? "—"}
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="shrink-0 font-mono text-[10px]">
+                          {panelCode}/{port.portNumber}
+                        </Badge>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
     </AppShell>
   );
 }
