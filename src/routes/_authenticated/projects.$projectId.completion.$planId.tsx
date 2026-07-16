@@ -1286,3 +1286,68 @@ function LegendDot({ className, label }: { className: string; label: string }) {
     </span>
   );
 }
+
+function MiniPanelViz({
+  portCount,
+  ports,
+  highlightPortId,
+}: {
+  portCount: number;
+  ports: PortRow[];
+  highlightPortId: string;
+}) {
+  const byNum = new Map<number, PortRow>();
+  for (const p of ports) byNum.set(p.portNumber, p);
+  const total = Math.max(portCount || 0, ports.length);
+  const slots: Array<PortRow | null> = [];
+  for (let i = 1; i <= total; i++) slots.push(byNum.get(i) ?? null);
+  const half = Math.ceil(slots.length / 2);
+  const rows = [slots.slice(0, half), slots.slice(half)];
+
+  return (
+    <div className="space-y-1 rounded-sm border border-neutral-800 bg-neutral-950/70 p-1.5 shadow-inner">
+      {rows.map((row, idx) =>
+        row.length === 0 ? null : (
+          <div
+            key={idx}
+            className="grid gap-0.5"
+            style={{ gridTemplateColumns: `repeat(${row.length}, minmax(0, 1fr))` }}
+          >
+            {row.map((port, i) => {
+              if (!port) {
+                return (
+                  <div
+                    key={`e-${idx}-${i}`}
+                    className="aspect-[3/4] rounded-[2px] border border-dashed border-neutral-800 bg-neutral-900/60"
+                  />
+                );
+              }
+              const cable = port.cable;
+              const hasCable = !!cable;
+              const isMeasured = hasCable && MEASURED_STATUSES.has(cable!.status);
+              const isHighlighted = port.id === highlightPortId;
+              return (
+                <div
+                  key={port.id}
+                  title={`Port ${port.portNumber}${cable ? ` · ${cable.code}` : ""}`}
+                  className={cn(
+                    "relative aspect-[3/4] rounded-[2px] border text-[8px] font-mono flex items-center justify-center",
+                    hasCable
+                      ? isMeasured
+                        ? "border-emerald-500/60 bg-emerald-500/15 text-emerald-200"
+                        : "border-amber-500/50 bg-amber-500/10 text-amber-200"
+                      : "border-neutral-800 bg-neutral-900/80 text-neutral-600",
+                    isHighlighted &&
+                      "!border-sky-400 ring-2 ring-sky-400/70 ring-offset-1 ring-offset-neutral-950 animate-pulse z-10",
+                  )}
+                >
+                  {port.portNumber}
+                </div>
+              );
+            })}
+          </div>
+        ),
+      )}
+    </div>
+  );
+}
