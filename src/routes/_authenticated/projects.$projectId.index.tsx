@@ -186,7 +186,7 @@ function ProjectDetailPage() {
                   {canManage ? (
                     <HubTile
                       projectId={projectId}
-                      to="/projects/$projectId/documents"
+                      to="/projects/$projectId/manage"
                       icon={FolderKanban}
                       title={t("nav.manage") ?? "Správa"}
                       tone="manage"
