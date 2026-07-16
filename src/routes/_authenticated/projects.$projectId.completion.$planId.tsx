@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, CheckCircle2, ChevronDown, Layers, Ruler, Server, Undo2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ChevronDown, Layers, Ruler, Search, Server, Undo2, X } from "lucide-react";
 import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
