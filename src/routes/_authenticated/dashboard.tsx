@@ -78,7 +78,10 @@ import { updateFloorPlan } from "@/lib/floorPlans.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { useT } from "@/i18n";
 
-const searchSchema = z.object({ org: z.string().uuid().optional() });
+const searchSchema = z.object({
+  org: z.string().uuid().optional(),
+  tab: z.enum(["overview", "projects"]).optional(),
+});
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   validateSearch: searchSchema,
