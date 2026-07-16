@@ -916,15 +916,24 @@ function MeasurementPanelCard({
   ports,
   canEdit,
   onMeasure,
+  highlightPortId,
+  registerPortRef,
 }: {
   panel: { id: string; code: string; name: string | null; portCount: number };
   ports: PortRow[];
   canEdit: boolean;
   onMeasure: (port: PortRow) => void;
+  highlightPortId?: string | null;
+  registerPortRef?: (id: string, el: HTMLButtonElement | null) => void;
 }) {
   const measured = ports.filter((p) => p.cable && MEASURED_STATUSES.has(p.cable.status)).length;
   const withCable = ports.filter((p) => p.cable).length;
+  const hasHighlight = highlightPortId ? ports.some((p) => p.id === highlightPortId) : false;
   const [open, setOpen] = useState(true);
+  // auto-open when a search result targets a port in this panel
+  useEffect(() => {
+    if (hasHighlight) setOpen(true);
+  }, [hasHighlight]);
 
   // Normalize to portCount slots (fill missing with null so illustration matches real panel)
   const slots: Array<PortRow | null> = useMemo(() => {
