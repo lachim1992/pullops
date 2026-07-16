@@ -2998,6 +2998,68 @@ function DayPlanCard({
             />
           </label>
 
+          {/* Fyzické spulky přiřazené k tomuto plánu */}
+          <div>
+            <div className="mb-1 flex items-center justify-between">
+              <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                Fyzické spulky
+              </div>
+              <div className="text-[10px] font-mono text-muted-foreground">
+                {assignedSpools.length > 0
+                  ? `${physicalCapacity.toFixed(0)} m k dispozici`
+                  : "Vyberte spulky ze skladu"}
+              </div>
+            </div>
+            <div className="mb-1 flex flex-wrap gap-1">
+              {assignedSpools.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => removeSpool(s.id)}
+                  title="Odebrat z plánu"
+                  className="inline-flex items-center gap-1 rounded-sm border border-primary/40 bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] hover:bg-destructive/10 hover:text-destructive"
+                >
+                  {s.serialNo}
+                  {s.cableTypeCode && (
+                    <span className="text-muted-foreground">· {s.cableTypeCode}</span>
+                  )}
+                  <span className="text-muted-foreground">
+                    · {s.currentLengthM.toFixed(0)} m
+                  </span>
+                  <X className="h-3 w-3" />
+                </button>
+              ))}
+              {assignedSpools.length === 0 && (
+                <span className="text-[10px] text-muted-foreground">
+                  Zatím žádná spulka.
+                </span>
+              )}
+            </div>
+            <select
+              value=""
+              onChange={(e) => {
+                if (e.target.value) addSpool(e.target.value);
+                e.target.value = "";
+              }}
+              className="w-full rounded-sm border border-border bg-background px-2 py-1 text-xs"
+            >
+              <option value="">+ přidat spulku ze skladu…</option>
+              {availableSpools.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.serialNo}
+                  {s.cableTypeCode ? ` · ${s.cableTypeCode}` : ""} · {s.currentLengthM.toFixed(0)} m
+                </option>
+              ))}
+            </select>
+            {availableSpools.length === 0 && assignedSpools.length === 0 && (
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                Žádné volné spulky. Přidej je v záložce Fyzické spulky.
+              </p>
+            )}
+          </div>
+
+
+
           <div>
             <div className="mb-1 flex items-center justify-between">
               <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
