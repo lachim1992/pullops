@@ -3053,7 +3053,13 @@ function DayPlanCard({
       )}
 
       <div className="mb-2 text-[10px] font-mono text-muted-foreground">
-        Kapacita: {capacity.toLocaleString("cs-CZ")} m · Kabelů: {cables.length}
+        Kapacita: {(hasPhysical ? physicalCapacity : virtualCapacity).toLocaleString("cs-CZ")} m
+        {hasPhysical && (
+          <span className="ml-1 text-primary">
+            · {assignedSpools.length} fyz. spulek
+          </span>
+        )}
+        {" "}· Kabelů: {cables.length}
       </div>
       <div className="mb-2 flex flex-wrap gap-1">
         {cables.map((c) => (
