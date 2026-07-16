@@ -8,21 +8,21 @@ import {
   Camera,
   CheckCircle2,
   CheckSquare,
-  ClipboardList,
   Circle,
   FileText,
   FolderKanban,
+  Gauge,
+  LayoutDashboard,
   Loader2,
   MessageSquare,
+  Navigation as NavIcon,
   PlayCircle,
-  Route as RouteIcon,
-  Users,
-  Wrench,
   Zap,
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getProject } from "@/lib/projects.functions";
 import { getMyProjectCapabilities } from "@/lib/capabilities.functions";
 import {
@@ -89,7 +89,7 @@ function ProjectDetailPage() {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35 }}
-            className="mb-5"
+            className="mb-4"
           >
             <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-accent">
               {project.data.code}
@@ -117,121 +117,126 @@ function ProjectDetailPage() {
             )}
           </motion.header>
 
-          {/* Personal dashboard — my tasks + today's activity */}
-          <section className="mb-5">
-            <PersonalDashboard data={myDash.data} loading={myDash.isLoading} projectId={projectId} />
-          </section>
+          <Tabs defaultValue="nav" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsTrigger value="nav" className="gap-1.5">
+                <NavIcon className="h-3.5 w-3.5" />
+                <span className="font-mono text-[11px] uppercase tracking-[0.18em]">Navigace</span>
+              </TabsTrigger>
+              <TabsTrigger value="dash" className="gap-1.5">
+                <LayoutDashboard className="h-3.5 w-3.5" />
+                <span className="font-mono text-[11px] uppercase tracking-[0.18em]">Dashboard</span>
+              </TabsTrigger>
+            </TabsList>
 
+            {/* ====================== NAVIGACE ====================== */}
+            <TabsContent value="nav" className="mt-0 space-y-4">
+              <section>
+                <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
+                  <HubTile
+                    projectId={projectId}
+                    to="/projects/$projectId/lobby"
+                    icon={MessageSquare}
+                    title={t("nav.chat") ?? "Chat"}
+                    tone="chat"
+                    metric={home.data ? `${home.data.hub.chatRecent}` : "—"}
+                    metricLabel="24h zpráv"
+                  />
+                  <HubTile
+                    projectId={projectId}
+                    to="/projects/$projectId/work"
+                    icon={Cable}
+                    title="Tahání"
+                    tone="pull"
+                    metric={home.data ? `${home.data.hub.pulledPct}%` : "—"}
+                    metricLabel="nataženo"
+                  />
+                  <HubTile
+                    projectId={projectId}
+                    to="/projects/$projectId/completion"
+                    icon={CheckSquare}
+                    title="Kompletace"
+                    tone="completion"
+                    metric={
+                      home.data
+                        ? `${home.data.hub.completionDone}/${home.data.hub.completionTotal || 0}`
+                        : "—"
+                    }
+                    metricLabel="endpointů hotovo"
+                  />
+                  <HubTile
+                    projectId={projectId}
+                    to="/projects/$projectId/defects"
+                    icon={AlertTriangle}
+                    title="Závady"
+                    tone="defects"
+                    metric={home.data ? `${home.data.hub.defectsOpen}` : "—"}
+                    metricLabel="otevřených"
+                    highlight={home.data ? home.data.hub.defectsOpen > 0 : false}
+                  />
+                  <HubTile
+                    projectId={projectId}
+                    to="/projects/$projectId/protocols"
+                    icon={FileText}
+                    title="Protokoly"
+                    tone="protocols"
+                    metric={home.data ? `${home.data.hub.protocolsTotal}` : "—"}
+                    metricLabel="celkem"
+                  />
+                  {canManage ? (
+                    <HubTile
+                      projectId={projectId}
+                      to="/projects/$projectId/documents"
+                      icon={FolderKanban}
+                      title={t("nav.manage") ?? "Správa"}
+                      tone="manage"
+                      metric="→"
+                      metricLabel="nastavení"
+                    />
+                  ) : (
+                    <HubTile
+                      projectId={projectId}
+                      to="/projects/$projectId/photos"
+                      icon={Camera}
+                      title="Fotoarchiv"
+                      tone="chat"
+                      metric={home.data ? `${home.data.hub.photosTotal}` : "—"}
+                      metricLabel="fotek celkem"
+                    />
+                  )}
+                </div>
+              </section>
 
+              <section className="grid gap-2.5 md:grid-cols-2">
+                <AlertsCard defectsOpen={home.data?.hub.defectsOpen ?? 0} projectId={projectId} />
+                <TodaysPlansCard plans={home.data?.todaysPlans ?? []} projectId={projectId} />
+              </section>
 
-          {/* Primary hub — bento 2x3 on mobile, 5 across on desktop */}
-          <section className="mb-5">
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
-              <HubTile
-                projectId={projectId}
-                to="/projects/$projectId/lobby"
-                icon={MessageSquare}
-                title={t("nav.chat") ?? "Chat"}
-                tone="chat"
-                metric={home.data ? `${home.data.hub.chatRecent}` : "—"}
-                metricLabel="24h zpráv"
-              />
-              <HubTile
-                projectId={projectId}
-                to="/projects/$projectId/work"
-                icon={Cable}
-                title="Tahání"
-                tone="pull"
-                metric={home.data ? `${home.data.hub.pulledPct}%` : "—"}
-                metricLabel="nataženo"
-              />
-              <HubTile
-                projectId={projectId}
-                to="/projects/$projectId/completion"
-                icon={CheckSquare}
-                title="Kompletace"
-                tone="completion"
-                metric={
-                  home.data
-                    ? `${home.data.hub.completionDone}/${home.data.hub.completionTotal || 0}`
-                    : "—"
-                }
-                metricLabel="endpointů hotovo"
-              />
-              <HubTile
-                projectId={projectId}
-                to="/projects/$projectId/defects"
-                icon={AlertTriangle}
-                title="Závady"
-                tone="defects"
-                metric={home.data ? `${home.data.hub.defectsOpen}` : "—"}
-                metricLabel="otevřených"
-                highlight={home.data ? home.data.hub.defectsOpen > 0 : false}
-              />
-              <HubTile
-                projectId={projectId}
-                to="/projects/$projectId/protocols"
-                icon={FileText}
-                title="Protokoly"
-                tone="protocols"
-                metric={home.data ? `${home.data.hub.protocolsTotal}` : "—"}
-                metricLabel="celkem"
-              />
-              {/* 6th tile on mobile row */}
-              {canManage ? (
-                <HubTile
-                  projectId={projectId}
-                  to="/projects/$projectId/documents"
-                  icon={FolderKanban}
-                  title={t("nav.manage") ?? "Správa"}
-                  tone="manage"
-                  metric="→"
-                  metricLabel="nastavení"
-                />
-              ) : (
-                <HubTile
-                  projectId={projectId}
-                  to="/projects/$projectId/photos"
-                  icon={Camera}
-                  title="Fotoarchiv"
-                  tone="chat"
-                  metric={home.data ? `${home.data.hub.photosTotal}` : "—"}
-                  metricLabel="fotek celkem"
-                />
-              )}
+              <section>
+                <div className="mb-2.5 flex items-center gap-3">
+                  <h2 className="font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
+                    Poslední aktivita
+                  </h2>
+                  <div className="hairline-gold h-px flex-1" />
+                  <Link
+                    to="/projects/$projectId/lobby"
+                    params={{ projectId }}
+                    className="font-mono text-[10px] uppercase tracking-[0.2em] text-accent hover:underline"
+                  >
+                    Vše →
+                  </Link>
+                </div>
+                <RecentActivity items={home.data?.recentActivity ?? []} loading={home.isLoading} />
+              </section>
+            </TabsContent>
 
-            </div>
-          </section>
-
-          {/* Compact progress card with 4 mini bars */}
-          <section className="mb-5">
-            <CompactProgress progress={progress.data} loading={progress.isLoading} />
-          </section>
-
-          {/* Alerts + today's plans */}
-          <section className="mb-5 grid gap-2.5 md:grid-cols-2">
-            <AlertsCard defectsOpen={home.data?.hub.defectsOpen ?? 0} projectId={projectId} />
-            <TodaysPlansCard plans={home.data?.todaysPlans ?? []} projectId={projectId} />
-          </section>
-
-          {/* Recent activity */}
-          <section className="mb-8">
-            <div className="mb-2.5 flex items-center gap-3">
-              <h2 className="font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
-                Poslední aktivita
-              </h2>
-              <div className="hairline-gold h-px flex-1" />
-              <Link
-                to="/projects/$projectId/lobby"
-                params={{ projectId }}
-                className="font-mono text-[10px] uppercase tracking-[0.2em] text-accent hover:underline"
-              >
-                Vše →
-              </Link>
-            </div>
-            <RecentActivity items={home.data?.recentActivity ?? []} loading={home.isLoading} />
-          </section>
-
+            {/* ====================== DASHBOARD ====================== */}
+            <TabsContent value="dash" className="mt-0 space-y-4">
+              <PersonalDashboard data={myDash.data} loading={myDash.isLoading} projectId={projectId} />
+              <CompactProgress progress={progress.data} loading={progress.isLoading} />
+              <ProjectStats home={home.data} progress={progress.data} loading={home.isLoading || progress.isLoading} />
+            </TabsContent>
+          </Tabs>
         </>
       )}
     </AppShell>
@@ -349,14 +354,16 @@ function CompactProgress({
 
   return (
     <div className="rounded-xl border border-border/60 bg-card/60 p-4 backdrop-blur">
+      <div className="mb-3 flex items-center gap-3">
+        <Gauge className="h-3.5 w-3.5 text-accent" />
+        <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
+          Celkový progres
+        </div>
+        <div className="hairline-gold h-px flex-1" />
+      </div>
       <div className="flex items-baseline justify-between gap-3">
-        <div>
-          <div className="font-mono text-[9px] uppercase tracking-[0.24em] text-muted-foreground">
-            Celkový progres
-          </div>
-          <div className="mt-0.5 font-display text-3xl font-semibold tracking-tight text-accent">
-            {progress.progressPct}%
-          </div>
+        <div className="font-display text-3xl font-semibold tracking-tight text-accent sm:text-4xl">
+          {progress.progressPct}%
         </div>
         <div className="text-right font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
           {progress.cables.total} kabelů
@@ -410,6 +417,73 @@ function MiniBar({
         <span className="ml-1 text-muted-foreground">
           {done}/{total}
         </span>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Project stats table (dashboard tab) ---------------- */
+
+function ProjectStats({
+  home,
+  progress,
+  loading,
+}: {
+  home: import("@/lib/metrics.functions").ProjectHome | undefined;
+  progress: import("@/lib/metrics.functions").ProjectProgress | undefined;
+  loading: boolean;
+}) {
+  if (loading || !home || !progress) {
+    return (
+      <div className="rounded-xl border border-border/60 bg-card/40 p-4 text-xs text-muted-foreground">
+        <Loader2 className="mr-2 inline h-3.5 w-3.5 animate-spin" />
+        Načítám statistiky…
+      </div>
+    );
+  }
+
+  const rows: Array<{ label: string; value: string | number; tone?: "accent" | "warn" | "ok" }> = [
+    { label: "Kabelů celkem", value: progress.cables.total },
+    { label: "Endpointů celkem", value: progress.endpoints.total },
+    { label: "Nataženo", value: `${progress.cables.pulled} / ${progress.cables.total}`, tone: "accent" },
+    { label: "Proměřeno", value: `${progress.cables.terminated} / ${progress.cables.total}`, tone: "accent" },
+    { label: "Změřeno", value: `${progress.cables.tested} / ${progress.cables.total}`, tone: "accent" },
+    { label: "Hotovo", value: `${progress.cables.done} / ${progress.cables.total}`, tone: "ok" },
+    { label: "Otevřené závady", value: home.hub.defectsOpen, tone: home.hub.defectsOpen > 0 ? "warn" : "ok" },
+    { label: "Protokoly", value: home.hub.protocolsTotal },
+    { label: "Fotky", value: home.hub.photosTotal },
+    { label: "Zpráv (24h)", value: home.hub.chatRecent },
+  ];
+
+  return (
+    <div className="rounded-xl border border-border/60 bg-card/60 backdrop-blur">
+      <div className="flex items-center gap-3 border-b border-border/50 px-4 py-2.5">
+        <LayoutDashboard className="h-3.5 w-3.5 text-accent" />
+        <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
+          Statistiky projektu
+        </div>
+      </div>
+      <div className="divide-y divide-border/40">
+        {rows.map((r) => (
+          <div key={r.label} className="flex items-center justify-between gap-3 px-4 py-2">
+            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+              {r.label}
+            </div>
+            <div
+              className={`font-mono text-sm font-bold tabular-nums ${
+                r.tone === "warn"
+                  ? "text-amber-500"
+                  : r.tone === "ok"
+                  ? "text-[color:var(--chart-5)]"
+                  : r.tone === "accent"
+                  ? "text-accent"
+                  : ""
+              }`}
+            >
+              {r.value}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -558,33 +632,6 @@ function relTime(iso: string): string {
   return `${d}d`;
 }
 
-/* ---------------- Section link ---------------- */
-
-function SectionLink({
-  projectId,
-  to,
-  icon: Icon,
-  title,
-}: {
-  projectId: string;
-  to: string;
-  icon: typeof Cable;
-  title: string;
-}) {
-  return (
-    <Link
-      to={to as never}
-      params={{ projectId } as never}
-      className="group flex items-center gap-2.5 rounded-lg border border-border/60 bg-card/50 p-2.5 backdrop-blur transition-colors hover:border-[color:var(--accent)]/50 hover:bg-card/80"
-    >
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[color:var(--accent)]/25 bg-[color:var(--accent)]/10 text-accent">
-        <Icon className="h-3.5 w-3.5" />
-      </div>
-      <div className="min-w-0 truncate font-display text-sm font-semibold">{title}</div>
-    </Link>
-  );
-}
-
 /* ---------------- Personal dashboard ---------------- */
 
 function PersonalDashboard({
@@ -609,7 +656,8 @@ function PersonalDashboard({
 
   return (
     <div className="rounded-xl border border-border/60 bg-card/60 p-3 backdrop-blur sm:p-4">
-      <div className="mb-2 flex items-center gap-3">
+      <div className="mb-3 flex items-center gap-3">
+        <Zap className="h-3.5 w-3.5 text-accent" />
         <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
           Můj přehled
         </div>
@@ -617,38 +665,29 @@ function PersonalDashboard({
         {loading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
       </div>
 
-      {/* Row 1: today's tasks | Row 2: total tasks */}
+      {/* Task rows */}
       <div className="grid gap-2 sm:grid-cols-2">
-        <TaskRow
-          label="Dnes"
-          data={tasks.today}
-          projectId={projectId}
-          tone="accent"
-        />
-        <TaskRow
-          label="Celý projekt"
-          data={tasks.total}
-          projectId={projectId}
-          tone="muted"
-        />
+        <TaskRow label="Dnes" data={tasks.today} projectId={projectId} tone="accent" />
+        <TaskRow label="Celý projekt" data={tasks.total} projectId={projectId} tone="muted" />
       </div>
 
-      {/* Row 3: today's activity across pull + completion */}
-      <div className="mt-2 flex items-stretch gap-2 overflow-x-auto rounded-lg border border-border/50 bg-background/40 p-2">
-        <div className="flex shrink-0 items-center gap-2 pr-2">
-          <Zap className="h-3.5 w-3.5 text-accent" />
+      {/* Activity — responsive grid, no horizontal scroll */}
+      <div className="mt-3 rounded-lg border border-border/50 bg-background/40 p-2.5">
+        <div className="mb-2 flex items-center justify-between gap-2">
           <div className="font-mono text-[9px] uppercase tracking-[0.22em] text-muted-foreground">
             Dnešní aktivita
           </div>
+          <div className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+            <span className="text-accent">{pullTotal}</span> tah. ·{" "}
+            <span className="text-[color:var(--chart-5)]">{compTotal}</span> kompl.
+          </div>
         </div>
-        <ActPill icon={Cable} label="Nataženo" value={act.pull.pulled} />
-        <ActPill icon={Cable} label="Proměřeno" value={act.pull.terminated} />
-        <ActPill icon={Cable} label="Změřeno" value={act.pull.tested} />
-        <ActPill icon={CheckSquare} label="Endpoint" value={act.completion.endpoints} />
-        <ActPill icon={CheckSquare} label="Panel" value={act.completion.panels} />
-        <div className="ml-auto shrink-0 self-center font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-          <span className="text-accent">{pullTotal}</span> tahání ·{" "}
-          <span className="text-[color:var(--chart-5)]">{compTotal}</span> kompletace
+        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-5">
+          <ActPill icon={Cable} label="Nataženo" value={act.pull.pulled} />
+          <ActPill icon={Cable} label="Proměřeno" value={act.pull.terminated} />
+          <ActPill icon={Cable} label="Změřeno" value={act.pull.tested} />
+          <ActPill icon={CheckSquare} label="Endpoint" value={act.completion.endpoints} />
+          <ActPill icon={CheckSquare} label="Panel" value={act.completion.panels} />
         </div>
       </div>
     </div>
@@ -740,18 +779,18 @@ function ActPill({
   const active = value > 0;
   return (
     <div
-      className={`flex shrink-0 items-center gap-1.5 rounded-md border px-2 py-1 ${
+      className={`flex min-w-0 items-center gap-1.5 rounded-md border px-2 py-1.5 ${
         active
           ? "border-[color:var(--accent)]/40 bg-[color:var(--accent)]/10"
           : "border-border/40 bg-transparent"
       }`}
     >
-      <Icon className={`h-3 w-3 ${active ? "text-accent" : "text-muted-foreground"}`} />
-      <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
+      <Icon className={`h-3 w-3 shrink-0 ${active ? "text-accent" : "text-muted-foreground"}`} />
+      <div className="min-w-0 flex-1 truncate font-mono text-[9px] uppercase tracking-[0.16em] text-muted-foreground">
         {label}
       </div>
       <div
-        className={`font-mono text-xs font-bold tabular-nums ${
+        className={`shrink-0 font-mono text-xs font-bold tabular-nums ${
           active ? "text-foreground" : "text-muted-foreground"
         }`}
       >
@@ -760,4 +799,3 @@ function ActPill({
     </div>
   );
 }
-
