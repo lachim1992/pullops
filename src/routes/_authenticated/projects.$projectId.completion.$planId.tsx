@@ -841,11 +841,23 @@ function MiniMap({
                   <Badge variant="outline" className="font-mono text-[10px]">{EP_LABEL[selectedEndpoint.completionStatus]}</Badge>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-1">
-                  {ENDPOINT_STATUSES.map((status) => (
-                    <Button key={status} size="sm" variant={status === selectedEndpoint.completionStatus ? "default" : "outline"} className="h-7 px-2 font-mono text-[10px]" onClick={() => onSetStatus(selectedEndpoint.id, status)}>
-                      {EP_LABEL[status]}
-                    </Button>
-                  ))}
+                  {ENDPOINT_STATUSES.map((status) => {
+                    const isPulled = status === "PULLED";
+                    return (
+                      <Button
+                        key={status}
+                        size="sm"
+                        variant={status === selectedEndpoint.completionStatus ? "default" : "outline"}
+                        className="h-7 px-2 font-mono text-[10px]"
+                        disabled={isPulled}
+                        title={isPulled ? "Řídí režim Tahání" : undefined}
+                        onClick={() => !isPulled && onSetStatus(selectedEndpoint.id, status)}
+                      >
+                        {EP_LABEL[status]}
+                        {isPulled && " 🔒"}
+                      </Button>
+                    );
+                  })}
                 </div>
                 <div className="mt-2 max-h-32 overflow-y-auto rounded-sm border border-border/60 bg-muted/30 p-2">
                   <div className="mb-1 font-mono text-[10px] uppercase text-muted-foreground">Kabely v bodě ({selectedCables.length})</div>
