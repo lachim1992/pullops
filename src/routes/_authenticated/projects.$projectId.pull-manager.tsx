@@ -236,7 +236,7 @@ function PullManagerPage() {
   }
 
   return (
-    <AppShell>
+    <AppShell projectId={projectId}>
       <div className="p-4 md:p-6 space-y-4">
         <div className="flex items-center gap-3 flex-wrap">
           <h1 className="text-2xl font-semibold">Manažer tahání</h1>
