@@ -212,7 +212,7 @@ export const getPullModeData = createServerFn({ method: "GET" })
     const { supabase } = context;
     const spoolLen = data.defaultSpoolLengthM;
 
-    const [plansRes, calsRes, endpointsRes, bundlesRes, typesRes, kindsRes, cablesRes, panelsRes, dayPlansRes, dayPlanCablesRes] =
+    const [plansRes, calsRes, endpointsRes, bundlesRes, typesRes, kindsRes, cablesRes, panelsRes, dayPlansRes, dayPlanCablesRes, planSpoolsRes, spoolsRes] =
       await Promise.all([
         supabase
           .from("floor_plans")
@@ -264,11 +264,21 @@ export const getPullModeData = createServerFn({ method: "GET" })
           .select("day_plan_id, cable_id, sort_order")
           .eq("project_id", data.projectId)
           .order("sort_order", { ascending: true }),
+        supabase
+          .from("pull_day_plan_spools")
+          .select("day_plan_id, spool_id, sort_order")
+          .eq("project_id", data.projectId)
+          .order("sort_order", { ascending: true }),
+        supabase
+          .from("spools")
+          .select("id, serial_no, cable_type_id, current_length_m")
+          .eq("project_id", data.projectId),
       ]);
 
-    for (const res of [plansRes, calsRes, endpointsRes, bundlesRes, typesRes, kindsRes, cablesRes, panelsRes, dayPlansRes, dayPlanCablesRes]) {
+    for (const res of [plansRes, calsRes, endpointsRes, bundlesRes, typesRes, kindsRes, cablesRes, panelsRes, dayPlansRes, dayPlanCablesRes, planSpoolsRes, spoolsRes]) {
       if (res.error) throw new Error(res.error.message);
     }
+
 
     const docIds = (plansRes.data ?? [])
       .map((p) => p.document_id as string | null)
@@ -417,6 +427,7 @@ export const getPullModeData = createServerFn({ method: "GET" })
       typeCode: string;
       used: number;
       capacity: number;
+      serialNo?: string | null;
       cables: Array<{ id: string; code: string; meters: number }>;
     };
 
@@ -433,6 +444,72 @@ export const getPullModeData = createServerFn({ method: "GET" })
       const cid = a.cable_id as string;
       if (!assignmentsByDayPlan.has(pid)) assignmentsByDayPlan.set(pid, []);
       assignmentsByDayPlan.get(pid)!.push(cid);
+    }
+
+    // Physical spools assigned per day plan (with type + remaining capacity).
+    type PhysSpool = { id: string; serialNo: string; typeCode: string; capacity: number };
+    const physSpoolsByPlan = new Map<string, PhysSpool[]>();
+    const spoolInfoById = new Map<string, { serial: string; typeCode: string; capacity: number }>();
+    for (const s of spoolsRes.data ?? []) {
+      const tc = s.cable_type_id ? typeMap.get(s.cable_type_id as string)?.code ?? "—" : "—";
+      spoolInfoById.set(s.id as string, {
+        serial: (s.serial_no as string) ?? "",
+        typeCode: tc,
+        capacity: Number(s.current_length_m ?? 0),
+      });
+    }
+    for (const a of planSpoolsRes.data ?? []) {
+      const info = spoolInfoById.get(a.spool_id as string);
+      if (!info) continue;
+      const pid = a.day_plan_id as string;
+      if (!physSpoolsByPlan.has(pid)) physSpoolsByPlan.set(pid, []);
+      physSpoolsByPlan.get(pid)!.push({
+        id: a.spool_id as string,
+        serialNo: info.serial,
+        typeCode: info.typeCode,
+        capacity: info.capacity,
+      });
+    }
+
+    /** Pack cables into a fixed set of physical spools (FFD by type). */
+    function packBlockPhysical(entries: CableEntry[], phys: PhysSpool[]): Spool[] {
+      const spools: Spool[] = phys.map((p, i) => ({
+        index: i + 1,
+        typeCode: p.typeCode,
+        used: 0,
+        capacity: p.capacity,
+        serialNo: p.serialNo,
+        cables: [],
+      }));
+      // Group entries by typeCode, longest-first
+      const byType = new Map<string, CableEntry[]>();
+      for (const e of entries) {
+        const arr = byType.get(e.typeCode) ?? [];
+        arr.push(e);
+        byType.set(e.typeCode, arr);
+      }
+      for (const [tc, list] of byType) {
+        list.sort((a, b) => b.meters - a.meters);
+        const pool = spools.filter((s) => s.typeCode === tc);
+        for (const cable of list) {
+          const fit = pool.find((s) => s.used + cable.meters <= s.capacity);
+          if (fit) {
+            fit.used += cable.meters;
+            fit.cables.push(cable);
+          } else {
+            // Overflow: add virtual spool of exactly cable length
+            spools.push({
+              index: spools.length + 1,
+              typeCode: tc,
+              used: cable.meters,
+              capacity: cable.meters,
+              serialNo: null,
+              cables: [cable],
+            });
+          }
+        }
+      }
+      return spools;
     }
 
     /** Pack a list of cable entries into a fixed number of spools of given length using FFD. */
@@ -505,24 +582,34 @@ export const getPullModeData = createServerFn({ method: "GET" })
           assignedCableIds.add(cid);
         }
       }
+      const phys = physSpoolsByPlan.get(p.id as string) ?? [];
       const spoolCount = Math.max(1, Number(p.spool_count ?? 3));
       const spoolLenBlock = Math.max(1, Number(p.spool_length_m ?? spoolLen));
-      const blockSpools = packBlock(entries, spoolCount, spoolLenBlock);
+      const blockSpools =
+        phys.length > 0 ? packBlockPhysical(entries, phys) : packBlock(entries, spoolCount, spoolLenBlock);
       const totalUsed = blockSpools.reduce((a, s) => a + s.used, 0);
-      const totalCapacity = spoolCount * spoolLenBlock;
+      const totalCapacity =
+        phys.length > 0
+          ? blockSpools.reduce((a, s) => a + s.capacity, 0)
+          : spoolCount * spoolLenBlock;
       return {
         id: p.id as string,
         name: p.name as string,
         sortOrder: Number(p.sort_order ?? 0),
         plannedDate: (p.planned_date as string | null) ?? null,
         floorPlanId: (p.floor_plan_id as string | null) ?? null,
-        spoolCount,
+        spoolCount: phys.length > 0 ? phys.length : spoolCount,
         spoolLengthM: spoolLenBlock,
         totalUsed,
         totalCapacity,
-        spools: blockSpools.map((s) => ({ ...s, wasted: Math.max(0, s.capacity - s.used) })),
+        spools: blockSpools.map((s) => ({
+          ...s,
+          serialNo: s.serialNo ?? null,
+          wasted: Math.max(0, s.capacity - s.used),
+        })),
       };
     });
+
 
     // Unassigned cables → global fallback packing per type
     const unassignedByType = new Map<string, Array<{ id: string; code: string; meters: number }>>();

@@ -80,8 +80,10 @@ type SpoolRow = {
   used: number;
   capacity: number;
   wasted: number;
+  serialNo?: string | null;
   cables: Array<{ id: string; code: string; meters: number }>;
 };
+
 
 type DayBlock = {
   id: string;
@@ -853,12 +855,13 @@ function SpoolCard({
       <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-border px-3 py-2">
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="font-mono text-[10px]">
-            Spulka #{spool.index}
+            {spool.serialNo ? spool.serialNo : `Spulka #${spool.index}`}
           </Badge>
           <span className="font-mono text-[11px] text-muted-foreground">
             {spool.typeCode}
           </span>
         </div>
+
         <div className="font-mono text-[11px] text-muted-foreground">
           {pulledMeters.toFixed(1)} / {spool.used.toFixed(1)} m ·{" "}
           zbývá <span className="text-foreground">{remaining.toFixed(1)} m</span> ·{" "}

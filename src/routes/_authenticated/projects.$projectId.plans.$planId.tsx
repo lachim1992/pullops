@@ -28,6 +28,11 @@ import {
   addDayPlanPhoto,
   deleteDayPlanPhoto,
 } from "@/lib/pullDayPlans.functions";
+import {
+  listSpoolsForPlanning,
+  assignSpoolToPlan,
+  unassignSpoolFromPlan,
+} from "@/lib/planSpools.functions";
 import { runOptimizer } from "@/lib/pullOptimizer.functions";
 import { listProjectMembersLite } from "@/lib/defects.functions";
 import { supabase } from "@/integrations/supabase/client";
@@ -2729,7 +2734,7 @@ function DayPlanCard({
   onDelete: (id: string) => Promise<void> | void;
   onAssign: (cableId: string, dayPlanId: string | null) => Promise<void> | void;
 }) {
-  const capacity = dp.spoolCount * dp.spoolLengthM;
+  const virtualCapacity = dp.spoolCount * dp.spoolLengthM;
   const [expanded, setExpanded] = useState(false);
   const [notesDraft, setNotesDraft] = useState<string>(dp.notes ?? "");
   const [uploading, setUploading] = useState(false);
@@ -2755,6 +2760,46 @@ function DayPlanCard({
     queryFn: () => photosFn({ data: { dayPlanId: dp.id } }),
     enabled: expanded,
   });
+
+  const spoolsFn = useServerFn(listSpoolsForPlanning);
+  const assignSpFn = useServerFn(assignSpoolToPlan);
+  const unassignSpFn = useServerFn(unassignSpoolFromPlan);
+  const spoolsQ = useQuery({
+    queryKey: ["plan-spools", projectId],
+    queryFn: () => spoolsFn({ data: { projectId } }),
+    enabled: expanded,
+  });
+  const assignedSpools = (spoolsQ.data?.spools ?? []).filter(
+    (s) => s.assignedPlanId === dp.id,
+  );
+  const availableSpools = (spoolsQ.data?.spools ?? []).filter(
+    (s) => !s.assignedPlanId,
+  );
+  const hasPhysical = assignedSpools.length > 0;
+  const physicalCapacity = assignedSpools.reduce((a, s) => a + s.currentLengthM, 0);
+
+  async function addSpool(spoolId: string) {
+    try {
+      await assignSpFn({ data: { projectId, dayPlanId: dp.id, spoolId } });
+      qc.invalidateQueries({ queryKey: ["plan-spools", projectId] });
+      qc.invalidateQueries({ queryKey: ["day-plans", projectId, dp.floorPlanId] });
+      toast.success("Spulka přiřazena");
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  }
+
+  async function removeSpool(spoolId: string) {
+    try {
+      await unassignSpFn({ data: { spoolId } });
+      qc.invalidateQueries({ queryKey: ["plan-spools", projectId] });
+      qc.invalidateQueries({ queryKey: ["day-plans", projectId, dp.floorPlanId] });
+      toast.success("Spulka odebrána");
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  }
+
 
   function patchBase() {
     return {
@@ -2838,33 +2883,36 @@ function DayPlanCard({
         )}
       </div>
 
-      <div className="mb-2 grid grid-cols-2 gap-2">
-        <label className="text-[10px] text-muted-foreground">
-          Cívek
-          <Input
-            type="number"
-            min={1}
-            max={20}
-            value={dp.spoolCount}
-            onChange={(e) =>
-              onUpdate({ ...patchBase(), spoolCount: Math.max(1, Number(e.target.value) || 1) })
-            }
-            className="h-7 text-xs font-mono"
-          />
-        </label>
-        <label className="text-[10px] text-muted-foreground">
-          Metry/cívka
-          <Input
-            type="number"
-            min={1}
-            value={dp.spoolLengthM}
-            onChange={(e) =>
-              onUpdate({ ...patchBase(), spoolLengthM: Math.max(1, Number(e.target.value) || 1) })
-            }
-            className="h-7 text-xs font-mono"
-          />
-        </label>
-      </div>
+      {!hasPhysical && (
+        <div className="mb-2 grid grid-cols-2 gap-2">
+          <label className="text-[10px] text-muted-foreground">
+            Cívek
+            <Input
+              type="number"
+              min={1}
+              max={20}
+              value={dp.spoolCount}
+              onChange={(e) =>
+                onUpdate({ ...patchBase(), spoolCount: Math.max(1, Number(e.target.value) || 1) })
+              }
+              className="h-7 text-xs font-mono"
+            />
+          </label>
+          <label className="text-[10px] text-muted-foreground">
+            Metry/cívka
+            <Input
+              type="number"
+              min={1}
+              value={dp.spoolLengthM}
+              onChange={(e) =>
+                onUpdate({ ...patchBase(), spoolLengthM: Math.max(1, Number(e.target.value) || 1) })
+              }
+              className="h-7 text-xs font-mono"
+            />
+          </label>
+        </div>
+      )}
+
 
       {expanded && (
         <div className="mb-2 space-y-2 rounded-sm border border-dashed border-border bg-muted/30 p-2">
@@ -2953,6 +3001,68 @@ function DayPlanCard({
             />
           </label>
 
+          {/* Fyzické spulky přiřazené k tomuto plánu */}
+          <div>
+            <div className="mb-1 flex items-center justify-between">
+              <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                Fyzické spulky
+              </div>
+              <div className="text-[10px] font-mono text-muted-foreground">
+                {assignedSpools.length > 0
+                  ? `${physicalCapacity.toFixed(0)} m k dispozici`
+                  : "Vyberte spulky ze skladu"}
+              </div>
+            </div>
+            <div className="mb-1 flex flex-wrap gap-1">
+              {assignedSpools.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => removeSpool(s.id)}
+                  title="Odebrat z plánu"
+                  className="inline-flex items-center gap-1 rounded-sm border border-primary/40 bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] hover:bg-destructive/10 hover:text-destructive"
+                >
+                  {s.serialNo}
+                  {s.cableTypeCode && (
+                    <span className="text-muted-foreground">· {s.cableTypeCode}</span>
+                  )}
+                  <span className="text-muted-foreground">
+                    · {s.currentLengthM.toFixed(0)} m
+                  </span>
+                  <X className="h-3 w-3" />
+                </button>
+              ))}
+              {assignedSpools.length === 0 && (
+                <span className="text-[10px] text-muted-foreground">
+                  Zatím žádná spulka.
+                </span>
+              )}
+            </div>
+            <select
+              value=""
+              onChange={(e) => {
+                if (e.target.value) addSpool(e.target.value);
+                e.target.value = "";
+              }}
+              className="w-full rounded-sm border border-border bg-background px-2 py-1 text-xs"
+            >
+              <option value="">+ přidat spulku ze skladu…</option>
+              {availableSpools.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.serialNo}
+                  {s.cableTypeCode ? ` · ${s.cableTypeCode}` : ""} · {s.currentLengthM.toFixed(0)} m
+                </option>
+              ))}
+            </select>
+            {availableSpools.length === 0 && assignedSpools.length === 0 && (
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                Žádné volné spulky. Přidej je v záložce Fyzické spulky.
+              </p>
+            )}
+          </div>
+
+
+
           <div>
             <div className="mb-1 flex items-center justify-between">
               <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
@@ -3008,7 +3118,13 @@ function DayPlanCard({
       )}
 
       <div className="mb-2 text-[10px] font-mono text-muted-foreground">
-        Kapacita: {capacity.toLocaleString("cs-CZ")} m · Kabelů: {cables.length}
+        Kapacita: {(hasPhysical ? physicalCapacity : virtualCapacity).toLocaleString("cs-CZ")} m
+        {hasPhysical && (
+          <span className="ml-1 text-primary">
+            · {assignedSpools.length} fyz. spulek
+          </span>
+        )}
+        {" "}· Kabelů: {cables.length}
       </div>
       <div className="mb-2 flex flex-wrap gap-1">
         {cables.map((c) => (
