@@ -49,6 +49,11 @@ export default {
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
+      // Skip HTML error-page replacement for server-function RPC calls — the
+      // client needs the serialized JSON error to reject the promise properly
+      // (e.g. validation errors like "duplicate code" that are caught in UI).
+      const url = new URL(request.url);
+      if (url.pathname.startsWith("/_serverFn/")) return response;
       return await normalizeCatastrophicSsrResponse(response);
     } catch (error) {
       console.error(error);
