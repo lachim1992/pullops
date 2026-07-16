@@ -2761,6 +2761,46 @@ function DayPlanCard({
     enabled: expanded,
   });
 
+  const spoolsFn = useServerFn(listSpoolsForPlanning);
+  const assignSpFn = useServerFn(assignSpoolToPlan);
+  const unassignSpFn = useServerFn(unassignSpoolFromPlan);
+  const spoolsQ = useQuery({
+    queryKey: ["plan-spools", projectId],
+    queryFn: () => spoolsFn({ data: { projectId } }),
+    enabled: expanded,
+  });
+  const assignedSpools = (spoolsQ.data?.spools ?? []).filter(
+    (s) => s.assignedPlanId === dp.id,
+  );
+  const availableSpools = (spoolsQ.data?.spools ?? []).filter(
+    (s) => !s.assignedPlanId,
+  );
+  const hasPhysical = assignedSpools.length > 0;
+  const physicalCapacity = assignedSpools.reduce((a, s) => a + s.currentLengthM, 0);
+
+  async function addSpool(spoolId: string) {
+    try {
+      await assignSpFn({ data: { projectId, dayPlanId: dp.id, spoolId } });
+      qc.invalidateQueries({ queryKey: ["plan-spools", projectId] });
+      qc.invalidateQueries({ queryKey: ["day-plans", projectId, dp.floorPlanId] });
+      toast.success("Spulka přiřazena");
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  }
+
+  async function removeSpool(spoolId: string) {
+    try {
+      await unassignSpFn({ data: { spoolId } });
+      qc.invalidateQueries({ queryKey: ["plan-spools", projectId] });
+      qc.invalidateQueries({ queryKey: ["day-plans", projectId, dp.floorPlanId] });
+      toast.success("Spulka odebrána");
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  }
+
+
   function patchBase() {
     return {
       id: dp.id,
