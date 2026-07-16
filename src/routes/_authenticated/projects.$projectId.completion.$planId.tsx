@@ -1168,8 +1168,11 @@ function MeasurementPanelCard({
                       return (
                         <div
                           key={`empty-${idx}-${i}`}
-                          className="aspect-[3/4] rounded-[3px] border border-dashed border-neutral-800 bg-neutral-900/60"
-                        />
+                          className="flex flex-col items-stretch gap-0.5"
+                        >
+                          <div className="aspect-[3/4] rounded-[3px] border border-dashed border-neutral-800 bg-neutral-900/60" />
+                          <span className="h-[11px]" />
+                        </div>
                       );
                     }
                     const cable = port.cable;
@@ -1181,43 +1184,64 @@ function MeasurementPanelCard({
                         }${isMeasured ? " · proměřeno" : " · čeká"}`
                       : `Port ${port.portNumber} · bez kabelu`;
                     const isHighlighted = highlightPortId === port.id;
+                    // Compact label: prefer peer endpoint code, else last segment of cable code.
+                    const rawLabel = hasCable
+                      ? cable!.peerEndpointCode ||
+                        (cable!.code.includes("-")
+                          ? cable!.code.split("-").pop()!
+                          : cable!.code)
+                      : "";
                     return (
-                      <button
-                        key={port.id}
-                        ref={(el) => registerPortRef?.(port.id, el)}
-                        type="button"
-                        title={title}
-                        disabled={!hasCable || !canEdit}
-                        onClick={() => onMeasure(port)}
-                        className={cn(
-                          "group relative aspect-[3/4] rounded-[3px] border text-[9px] font-mono transition-all",
-                          "flex flex-col items-center justify-between p-[3px]",
-                          hasCable
-                            ? isMeasured
-                              ? "border-emerald-500/70 bg-emerald-500/15 text-emerald-200 shadow-[0_0_6px_-1px_rgba(16,185,129,0.6)]"
-                              : "border-amber-500/60 bg-amber-500/10 text-amber-200 hover:border-amber-400 hover:bg-amber-500/20"
-                            : "border-neutral-800 bg-neutral-900/80 text-neutral-600",
-                          hasCable && canEdit && "cursor-pointer active:scale-95",
-                          (!hasCable || !canEdit) && "cursor-default",
-                          isHighlighted &&
-                            "!border-sky-400 ring-2 ring-sky-400/70 ring-offset-1 ring-offset-neutral-950 animate-pulse",
-                        )}
-                      >
-                        {/* LED */}
-                        <span
+                      <div key={port.id} className="flex flex-col items-stretch gap-0.5">
+                        <button
+                          ref={(el) => registerPortRef?.(port.id, el)}
+                          type="button"
+                          title={title}
+                          disabled={!hasCable || !canEdit}
+                          onClick={() => onMeasure(port)}
                           className={cn(
-                            "h-1 w-1 rounded-full",
-                            isMeasured
-                              ? "bg-emerald-400 shadow-[0_0_4px_rgba(16,185,129,0.9)]"
-                              : hasCable
-                                ? "bg-amber-400 shadow-[0_0_4px_rgba(245,158,11,0.8)]"
-                                : "bg-neutral-700",
+                            "group relative aspect-[3/4] rounded-[3px] border text-[9px] font-mono transition-all",
+                            "flex flex-col items-center justify-between p-[3px]",
+                            hasCable
+                              ? isMeasured
+                                ? "border-emerald-500/70 bg-emerald-500/15 text-emerald-200 shadow-[0_0_6px_-1px_rgba(16,185,129,0.6)]"
+                                : "border-amber-500/60 bg-amber-500/10 text-amber-200 hover:border-amber-400 hover:bg-amber-500/20"
+                              : "border-neutral-800 bg-neutral-900/80 text-neutral-600",
+                            hasCable && canEdit && "cursor-pointer active:scale-95",
+                            (!hasCable || !canEdit) && "cursor-default",
+                            isHighlighted &&
+                              "!border-sky-400 ring-2 ring-sky-400/70 ring-offset-1 ring-offset-neutral-950 animate-pulse",
                           )}
-                        />
-                        {/* RJ45 slit */}
-                        <span className="my-[2px] block h-[2px] w-[70%] rounded-[1px] bg-neutral-950/80 shadow-inner" />
-                        <span className="leading-none">{port.portNumber}</span>
-                      </button>
+                        >
+                          {/* LED */}
+                          <span
+                            className={cn(
+                              "h-1 w-1 rounded-full",
+                              isMeasured
+                                ? "bg-emerald-400 shadow-[0_0_4px_rgba(16,185,129,0.9)]"
+                                : hasCable
+                                  ? "bg-amber-400 shadow-[0_0_4px_rgba(245,158,11,0.8)]"
+                                  : "bg-neutral-700",
+                            )}
+                          />
+                          {/* RJ45 slit */}
+                          <span className="my-[2px] block h-[2px] w-[70%] rounded-[1px] bg-neutral-950/80 shadow-inner" />
+                          <span className="leading-none">{port.portNumber}</span>
+                        </button>
+                        <span
+                          title={hasCable ? cable!.code : undefined}
+                          className={cn(
+                            "block truncate text-center font-mono text-[9px] leading-[11px]",
+                            hasCable
+                              ? isMeasured
+                                ? "text-emerald-300/90"
+                                : "text-amber-200/90"
+                              : "text-neutral-700",
+                          )}
+                        >
+                          {rawLabel || "—"}
+                        </span>
+                      </div>
                     );
                   })}
                 </div>
