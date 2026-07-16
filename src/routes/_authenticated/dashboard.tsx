@@ -535,12 +535,12 @@ function KpiTile({
             ? "text-muted-foreground border-border/60 bg-muted/30"
             : "text-accent border-[color:var(--accent)]/30 bg-[color:var(--accent)]/10";
   return (
-    <div className="min-w-[9.5rem] shrink-0 snap-start rounded-xl border border-border/60 bg-card/60 p-3 backdrop-blur sm:min-w-0">
+    <div className="min-w-0 rounded-xl border border-border/60 bg-card/60 p-3 backdrop-blur">
       <div className="flex items-center gap-2">
         <div className={`grid h-8 w-8 shrink-0 place-items-center rounded-md border ${toneCls}`}>
           <Icon className="h-4 w-4" />
         </div>
-        <div className="min-w-0 flex-1 font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
+        <div className="min-w-0 flex-1 truncate font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">
           {label}
         </div>
       </div>
