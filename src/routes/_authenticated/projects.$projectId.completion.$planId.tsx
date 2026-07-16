@@ -943,12 +943,16 @@ function EndpointCard({
   selected,
   onSelect,
   onSetStatus,
+  onCancelCable,
+  canEdit,
 }: {
   endpoint: { id: string; code: string; kind: string | null; completionStatus: EndpointCompletionStatus };
   cables: Array<{ id: string; code: string; status: string }>;
   selected: boolean;
   onSelect: () => void;
   onSetStatus: (s: EndpointCompletionStatus) => void;
+  onCancelCable: (cableId: string, code: string) => void;
+  canEdit: boolean;
 }) {
   const info = endpoint.kind ? endpointKindInfo(endpoint.kind) : null;
   return (
