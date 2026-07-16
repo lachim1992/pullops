@@ -62,7 +62,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const searchSchema = z.object({
-  tab: z.enum(["tasks", "photos"]).optional(),
+  tab: z.enum(["chat", "tasks", "photos"]).optional(),
 });
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/lobby")({
@@ -77,7 +77,8 @@ function LobbyPage() {
   const { projectId } = Route.useParams();
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
-  const tab = search.tab ?? "tasks";
+  const tab = search.tab ?? "chat";
+  const taskTab = tab === "photos" ? "photos" : "tasks";
   return (
     <AppShell projectId={projectId}>
       <div className="animate-fade-in space-y-5">
@@ -86,35 +87,39 @@ function LobbyPage() {
             Projekt / Lobby
           </div>
           <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight">
-            {tab === "photos" ? "Fotky lobby" : "Úkoly"}
+            {tab === "chat" ? "Chat" : tab === "photos" ? "Fotky lobby" : "Úkoly"}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Úkoly týmu a lobby fotky.
           </p>
         </header>
 
-        <Tabs
-          value={tab}
-          onValueChange={(v) =>
-            navigate({ search: { tab: v as "tasks" | "photos" }, replace: true })
-          }
-          className="w-full"
-        >
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="tasks" className="gap-2">
-              <ListChecks className="h-4 w-4" /> Úkoly
-            </TabsTrigger>
-            <TabsTrigger value="photos" className="gap-2">
-              <Camera className="h-4 w-4" /> Fotky
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="tasks" className="mt-4 animate-fade-in">
-            <TasksTab projectId={projectId} />
-          </TabsContent>
-          <TabsContent value="photos" className="mt-4 animate-fade-in">
-            <PhotosTab projectId={projectId} />
-          </TabsContent>
-        </Tabs>
+        {tab === "chat" ? (
+          <ChatTab projectId={projectId} />
+        ) : (
+          <Tabs
+            value={taskTab}
+            onValueChange={(v) =>
+              navigate({ search: { tab: v as "tasks" | "photos" }, replace: true })
+            }
+            className="w-full"
+          >
+            <TabsList className="grid w-full max-w-md grid-cols-2">
+              <TabsTrigger value="tasks" className="gap-2">
+                <ListChecks className="h-4 w-4" /> Úkoly
+              </TabsTrigger>
+              <TabsTrigger value="photos" className="gap-2">
+                <Camera className="h-4 w-4" /> Fotky
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="tasks" className="mt-4 animate-fade-in">
+              <TasksTab projectId={projectId} />
+            </TabsContent>
+            <TabsContent value="photos" className="mt-4 animate-fade-in">
+              <PhotosTab projectId={projectId} />
+            </TabsContent>
+          </Tabs>
+        )}
       </div>
     </AppShell>
   );
