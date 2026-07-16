@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Bell, Check } from "lucide-react";
+import { Bell, Check, Rocket } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -21,6 +21,9 @@ import {
   markAllNotificationsRead,
 } from "@/lib/notifications.functions";
 import { cn } from "@/lib/utils";
+import { useAppUpdate } from "@/hooks/use-app-update";
+import { ChangelogDialog } from "@/components/changelog-dialog";
+
 
 function timeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
