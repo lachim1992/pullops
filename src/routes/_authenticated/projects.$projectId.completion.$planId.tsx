@@ -387,6 +387,21 @@ function CompletionPlanEditor() {
 
         {tab === "measurement" && (
           <section className="space-y-3">
+            {/* Sticky search bar */}
+            <div className="sticky top-0 z-30 -mx-2 border-b border-border/60 bg-background/95 px-2 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+              <button
+                type="button"
+                onClick={() => setSearchOpen(true)}
+                className="flex w-full items-center gap-2 rounded-sm border border-border bg-card px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:border-primary/50 active:scale-[0.99]"
+              >
+                <Search className="h-4 w-4 shrink-0" />
+                <span className="truncate">Hledat kabel, endpoint, PP/port…</span>
+                <span className="ml-auto shrink-0 rounded-sm border border-border px-1.5 py-0.5 font-mono text-[10px] uppercase text-muted-foreground">
+                  {searchIndex.length}
+                </span>
+              </button>
+            </div>
+
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
                 Měření kabelů podle portů
@@ -414,6 +429,8 @@ function CompletionPlanEditor() {
                     panel={p}
                     ports={rows}
                     canEdit={canManage}
+                    highlightPortId={highlightPortId}
+                    registerPortRef={registerPortRef}
                     onMeasure={(port) => {
                       setMeasureTarget(port);
                       setMeasureNote(port.cable?.notes ?? "");
