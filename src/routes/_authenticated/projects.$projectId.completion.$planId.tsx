@@ -55,7 +55,6 @@ const PANEL_LABEL: Record<PanelCompletionStatus, string> = {
   WIRED: "Zapojeno + popsáno",
 };
 
-const MEASURED_STATUSES = new Set(["TERMINATED", "TESTED", "DONE"]);
 
 function normalizeSearch(s: string): string {
   return s
@@ -628,7 +627,7 @@ function CompletionPlanEditor() {
               <ul className="divide-y divide-border">
                 {searchResults.map(({ port, panelCode }) => {
                   const cable = port.cable!;
-                  const isMeasured = MEASURED_STATUSES.has(cable.status);
+                  const isMeasured = cable.tested;
                   return (
                     <li key={port.id}>
                       <button
@@ -1122,7 +1121,7 @@ function MeasurementPanelCard({
   highlightPortId?: string | null;
   registerPortRef?: (id: string, el: HTMLButtonElement | null) => void;
 }) {
-  const measured = ports.filter((p) => p.cable && MEASURED_STATUSES.has(p.cable.status)).length;
+  const measured = ports.filter((p) => p.cable && p.cable.tested).length;
   const withCable = ports.filter((p) => p.cable).length;
   const hasHighlight = highlightPortId ? ports.some((p) => p.id === highlightPortId) : false;
   const [open, setOpen] = useState(true);
@@ -1198,7 +1197,7 @@ function MeasurementPanelCard({
                     }
                     const cable = port.cable;
                     const hasCable = !!cable;
-                    const isMeasured = hasCable && MEASURED_STATUSES.has(cable!.status);
+                    const isMeasured = hasCable && cable!.tested;
                     const title = hasCable
                       ? `Port ${port.portNumber} · ${cable!.code}${
                           cable!.peerEndpointCode ? ` → ${cable!.peerEndpointCode}` : ""
@@ -1323,7 +1322,7 @@ function MiniPanelViz({
               }
               const cable = port.cable;
               const hasCable = !!cable;
-              const isMeasured = hasCable && MEASURED_STATUSES.has(cable!.status);
+              const isMeasured = hasCable && cable!.tested;
               const isHighlighted = port.id === highlightPortId;
               return (
                 <div
