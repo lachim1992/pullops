@@ -33,13 +33,9 @@ function OrgChatPage() {
   const activeOrgId = search.org ?? orgs.data?.[0]?.id;
 
   return (
-    <AppShell>
-      <div className="mb-4 flex items-center gap-2">
-        <MessageSquare className="h-5 w-5 text-[color:var(--accent)]" />
-        <h1 className="font-display text-xl font-semibold tracking-tight">Firemní chat</h1>
-      </div>
+    <AppShell contentClassName="max-w-none px-0 py-0 sm:px-0 sm:py-0">
       {!activeOrgId ? (
-        <div className="text-sm text-muted-foreground">Vyberte organizaci na dashboardu.</div>
+        <div className="p-4 text-sm text-muted-foreground">Vyberte organizaci na dashboardu.</div>
       ) : (
         <ChatPanel organizationId={activeOrgId} orgName={orgs.data?.find((o) => o.id === activeOrgId)?.name ?? ""} />
       )}
