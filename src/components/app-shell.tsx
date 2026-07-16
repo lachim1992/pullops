@@ -141,10 +141,10 @@ export function AppShell({ children, projectId, topBarExtra, contentClassName }:
               className="flex items-center gap-2 md:hidden"
               onClick={() => setMobileOpen(false)}
             >
-              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-[color:var(--gold-soft)] to-[color:var(--accent)] text-primary-foreground">
-                <Cable className="h-3.5 w-3.5" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-md bg-gradient-to-br from-[color:var(--gold-soft)] to-[color:var(--accent)] text-primary-foreground shadow-[0_0_16px_-6px_var(--accent)]">
+                <Cable className="h-4 w-4" />
               </div>
-              <span className="font-display text-sm font-semibold tracking-tight">PullOps</span>
+              <span className="font-display text-base font-semibold tracking-tight">PullOps</span>
             </Link>
 
             <div className="ml-auto flex items-center gap-2">
