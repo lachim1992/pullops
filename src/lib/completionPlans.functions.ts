@@ -5,10 +5,14 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const uuid = z.string().uuid();
 
-export const ENDPOINT_STATUSES = ["PENDING", "PULLED", "TERMINATED", "TESTED", "DONE"] as const;
+export const ENDPOINT_STATUSES = ["PLANNED", "PULLED", "TERMINATED", "TESTED", "DONE", "CANCELLED"] as const;
 export type EndpointCompletionStatus = (typeof ENDPOINT_STATUSES)[number];
 
-export const PANEL_STATUSES = ["PENDING", "WIRED", "LABELED", "MEASURED", "DONE"] as const;
+/** Statuses user can set manually from the completion editor.
+ *  PULLED is read-only here — it's owned by the Pull mode. */
+export const ENDPOINT_MANUAL_STATUSES = ["PLANNED", "TERMINATED", "TESTED", "DONE", "CANCELLED"] as const;
+
+export const PANEL_STATUSES = ["PLANNED", "WIRED", "MEASURED"] as const;
 export type PanelCompletionStatus = (typeof PANEL_STATUSES)[number];
 
 /** List all day plans of a project with completion & pulled progress. */
