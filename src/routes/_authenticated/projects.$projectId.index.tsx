@@ -232,25 +232,6 @@ function ProjectDetailPage() {
             <RecentActivity items={home.data?.recentActivity ?? []} loading={home.isLoading} />
           </section>
 
-          {canManage && (
-            <section className="mb-8">
-              <div className="mb-2.5 flex items-center gap-3">
-                <h2 className="font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
-                  {t("nav.manage")}
-                </h2>
-                <div className="hairline-gold h-px flex-1" />
-              </div>
-              <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
-                <SectionLink projectId={projectId} to="/projects/$projectId/documents" icon={ClipboardList} title={t("projectHub.docsTitle")} />
-                <SectionLink projectId={projectId} to="/projects/$projectId/plans" icon={RouteIcon} title={t("projectHub.plansTitle")} />
-                <SectionLink projectId={projectId} to="/projects/$projectId/endpoints" icon={Wrench} title={t("projectHub.endpointsTitle")} />
-                <SectionLink projectId={projectId} to="/projects/$projectId/cable-types" icon={Cable} title={t("projectHub.ctypesTitle")} />
-                <SectionLink projectId={projectId} to="/projects/$projectId/cables" icon={Cable} title={t("projectHub.cablesTitle")} />
-                <SectionLink projectId={projectId} to="/projects/$projectId/spools" icon={Cable} title={t("projectHub.spoolsTitle")} />
-                <SectionLink projectId={projectId} to="/projects/$projectId/members" icon={Users} title={t("projectHub.membersTitle")} />
-              </div>
-            </section>
-          )}
         </>
       )}
     </AppShell>
