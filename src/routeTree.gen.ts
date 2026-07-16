@@ -26,6 +26,7 @@ import { Route as AuthenticatedProjectsProjectIdIndexRouteImport } from './route
 import { Route as AuthenticatedProjectsProjectIdWorkRouteImport } from './routes/_authenticated/projects.$projectId.work'
 import { Route as AuthenticatedProjectsProjectIdSpoolsRouteImport } from './routes/_authenticated/projects.$projectId.spools'
 import { Route as AuthenticatedProjectsProjectIdSettingsRouteImport } from './routes/_authenticated/projects.$projectId.settings'
+import { Route as AuthenticatedProjectsProjectIdPullManagerRouteImport } from './routes/_authenticated/projects.$projectId.pull-manager'
 import { Route as AuthenticatedProjectsProjectIdProtocolsRouteImport } from './routes/_authenticated/projects.$projectId.protocols'
 import { Route as AuthenticatedProjectsProjectIdPlansRouteImport } from './routes/_authenticated/projects.$projectId.plans'
 import { Route as AuthenticatedProjectsProjectIdPhotosRouteImport } from './routes/_authenticated/projects.$projectId.photos'
@@ -140,6 +141,12 @@ const AuthenticatedProjectsProjectIdSettingsRoute =
   AuthenticatedProjectsProjectIdSettingsRouteImport.update({
     id: '/projects/$projectId/settings',
     path: '/projects/$projectId/settings',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedProjectsProjectIdPullManagerRoute =
+  AuthenticatedProjectsProjectIdPullManagerRouteImport.update({
+    id: '/projects/$projectId/pull-manager',
+    path: '/projects/$projectId/pull-manager',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedProjectsProjectIdProtocolsRoute =
@@ -315,6 +322,7 @@ export interface FileRoutesByFullPath {
   '/projects/$projectId/photos': typeof AuthenticatedProjectsProjectIdPhotosRoute
   '/projects/$projectId/plans': typeof AuthenticatedProjectsProjectIdPlansRouteWithChildren
   '/projects/$projectId/protocols': typeof AuthenticatedProjectsProjectIdProtocolsRoute
+  '/projects/$projectId/pull-manager': typeof AuthenticatedProjectsProjectIdPullManagerRoute
   '/projects/$projectId/settings': typeof AuthenticatedProjectsProjectIdSettingsRoute
   '/projects/$projectId/spools': typeof AuthenticatedProjectsProjectIdSpoolsRoute
   '/projects/$projectId/work': typeof AuthenticatedProjectsProjectIdWorkRoute
@@ -353,6 +361,7 @@ export interface FileRoutesByTo {
   '/projects/$projectId/members': typeof AuthenticatedProjectsProjectIdMembersRoute
   '/projects/$projectId/photos': typeof AuthenticatedProjectsProjectIdPhotosRoute
   '/projects/$projectId/protocols': typeof AuthenticatedProjectsProjectIdProtocolsRoute
+  '/projects/$projectId/pull-manager': typeof AuthenticatedProjectsProjectIdPullManagerRoute
   '/projects/$projectId/settings': typeof AuthenticatedProjectsProjectIdSettingsRoute
   '/projects/$projectId/spools': typeof AuthenticatedProjectsProjectIdSpoolsRoute
   '/projects/$projectId/work': typeof AuthenticatedProjectsProjectIdWorkRoute
@@ -397,6 +406,7 @@ export interface FileRoutesById {
   '/_authenticated/projects/$projectId/photos': typeof AuthenticatedProjectsProjectIdPhotosRoute
   '/_authenticated/projects/$projectId/plans': typeof AuthenticatedProjectsProjectIdPlansRouteWithChildren
   '/_authenticated/projects/$projectId/protocols': typeof AuthenticatedProjectsProjectIdProtocolsRoute
+  '/_authenticated/projects/$projectId/pull-manager': typeof AuthenticatedProjectsProjectIdPullManagerRoute
   '/_authenticated/projects/$projectId/settings': typeof AuthenticatedProjectsProjectIdSettingsRoute
   '/_authenticated/projects/$projectId/spools': typeof AuthenticatedProjectsProjectIdSpoolsRoute
   '/_authenticated/projects/$projectId/work': typeof AuthenticatedProjectsProjectIdWorkRoute
@@ -441,6 +451,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/photos'
     | '/projects/$projectId/plans'
     | '/projects/$projectId/protocols'
+    | '/projects/$projectId/pull-manager'
     | '/projects/$projectId/settings'
     | '/projects/$projectId/spools'
     | '/projects/$projectId/work'
@@ -479,6 +490,7 @@ export interface FileRouteTypes {
     | '/projects/$projectId/members'
     | '/projects/$projectId/photos'
     | '/projects/$projectId/protocols'
+    | '/projects/$projectId/pull-manager'
     | '/projects/$projectId/settings'
     | '/projects/$projectId/spools'
     | '/projects/$projectId/work'
@@ -522,6 +534,7 @@ export interface FileRouteTypes {
     | '/_authenticated/projects/$projectId/photos'
     | '/_authenticated/projects/$projectId/plans'
     | '/_authenticated/projects/$projectId/protocols'
+    | '/_authenticated/projects/$projectId/pull-manager'
     | '/_authenticated/projects/$projectId/settings'
     | '/_authenticated/projects/$projectId/spools'
     | '/_authenticated/projects/$projectId/work'
@@ -668,6 +681,13 @@ declare module '@tanstack/react-router' {
       path: '/projects/$projectId/settings'
       fullPath: '/projects/$projectId/settings'
       preLoaderRoute: typeof AuthenticatedProjectsProjectIdSettingsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/projects/$projectId/pull-manager': {
+      id: '/_authenticated/projects/$projectId/pull-manager'
+      path: '/projects/$projectId/pull-manager'
+      fullPath: '/projects/$projectId/pull-manager'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdPullManagerRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/projects/$projectId/protocols': {
@@ -936,6 +956,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedProjectsProjectIdPhotosRoute: typeof AuthenticatedProjectsProjectIdPhotosRoute
   AuthenticatedProjectsProjectIdPlansRoute: typeof AuthenticatedProjectsProjectIdPlansRouteWithChildren
   AuthenticatedProjectsProjectIdProtocolsRoute: typeof AuthenticatedProjectsProjectIdProtocolsRoute
+  AuthenticatedProjectsProjectIdPullManagerRoute: typeof AuthenticatedProjectsProjectIdPullManagerRoute
   AuthenticatedProjectsProjectIdSettingsRoute: typeof AuthenticatedProjectsProjectIdSettingsRoute
   AuthenticatedProjectsProjectIdSpoolsRoute: typeof AuthenticatedProjectsProjectIdSpoolsRoute
   AuthenticatedProjectsProjectIdWorkRoute: typeof AuthenticatedProjectsProjectIdWorkRoute
@@ -977,6 +998,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedProjectsProjectIdPlansRouteWithChildren,
   AuthenticatedProjectsProjectIdProtocolsRoute:
     AuthenticatedProjectsProjectIdProtocolsRoute,
+  AuthenticatedProjectsProjectIdPullManagerRoute:
+    AuthenticatedProjectsProjectIdPullManagerRoute,
   AuthenticatedProjectsProjectIdSettingsRoute:
     AuthenticatedProjectsProjectIdSettingsRoute,
   AuthenticatedProjectsProjectIdSpoolsRoute:
