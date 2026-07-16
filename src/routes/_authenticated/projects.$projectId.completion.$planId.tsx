@@ -356,6 +356,8 @@ function CompletionPlanEditor() {
                     selected={selectedEndpointId === ep.id}
                     onSelect={() => setSelectedEndpointId(ep.id === selectedEndpointId ? null : ep.id)}
                     onSetStatus={(s) => setEpStatus(ep.id, s)}
+                    onCancelCable={cancelCable}
+                    canEdit={canManage}
                   />
                 ))}
               </div>
