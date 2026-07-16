@@ -27,7 +27,7 @@ import {
   setPatchPanelCompletionStatus,
   unmarkPlanReadyForCompletion,
   ENDPOINT_STATUSES,
-  ENDPOINT_MANUAL_STATUSES,
+  
   PANEL_STATUSES,
   type EndpointCompletionStatus,
   type PanelCompletionStatus,
