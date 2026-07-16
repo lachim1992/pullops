@@ -21,13 +21,12 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import {
   getCompletionPlan,
-  setCableMeasured,
+  setCableTested,
   setCableCancelled,
   setEndpointCompletionStatus,
   setPatchPanelCompletionStatus,
   unmarkPlanReadyForCompletion,
-  ENDPOINT_STATUSES,
-  
+  ENDPOINT_MANUAL_STATUSES,
   PANEL_STATUSES,
   type EndpointCompletionStatus,
   type PanelCompletionStatus,
@@ -43,24 +42,17 @@ export const Route = createFileRoute("/_authenticated/projects/$projectId/comple
 
 const EP_LABEL: Record<EndpointCompletionStatus, string> = {
   PLANNED: "Naplánováno",
-  PULLED: "Protaženo",
   TERMINATED: "Zaterminováno",
-  TESTED: "Otestováno",
-  DONE: "Hotovo",
   CANCELLED: "Zrušeno",
 };
 const EP_COLOR: Record<EndpointCompletionStatus, string> = {
   PLANNED: "hsl(0 0% 45%)",
-  PULLED: "hsl(45 90% 55%)",
   TERMINATED: "hsl(25 85% 55%)",
-  TESTED: "hsl(210 85% 55%)",
-  DONE: "hsl(140 60% 45%)",
   CANCELLED: "hsl(0 70% 45%)",
 };
 const PANEL_LABEL: Record<PanelCompletionStatus, string> = {
   PLANNED: "Naplánováno",
   WIRED: "Zapojeno + popsáno",
-  MEASURED: "Proměřeno",
 };
 
 const MEASURED_STATUSES = new Set(["TERMINATED", "TESTED", "DONE"]);
