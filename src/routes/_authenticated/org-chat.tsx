@@ -112,8 +112,9 @@ function ChatPanel({ organizationId, orgName }: { organizationId: string; orgNam
   }, [messages.data]);
 
   return (
-    <div className="flex h-[calc(100vh-10rem)] min-h-[500px] flex-col overflow-hidden rounded-lg border border-border/60 bg-card">
-      <div className="border-b border-border/60 px-4 py-2 text-xs font-mono uppercase tracking-[0.2em] text-muted-foreground">
+    <div className="flex h-[calc(100dvh-3rem-env(safe-area-inset-top))] min-h-[400px] flex-col overflow-hidden bg-background">
+      <div className="border-b border-border/60 px-4 py-2 text-xs font-mono uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
+        <MessageSquare className="h-3.5 w-3.5 text-[color:var(--accent)]" />
         {orgName || "organizace"}
       </div>
 
