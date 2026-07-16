@@ -597,22 +597,22 @@ function FunRidge({
   ];
 
   return (
-    <section className="-mx-4 mb-5 sm:mx-0">
-      <div className="mb-2 flex items-center gap-3 px-4 sm:px-0">
+    <section className="mb-5">
+      <div className="mb-2 flex items-center gap-3">
         <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
           Highlighty
         </div>
         <div className="hairline-gold h-px flex-1" />
       </div>
-      <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 pb-2 sm:grid sm:snap-none sm:grid-cols-2 sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
         {items.map((it, i) => (
           <div
             key={i}
-            className="relative min-w-[13rem] shrink-0 snap-start overflow-hidden rounded-xl border border-[color:var(--accent)]/20 bg-gradient-to-br from-[color:var(--accent)]/10 via-card/60 to-card/40 p-3 sm:min-w-0"
+            className="relative min-w-0 overflow-hidden rounded-xl border border-[color:var(--accent)]/20 bg-gradient-to-br from-[color:var(--accent)]/10 via-card/60 to-card/40 p-3"
           >
-            <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-accent">
-              <it.icon className="h-3.5 w-3.5" />
-              {it.label}
+            <div className="flex items-center gap-2 truncate font-mono text-[10px] uppercase tracking-[0.2em] text-accent">
+              <it.icon className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{it.label}</span>
             </div>
             <div className="mt-1.5 truncate font-display text-xl font-black tracking-tight">
               {it.value}
