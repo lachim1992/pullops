@@ -28,6 +28,11 @@ import {
   addDayPlanPhoto,
   deleteDayPlanPhoto,
 } from "@/lib/pullDayPlans.functions";
+import {
+  listSpoolsForPlanning,
+  assignSpoolToPlan,
+  unassignSpoolFromPlan,
+} from "@/lib/planSpools.functions";
 import { runOptimizer } from "@/lib/pullOptimizer.functions";
 import { listProjectMembersLite } from "@/lib/defects.functions";
 import { supabase } from "@/integrations/supabase/client";
