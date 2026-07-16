@@ -105,6 +105,14 @@ function CompletionPlanEditor() {
   const [measureTarget, setMeasureTarget] = useState<PortRow | null>(null);
   const [measureNote, setMeasureNote] = useState("");
   const [measureBusy, setMeasureBusy] = useState(false);
+  const [searchQ, setSearchQ] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [highlightPortId, setHighlightPortId] = useState<string | null>(null);
+  const portRefs = useRef(new Map<string, HTMLButtonElement>());
+  const registerPortRef = useCallback((id: string, el: HTMLButtonElement | null) => {
+    if (el) portRefs.current.set(id, el);
+    else portRefs.current.delete(id);
+  }, []);
 
   const endpoints = q.data?.endpoints ?? [];
   const panels = q.data?.panels ?? [];
