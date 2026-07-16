@@ -501,8 +501,8 @@ function KpiStrip({ kpis }: { kpis: OrgDashboard["kpis"] }) {
   ];
 
   return (
-    <section className="-mx-4 mb-5 sm:mx-0">
-      <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 pb-2 sm:grid sm:snap-none sm:grid-cols-3 sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4 xl:grid-cols-8">
+    <section className="mb-5">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 xl:grid-cols-8">
         {tiles.map((t, i) => (
           <KpiTile key={i} {...t} />
         ))}
