@@ -31,9 +31,12 @@ import {
   AreaChart,
   CartesianGrid,
   ResponsiveContainer,
+  Scatter,
+  ScatterChart,
   Tooltip as RTooltip,
   XAxis,
   YAxis,
+  ZAxis,
 } from "recharts";
 
 import { AppShell } from "@/components/app-shell";
