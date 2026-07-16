@@ -493,3 +493,15 @@ export const setPatchPanelCompletionStatus = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const setCableCancelled = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ cableId: uuid }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("cables")
+      .update({ status: "CANCELLED" } as never)
+      .eq("id", data.cableId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
