@@ -1005,9 +1005,11 @@ function MeasurementPanelCard({
                           cable!.peerEndpointCode ? ` → ${cable!.peerEndpointCode}` : ""
                         }${isMeasured ? " · proměřeno" : " · čeká"}`
                       : `Port ${port.portNumber} · bez kabelu`;
+                    const isHighlighted = highlightPortId === port.id;
                     return (
                       <button
                         key={port.id}
+                        ref={(el) => registerPortRef?.(port.id, el)}
                         type="button"
                         title={title}
                         disabled={!hasCable || !canEdit}
@@ -1022,6 +1024,8 @@ function MeasurementPanelCard({
                             : "border-neutral-800 bg-neutral-900/80 text-neutral-600",
                           hasCable && canEdit && "cursor-pointer active:scale-95",
                           (!hasCable || !canEdit) && "cursor-default",
+                          isHighlighted &&
+                            "!border-sky-400 ring-2 ring-sky-400/70 ring-offset-1 ring-offset-neutral-950 animate-pulse",
                         )}
                       >
                         {/* LED */}
