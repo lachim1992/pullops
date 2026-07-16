@@ -1093,11 +1093,13 @@ function PullMap({
     panRef.current = { startX: e.clientX, startY: e.clientY, tx0: view.tx, ty0: view.ty };
   };
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!panRef.current) return;
-    const dx = e.clientX - panRef.current.startX;
-    const dy = e.clientY - panRef.current.startY;
-    setView((v) => ({ ...v, tx: panRef.current!.tx0 + dx, ty: panRef.current!.ty0 + dy }));
+    const pan = panRef.current;
+    if (!pan) return;
+    const dx = e.clientX - pan.startX;
+    const dy = e.clientY - pan.startY;
+    setView((v) => ({ ...v, tx: pan.tx0 + dx, ty: pan.ty0 + dy }));
   };
+
   const onPointerUp = () => { panRef.current = null; };
   const resetView = () => setView({ tx: 0, ty: 0, s: 1 });
 
