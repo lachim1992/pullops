@@ -300,6 +300,9 @@ function SidebarBody({
                 <NavItem to="/projects/$projectId/work" params={{ projectId }} icon={Wrench} onClick={onNavigate}>
                   {t("nav.pulling")}
                 </NavItem>
+                <NavItem to="/projects/$projectId/pull-manager" params={{ projectId }} icon={Cable} onClick={onNavigate}>
+                  {t("nav.pullManager")}
+                </NavItem>
                 <NavItem to="/projects/$projectId/defects" params={{ projectId }} icon={AlertTriangle} onClick={onNavigate}>
                   {t("nav.defects")}
                 </NavItem>
