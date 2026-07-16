@@ -212,7 +212,7 @@ export const getPullModeData = createServerFn({ method: "GET" })
     const { supabase } = context;
     const spoolLen = data.defaultSpoolLengthM;
 
-    const [plansRes, calsRes, endpointsRes, bundlesRes, typesRes, kindsRes, cablesRes, panelsRes, dayPlansRes, dayPlanCablesRes] =
+    const [plansRes, calsRes, endpointsRes, bundlesRes, typesRes, kindsRes, cablesRes, panelsRes, dayPlansRes, dayPlanCablesRes, planSpoolsRes, spoolsRes] =
       await Promise.all([
         supabase
           .from("floor_plans")
@@ -264,11 +264,21 @@ export const getPullModeData = createServerFn({ method: "GET" })
           .select("day_plan_id, cable_id, sort_order")
           .eq("project_id", data.projectId)
           .order("sort_order", { ascending: true }),
+        supabase
+          .from("pull_day_plan_spools")
+          .select("day_plan_id, spool_id, sort_order")
+          .eq("project_id", data.projectId)
+          .order("sort_order", { ascending: true }),
+        supabase
+          .from("spools")
+          .select("id, serial_no, cable_type_id, current_length_m")
+          .eq("project_id", data.projectId),
       ]);
 
-    for (const res of [plansRes, calsRes, endpointsRes, bundlesRes, typesRes, kindsRes, cablesRes, panelsRes, dayPlansRes, dayPlanCablesRes]) {
+    for (const res of [plansRes, calsRes, endpointsRes, bundlesRes, typesRes, kindsRes, cablesRes, panelsRes, dayPlansRes, dayPlanCablesRes, planSpoolsRes, spoolsRes]) {
       if (res.error) throw new Error(res.error.message);
     }
+
 
     const docIds = (plansRes.data ?? [])
       .map((p) => p.document_id as string | null)
