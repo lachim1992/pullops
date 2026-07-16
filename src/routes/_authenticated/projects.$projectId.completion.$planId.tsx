@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, CheckCircle2, Layers, Ruler, Server, Undo2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ChevronDown, Layers, Ruler, Server, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/app-shell";
@@ -820,78 +820,136 @@ function MeasurementPanelCard({
 }) {
   const measured = ports.filter((p) => p.cable && MEASURED_STATUSES.has(p.cable.status)).length;
   const withCable = ports.filter((p) => p.cable).length;
+  const [open, setOpen] = useState(true);
+
+  // Normalize to portCount slots (fill missing with null so illustration matches real panel)
+  const slots: Array<PortRow | null> = useMemo(() => {
+    const byNum = new Map<number, PortRow>();
+    for (const p of ports) byNum.set(p.portNumber, p);
+    const total = Math.max(panel.portCount || 0, ports.length);
+    const arr: Array<PortRow | null> = [];
+    for (let i = 1; i <= total; i++) arr.push(byNum.get(i) ?? null);
+    return arr;
+  }, [ports, panel.portCount]);
+
+  // Split into two rows like a real 1U patch panel; halve on typical counts (24, 48…)
+  const half = Math.ceil(slots.length / 2);
+  const rowA = slots.slice(0, half);
+  const rowB = slots.slice(half);
+
   return (
-    <div className="rounded-sm border border-border bg-card">
-      <div className="flex items-center justify-between border-b border-border/60 px-3 py-2">
-        <div>
-          <div className="font-mono text-sm font-bold uppercase">{panel.code}</div>
-          <div className="text-[11px] text-muted-foreground">
-            {panel.name ?? "—"} · {panel.portCount} portů
+    <div className="overflow-hidden rounded-md border border-border bg-card">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-3 border-b border-border/60 px-3 py-2 text-left transition-colors hover:bg-muted/40"
+        aria-expanded={open}
+      >
+        <div className="flex min-w-0 items-center gap-2">
+          <ChevronDown
+            className={cn(
+              "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+              !open && "-rotate-90",
+            )}
+          />
+          <div className="min-w-0">
+            <div className="truncate font-mono text-sm font-bold uppercase">{panel.code}</div>
+            <div className="truncate text-[11px] text-muted-foreground">
+              {panel.name ?? "—"} · {panel.portCount} portů
+            </div>
           </div>
         </div>
-        <Badge variant="outline" className="font-mono text-[10px]">
+        <Badge variant="outline" className="shrink-0 font-mono text-[10px]">
           {measured}/{withCable} proměřeno
         </Badge>
-      </div>
-      <div className="divide-y divide-border/40">
-        {ports.length === 0 && (
-          <div className="px-3 py-3 text-center text-[11px] text-muted-foreground">
-            Panel nemá porty.
-          </div>
-        )}
-        {ports.map((port) => {
-          const cable = port.cable;
-          const isMeasured = !!cable && MEASURED_STATUSES.has(cable.status);
-          const hasCable = !!cable;
-          return (
-            <button
-              key={port.id}
-              type="button"
-              disabled={!hasCable || !canEdit}
-              onClick={() => onMeasure(port)}
-              className={cn(
-                "flex w-full items-center justify-between gap-2 px-3 py-2 text-left transition-colors",
-                hasCable && canEdit && "hover:bg-muted/50",
-                !hasCable && "opacity-60",
-                !canEdit && "cursor-default",
-              )}
-            >
-              <div className="flex min-w-0 items-center gap-2">
-                <span
-                  className={cn(
-                    "inline-flex h-6 w-8 items-center justify-center rounded-sm border font-mono text-[11px] font-bold",
-                    isMeasured
-                      ? "border-primary bg-primary/15 text-primary"
-                      : hasCable
-                        ? "border-border bg-muted/40"
-                        : "border-dashed border-border text-muted-foreground",
-                  )}
+      </button>
+
+      {open && (
+        <div className="space-y-3 bg-gradient-to-b from-neutral-950 to-neutral-900 p-3">
+          {/* Illustrated patch panel: 2 rows of RJ45-style jacks */}
+          <div className="space-y-2 rounded-sm border border-neutral-800 bg-neutral-950/70 p-2 shadow-inner">
+            {[rowA, rowB].map((row, idx) =>
+              row.length === 0 ? null : (
+                <div
+                  key={idx}
+                  className="grid gap-1"
+                  style={{ gridTemplateColumns: `repeat(${row.length}, minmax(0, 1fr))` }}
                 >
-                  {port.portNumber}
-                </span>
-                <div className="min-w-0">
-                  <div className="truncate font-mono text-[11px]">
-                    {cable ? cable.code : port.label ?? "—"}
-                  </div>
-                  <div className="truncate text-[10px] text-muted-foreground">
-                    {cable
-                      ? cable.peerEndpointCode
-                        ? `→ ${cable.peerEndpointCode}`
-                        : "bez endpointu"
-                      : "bez kabelu"}
-                  </div>
+                  {row.map((port, i) => {
+                    if (!port) {
+                      return (
+                        <div
+                          key={`empty-${idx}-${i}`}
+                          className="aspect-[3/4] rounded-[3px] border border-dashed border-neutral-800 bg-neutral-900/60"
+                        />
+                      );
+                    }
+                    const cable = port.cable;
+                    const hasCable = !!cable;
+                    const isMeasured = hasCable && MEASURED_STATUSES.has(cable!.status);
+                    const title = hasCable
+                      ? `Port ${port.portNumber} · ${cable!.code}${
+                          cable!.peerEndpointCode ? ` → ${cable!.peerEndpointCode}` : ""
+                        }${isMeasured ? " · proměřeno" : " · čeká"}`
+                      : `Port ${port.portNumber} · bez kabelu`;
+                    return (
+                      <button
+                        key={port.id}
+                        type="button"
+                        title={title}
+                        disabled={!hasCable || !canEdit}
+                        onClick={() => onMeasure(port)}
+                        className={cn(
+                          "group relative aspect-[3/4] rounded-[3px] border text-[9px] font-mono transition-all",
+                          "flex flex-col items-center justify-between p-[3px]",
+                          hasCable
+                            ? isMeasured
+                              ? "border-emerald-500/70 bg-emerald-500/15 text-emerald-200 shadow-[0_0_6px_-1px_rgba(16,185,129,0.6)]"
+                              : "border-amber-500/60 bg-amber-500/10 text-amber-200 hover:border-amber-400 hover:bg-amber-500/20"
+                            : "border-neutral-800 bg-neutral-900/80 text-neutral-600",
+                          hasCable && canEdit && "cursor-pointer active:scale-95",
+                          (!hasCable || !canEdit) && "cursor-default",
+                        )}
+                      >
+                        {/* LED */}
+                        <span
+                          className={cn(
+                            "h-1 w-1 rounded-full",
+                            isMeasured
+                              ? "bg-emerald-400 shadow-[0_0_4px_rgba(16,185,129,0.9)]"
+                              : hasCable
+                                ? "bg-amber-400 shadow-[0_0_4px_rgba(245,158,11,0.8)]"
+                                : "bg-neutral-700",
+                          )}
+                        />
+                        {/* RJ45 slit */}
+                        <span className="my-[2px] block h-[2px] w-[70%] rounded-[1px] bg-neutral-950/80 shadow-inner" />
+                        <span className="leading-none">{port.portNumber}</span>
+                      </button>
+                    );
+                  })}
                 </div>
-              </div>
-              <Badge
-                variant={isMeasured ? "default" : "outline"}
-                className="font-mono text-[10px]"
-              >
-                {isMeasured ? "Proměřeno" : hasCable ? "Čeká" : "—"}
-              </Badge>
-            </button>
-          );
-        })}
-      </div>
+              ),
+            )}
+          </div>
+
+          {/* Legend */}
+          <div className="flex flex-wrap items-center gap-3 text-[10px] text-muted-foreground">
+            <LegendDot className="bg-emerald-400 shadow-[0_0_4px_rgba(16,185,129,0.9)]" label="Proměřeno" />
+            <LegendDot className="bg-amber-400 shadow-[0_0_4px_rgba(245,158,11,0.8)]" label="Čeká na proměření" />
+            <LegendDot className="bg-neutral-700" label="Bez kabelu" />
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+function LegendDot({ className, label }: { className: string; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span className={cn("inline-block h-1.5 w-1.5 rounded-full", className)} />
+      {label}
+    </span>
   );
 }
