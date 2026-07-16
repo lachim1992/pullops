@@ -2734,7 +2734,7 @@ function DayPlanCard({
   onDelete: (id: string) => Promise<void> | void;
   onAssign: (cableId: string, dayPlanId: string | null) => Promise<void> | void;
 }) {
-  const capacity = dp.spoolCount * dp.spoolLengthM;
+  const virtualCapacity = dp.spoolCount * dp.spoolLengthM;
   const [expanded, setExpanded] = useState(false);
   const [notesDraft, setNotesDraft] = useState<string>(dp.notes ?? "");
   const [uploading, setUploading] = useState(false);
