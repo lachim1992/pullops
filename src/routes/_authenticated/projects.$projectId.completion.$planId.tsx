@@ -218,7 +218,12 @@ function CompletionPlanEditor() {
     return m;
   }, [cables]);
 
-  const doneCount = endpoints.filter((e) => e.completionStatus === "DONE").length;
+  // "Hotovo" is auto: endpoint TERMINATED + all its cables tested.
+  const doneCount = endpoints.filter((e) => {
+    if (e.completionStatus !== "TERMINATED") return false;
+    const cs = cablesByEndpoint.get(e.id) ?? [];
+    return cs.length > 0 && cs.every((c) => c.tested);
+  }).length;
 
   async function setEpStatus(id: string, status: EndpointCompletionStatus) {
     try {
