@@ -350,6 +350,8 @@ export type Database = {
           project_id: string
           route_id: string | null
           status: Database["public"]["Enums"]["cable_status"]
+          tested_at: string | null
+          tested_by: string | null
           to_endpoint_id: string | null
           to_port_id: string | null
           updated_at: string
@@ -371,6 +373,8 @@ export type Database = {
           project_id: string
           route_id?: string | null
           status?: Database["public"]["Enums"]["cable_status"]
+          tested_at?: string | null
+          tested_by?: string | null
           to_endpoint_id?: string | null
           to_port_id?: string | null
           updated_at?: string
@@ -392,6 +396,8 @@ export type Database = {
           project_id?: string
           route_id?: string | null
           status?: Database["public"]["Enums"]["cable_status"]
+          tested_at?: string | null
+          tested_by?: string | null
           to_endpoint_id?: string | null
           to_port_id?: string | null
           updated_at?: string
@@ -2948,6 +2954,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_cable_terminated: { Args: { p_cable_id: string }; Returns: boolean }
       is_org_admin_for_project: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
@@ -2978,6 +2985,10 @@ export type Database = {
       }
       seed_endpoint_kinds: {
         Args: { p_project_id: string }
+        Returns: undefined
+      }
+      set_cable_tested_tx: {
+        Args: { p_cable_id: string; p_tested: boolean }
         Returns: undefined
       }
       set_endpoint_completion_status_tx: {

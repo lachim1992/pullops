@@ -21,13 +21,12 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import {
   getCompletionPlan,
-  setCableMeasured,
+  setCableTested,
   setCableCancelled,
   setEndpointCompletionStatus,
   setPatchPanelCompletionStatus,
   unmarkPlanReadyForCompletion,
-  ENDPOINT_STATUSES,
-  
+  ENDPOINT_MANUAL_STATUSES,
   PANEL_STATUSES,
   type EndpointCompletionStatus,
   type PanelCompletionStatus,
@@ -43,27 +42,19 @@ export const Route = createFileRoute("/_authenticated/projects/$projectId/comple
 
 const EP_LABEL: Record<EndpointCompletionStatus, string> = {
   PLANNED: "Naplánováno",
-  PULLED: "Protaženo",
   TERMINATED: "Zaterminováno",
-  TESTED: "Otestováno",
-  DONE: "Hotovo",
   CANCELLED: "Zrušeno",
 };
 const EP_COLOR: Record<EndpointCompletionStatus, string> = {
   PLANNED: "hsl(0 0% 45%)",
-  PULLED: "hsl(45 90% 55%)",
   TERMINATED: "hsl(25 85% 55%)",
-  TESTED: "hsl(210 85% 55%)",
-  DONE: "hsl(140 60% 45%)",
   CANCELLED: "hsl(0 70% 45%)",
 };
 const PANEL_LABEL: Record<PanelCompletionStatus, string> = {
   PLANNED: "Naplánováno",
   WIRED: "Zapojeno + popsáno",
-  MEASURED: "Proměřeno",
 };
 
-const MEASURED_STATUSES = new Set(["TERMINATED", "TESTED", "DONE"]);
 
 function normalizeSearch(s: string): string {
   return s
@@ -86,6 +77,8 @@ type PortRow = {
     status: string;
     notes: string | null;
     peerEndpointCode: string | null;
+    terminated: boolean;
+    tested: boolean;
   } | null;
 };
 
@@ -97,7 +90,7 @@ function CompletionPlanEditor() {
   const dataFn = useServerFn(getCompletionPlan);
   const setEpFn = useServerFn(setEndpointCompletionStatus);
   const setPpFn = useServerFn(setPatchPanelCompletionStatus);
-  const setMeasuredFn = useServerFn(setCableMeasured);
+  const setTestedFn = useServerFn(setCableTested);
   const setCancelledFn = useServerFn(setCableCancelled);
   const unmarkFn = useServerFn(unmarkPlanReadyForCompletion);
   const capsFn = useServerFn(getMyProjectCapabilities);
@@ -226,7 +219,12 @@ function CompletionPlanEditor() {
     return m;
   }, [cables]);
 
-  const doneCount = endpoints.filter((e) => e.completionStatus === "DONE").length;
+  // "Hotovo" is auto: endpoint TERMINATED + all its cables tested.
+  const doneCount = endpoints.filter((e) => {
+    if (e.completionStatus !== "TERMINATED") return false;
+    const cs = cablesByEndpoint.get(e.id) ?? [];
+    return cs.length > 0 && cs.every((c) => c.tested);
+  }).length;
 
   async function setEpStatus(id: string, status: EndpointCompletionStatus) {
     try {
@@ -269,13 +267,13 @@ function CompletionPlanEditor() {
     if (!measureTarget?.cable) return;
     setMeasureBusy(true);
     try {
-      await setMeasuredFn({
+      await setTestedFn({
         data: {
           cableId: measureTarget.cable.id,
-          note: measureNote.trim().length > 0 ? measureNote.trim() : null,
+          tested: true,
         },
       });
-      toast.success(`Port ${measureTarget.portNumber} proměřen`);
+      toast.success(`Kabel ${measureTarget.cable.code} proměřen`);
       setMeasureTarget(null);
       setMeasureNote("");
       await qc.invalidateQueries({ queryKey: ["completion-plan", planId] });
@@ -286,8 +284,19 @@ function CompletionPlanEditor() {
     }
   }
 
-  const measuredCount = ports.filter((p) => p.cable && MEASURED_STATUSES.has(p.cable.status)).length;
+  async function undoTest(cableId: string, code: string) {
+    try {
+      await setTestedFn({ data: { cableId, tested: false } });
+      toast.success(`Zrušeno proměření kabelu ${code}`);
+      await qc.invalidateQueries({ queryKey: ["completion-plan", planId] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Chyba");
+    }
+  }
+
+  const measuredCount = ports.filter((p) => p.cable?.tested).length;
   const totalWithCable = ports.filter((p) => p.cable).length;
+
 
 
   return (
@@ -469,19 +478,30 @@ function CompletionPlanEditor() {
       >
         <DialogContent className="max-w-xl">
           <DialogHeader>
-            <DialogTitle>Proměřeno?</DialogTitle>
+            <DialogTitle>
+              {measureTarget?.cable?.tested ? "Zrušit proměření?" : "Proměřeno?"}
+            </DialogTitle>
             <DialogDescription>
               {measureTarget?.cable ? (
                 <>
-                  Označit kabel <span className="font-mono font-bold">{measureTarget.cable.code}</span>{" "}
-                  na portu <span className="font-mono font-bold">{measureTarget.portNumber}</span> jako
-                  proměřený?
+                  Kabel <span className="font-mono font-bold">{measureTarget.cable.code}</span>{" "}
+                  na portu <span className="font-mono font-bold">{measureTarget.portNumber}</span>
+                  {measureTarget.cable.tested
+                    ? " — odebrat proměření?"
+                    : " — označit jako proměřený?"}
                 </>
               ) : (
                 "Port bez kabelu nelze proměřit."
               )}
             </DialogDescription>
           </DialogHeader>
+          {measureTarget?.cable && !measureTarget.cable.terminated && !measureTarget.cable.tested && (
+            <div className="rounded-sm border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive">
+              Kabel není zaterminovaný. Nejprve nastav status <b>Zaterminováno</b> u dotčeného
+              endpointu (záložka Endpointy) a status <b>Zapojeno + popsáno</b> u dotčeného
+              patch panelu (záložka Racky).
+            </div>
+          )}
           {measureTarget && (() => {
             const panel = panelById.get(measureTarget.panelId);
             const panelPorts = portsByPanel.get(measureTarget.panelId) ?? [];
@@ -549,12 +569,37 @@ function CompletionPlanEditor() {
               >
                 Zavřít
               </Button>
-              <Button
-                onClick={confirmMeasure}
-                disabled={measureBusy || !measureTarget?.cable || !canManage}
-              >
-                {measureBusy ? "Ukládám…" : "Potvrdit proměřeno"}
-              </Button>
+              {measureTarget?.cable?.tested ? (
+                <Button
+                  variant="destructive"
+                  onClick={async () => {
+                    if (!measureTarget?.cable) return;
+                    setMeasureBusy(true);
+                    try {
+                      await undoTest(measureTarget.cable.id, measureTarget.cable.code);
+                      setMeasureTarget(null);
+                      setMeasureNote("");
+                    } finally {
+                      setMeasureBusy(false);
+                    }
+                  }}
+                  disabled={measureBusy || !canManage}
+                >
+                  {measureBusy ? "Ukládám…" : "Zrušit proměření"}
+                </Button>
+              ) : (
+                <Button
+                  onClick={confirmMeasure}
+                  disabled={
+                    measureBusy ||
+                    !measureTarget?.cable ||
+                    !canManage ||
+                    !measureTarget.cable.terminated
+                  }
+                >
+                  {measureBusy ? "Ukládám…" : "Potvrdit proměřeno"}
+                </Button>
+              )}
             </div>
           </DialogFooter>
         </DialogContent>
@@ -618,7 +663,7 @@ function CompletionPlanEditor() {
               <ul className="divide-y divide-border">
                 {searchResults.map(({ port, panelCode }) => {
                   const cable = port.cable!;
-                  const isMeasured = MEASURED_STATUSES.has(cable.status);
+                  const isMeasured = cable.tested;
                   return (
                     <li key={port.id}>
                       <button
@@ -901,23 +946,17 @@ function MiniMap({
                   <Badge variant="outline" className="font-mono text-[10px]">{EP_LABEL[selectedEndpoint.completionStatus]}</Badge>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-1">
-                  {ENDPOINT_STATUSES.map((status) => {
-                    const isPulled = status === "PULLED";
-                    return (
-                      <Button
-                        key={status}
-                        size="sm"
-                        variant={status === selectedEndpoint.completionStatus ? "default" : "outline"}
-                        className="h-7 px-2 font-mono text-[10px]"
-                        disabled={isPulled}
-                        title={isPulled ? "Řídí režim Tahání" : undefined}
-                        onClick={() => !isPulled && onSetStatus(selectedEndpoint.id, status)}
-                      >
-                        {EP_LABEL[status]}
-                        {isPulled && " 🔒"}
-                      </Button>
-                    );
-                  })}
+                  {ENDPOINT_MANUAL_STATUSES.map((status) => (
+                    <Button
+                      key={status}
+                      size="sm"
+                      variant={status === selectedEndpoint.completionStatus ? "default" : "outline"}
+                      className="h-7 px-2 font-mono text-[10px]"
+                      onClick={() => onSetStatus(selectedEndpoint.id, status)}
+                    >
+                      {EP_LABEL[status]}
+                    </Button>
+                  ))}
                 </div>
                 <div className="mt-2 max-h-32 overflow-y-auto rounded-sm border border-border/60 bg-muted/30 p-2">
                   <div className="mb-1 font-mono text-[10px] uppercase text-muted-foreground">Kabely v bodě ({selectedCables.length})</div>
@@ -1015,23 +1054,17 @@ function EndpointCard({
       {selected && (
         <div className="mt-2 space-y-2">
           <div className="flex flex-wrap gap-1">
-            {ENDPOINT_STATUSES.map((s) => {
-              const isPulled = s === "PULLED";
-              return (
-                <Button
-                  key={s}
-                  size="sm"
-                  variant={s === endpoint.completionStatus ? "default" : "outline"}
-                  className="h-7 px-2 font-mono text-[10px]"
-                  disabled={isPulled}
-                  title={isPulled ? "Řídí režim Tahání" : undefined}
-                  onClick={() => !isPulled && onSetStatus(s)}
-                >
-                  {EP_LABEL[s]}
-                  {isPulled && " 🔒"}
-                </Button>
-              );
-            })}
+            {ENDPOINT_MANUAL_STATUSES.map((s) => (
+              <Button
+                key={s}
+                size="sm"
+                variant={s === endpoint.completionStatus ? "default" : "outline"}
+                className="h-7 px-2 font-mono text-[10px]"
+                onClick={() => onSetStatus(s)}
+              >
+                {EP_LABEL[s]}
+              </Button>
+            ))}
           </div>
           {cables.length > 0 && (
             <div className="rounded-sm border border-border/60 bg-muted/30 p-2">
@@ -1124,7 +1157,7 @@ function MeasurementPanelCard({
   highlightPortId?: string | null;
   registerPortRef?: (id: string, el: HTMLButtonElement | null) => void;
 }) {
-  const measured = ports.filter((p) => p.cable && MEASURED_STATUSES.has(p.cable.status)).length;
+  const measured = ports.filter((p) => p.cable && p.cable.tested).length;
   const withCable = ports.filter((p) => p.cable).length;
   const hasHighlight = highlightPortId ? ports.some((p) => p.id === highlightPortId) : false;
   const [open, setOpen] = useState(true);
@@ -1200,11 +1233,13 @@ function MeasurementPanelCard({
                     }
                     const cable = port.cable;
                     const hasCable = !!cable;
-                    const isMeasured = hasCable && MEASURED_STATUSES.has(cable!.status);
+                    const isMeasured = hasCable && cable!.tested;
+                    const isTerminated = hasCable && cable!.terminated;
+                    const locked = hasCable && !isTerminated && !isMeasured;
                     const title = hasCable
                       ? `Port ${port.portNumber} · ${cable!.code}${
                           cable!.peerEndpointCode ? ` → ${cable!.peerEndpointCode}` : ""
-                        }${isMeasured ? " · proměřeno" : " · čeká"}`
+                        }${isMeasured ? " · proměřeno" : locked ? " · uzamčeno (chybí terminace)" : " · čeká"}`
                       : `Port ${port.portNumber} · bez kabelu`;
                     const isHighlighted = highlightPortId === port.id;
                     // Label under the port shows the CABLE code (not the endpoint).
@@ -1215,7 +1250,7 @@ function MeasurementPanelCard({
                           ref={(el) => registerPortRef?.(port.id, el)}
                           type="button"
                           title={title}
-                          disabled={!hasCable || !canEdit}
+                          disabled={!hasCable || !canEdit || locked}
                           onClick={() => onMeasure(port)}
                           className={cn(
                             "group relative aspect-[3/4] rounded-[3px] border text-[9px] font-mono transition-all",
@@ -1223,10 +1258,12 @@ function MeasurementPanelCard({
                             hasCable
                               ? isMeasured
                                 ? "border-emerald-500/70 bg-emerald-500/15 text-emerald-200 shadow-[0_0_6px_-1px_rgba(16,185,129,0.6)]"
-                                : "border-amber-500/60 bg-amber-500/10 text-amber-200 hover:border-amber-400 hover:bg-amber-500/20"
+                                : locked
+                                  ? "border-neutral-700 bg-neutral-900/80 text-neutral-500"
+                                  : "border-amber-500/60 bg-amber-500/10 text-amber-200 hover:border-amber-400 hover:bg-amber-500/20"
                               : "border-neutral-800 bg-neutral-900/80 text-neutral-600",
-                            hasCable && canEdit && "cursor-pointer active:scale-95",
-                            (!hasCable || !canEdit) && "cursor-default",
+                            hasCable && canEdit && !locked && "cursor-pointer active:scale-95",
+                            (!hasCable || !canEdit || locked) && "cursor-default",
                             isHighlighted &&
                               "!border-sky-400 ring-2 ring-sky-400/70 ring-offset-1 ring-offset-neutral-950 animate-pulse",
                           )}
@@ -1237,9 +1274,11 @@ function MeasurementPanelCard({
                               "h-1 w-1 rounded-full",
                               isMeasured
                                 ? "bg-emerald-400 shadow-[0_0_4px_rgba(16,185,129,0.9)]"
-                                : hasCable
-                                  ? "bg-amber-400 shadow-[0_0_4px_rgba(245,158,11,0.8)]"
-                                  : "bg-neutral-700",
+                                : locked
+                                  ? "bg-neutral-600"
+                                  : hasCable
+                                    ? "bg-amber-400 shadow-[0_0_4px_rgba(245,158,11,0.8)]"
+                                    : "bg-neutral-700",
                             )}
                           />
                           {/* RJ45 slit */}
@@ -1253,7 +1292,9 @@ function MeasurementPanelCard({
                             hasCable
                               ? isMeasured
                                 ? "text-emerald-300/90"
-                                : "text-amber-200/90"
+                                : locked
+                                  ? "text-neutral-500"
+                                  : "text-amber-200/90"
                               : "text-neutral-700",
                           )}
                         >
@@ -1271,6 +1312,7 @@ function MeasurementPanelCard({
           <div className="flex flex-wrap items-center gap-3 text-[10px] text-muted-foreground">
             <LegendDot className="bg-emerald-400 shadow-[0_0_4px_rgba(16,185,129,0.9)]" label="Proměřeno" />
             <LegendDot className="bg-amber-400 shadow-[0_0_4px_rgba(245,158,11,0.8)]" label="Čeká na proměření" />
+            <LegendDot className="bg-neutral-600" label="Uzamčeno – chybí terminace" />
             <LegendDot className="bg-neutral-700" label="Bez kabelu" />
           </div>
         </div>
@@ -1325,7 +1367,7 @@ function MiniPanelViz({
               }
               const cable = port.cable;
               const hasCable = !!cable;
-              const isMeasured = hasCable && MEASURED_STATUSES.has(cable!.status);
+              const isMeasured = hasCable && cable!.tested;
               const isHighlighted = port.id === highlightPortId;
               return (
                 <div
