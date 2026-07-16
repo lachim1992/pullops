@@ -478,19 +478,30 @@ function CompletionPlanEditor() {
       >
         <DialogContent className="max-w-xl">
           <DialogHeader>
-            <DialogTitle>Proměřeno?</DialogTitle>
+            <DialogTitle>
+              {measureTarget?.cable?.tested ? "Zrušit proměření?" : "Proměřeno?"}
+            </DialogTitle>
             <DialogDescription>
               {measureTarget?.cable ? (
                 <>
-                  Označit kabel <span className="font-mono font-bold">{measureTarget.cable.code}</span>{" "}
-                  na portu <span className="font-mono font-bold">{measureTarget.portNumber}</span> jako
-                  proměřený?
+                  Kabel <span className="font-mono font-bold">{measureTarget.cable.code}</span>{" "}
+                  na portu <span className="font-mono font-bold">{measureTarget.portNumber}</span>
+                  {measureTarget.cable.tested
+                    ? " — odebrat proměření?"
+                    : " — označit jako proměřený?"}
                 </>
               ) : (
                 "Port bez kabelu nelze proměřit."
               )}
             </DialogDescription>
           </DialogHeader>
+          {measureTarget?.cable && !measureTarget.cable.terminated && !measureTarget.cable.tested && (
+            <div className="rounded-sm border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive">
+              Kabel není zaterminovaný. Nejprve nastav status <b>Zaterminováno</b> u dotčeného
+              endpointu (záložka Endpointy) a status <b>Zapojeno + popsáno</b> u dotčeného
+              patch panelu (záložka Racky).
+            </div>
+          )}
           {measureTarget && (() => {
             const panel = panelById.get(measureTarget.panelId);
             const panelPorts = portsByPanel.get(measureTarget.panelId) ?? [];
@@ -558,12 +569,37 @@ function CompletionPlanEditor() {
               >
                 Zavřít
               </Button>
-              <Button
-                onClick={confirmMeasure}
-                disabled={measureBusy || !measureTarget?.cable || !canManage}
-              >
-                {measureBusy ? "Ukládám…" : "Potvrdit proměřeno"}
-              </Button>
+              {measureTarget?.cable?.tested ? (
+                <Button
+                  variant="destructive"
+                  onClick={async () => {
+                    if (!measureTarget?.cable) return;
+                    setMeasureBusy(true);
+                    try {
+                      await undoTest(measureTarget.cable.id, measureTarget.cable.code);
+                      setMeasureTarget(null);
+                      setMeasureNote("");
+                    } finally {
+                      setMeasureBusy(false);
+                    }
+                  }}
+                  disabled={measureBusy || !canManage}
+                >
+                  {measureBusy ? "Ukládám…" : "Zrušit proměření"}
+                </Button>
+              ) : (
+                <Button
+                  onClick={confirmMeasure}
+                  disabled={
+                    measureBusy ||
+                    !measureTarget?.cable ||
+                    !canManage ||
+                    !measureTarget.cable.terminated
+                  }
+                >
+                  {measureBusy ? "Ukládám…" : "Potvrdit proměřeno"}
+                </Button>
+              )}
             </div>
           </DialogFooter>
         </DialogContent>
