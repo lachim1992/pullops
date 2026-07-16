@@ -2296,6 +2296,65 @@ export type Database = {
           },
         ]
       }
+      pull_day_plan_spools: {
+        Row: {
+          created_at: string
+          day_plan_id: string
+          id: string
+          organization_id: string
+          project_id: string
+          sort_order: number
+          spool_id: string
+        }
+        Insert: {
+          created_at?: string
+          day_plan_id: string
+          id?: string
+          organization_id: string
+          project_id: string
+          sort_order?: number
+          spool_id: string
+        }
+        Update: {
+          created_at?: string
+          day_plan_id?: string
+          id?: string
+          organization_id?: string
+          project_id?: string
+          sort_order?: number
+          spool_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pull_day_plan_spools_day_plan_id_fkey"
+            columns: ["day_plan_id"]
+            isOneToOne: false
+            referencedRelation: "pull_day_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pull_day_plan_spools_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pull_day_plan_spools_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pull_day_plan_spools_spool_id_fkey"
+            columns: ["spool_id"]
+            isOneToOne: true
+            referencedRelation: "spools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pull_day_plans: {
         Row: {
           assigned_to: string | null
