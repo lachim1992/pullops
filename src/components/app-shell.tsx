@@ -94,7 +94,7 @@ export function AppShell({ children, projectId, topBarExtra, contentClassName }:
         {sidebar}
       </aside>
 
-      <main className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
+      <main className="flex min-w-0 flex-1 flex-col [overflow-x:clip]">
         <div className="sticky top-0 z-30 border-b border-border/40 bg-background/85 pt-[env(safe-area-inset-top)] backdrop-blur">
           <div className="flex min-h-12 items-center gap-2 px-3 sm:px-4 md:h-12">
             {/* Mobile hamburger */}
