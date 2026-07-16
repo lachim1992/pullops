@@ -467,7 +467,7 @@ function CompletionPlanEditor() {
           }
         }}
       >
-        <DialogContent>
+        <DialogContent className="max-w-xl">
           <DialogHeader>
             <DialogTitle>Proměřeno?</DialogTitle>
             <DialogDescription>
@@ -482,6 +482,28 @@ function CompletionPlanEditor() {
               )}
             </DialogDescription>
           </DialogHeader>
+          {measureTarget && (() => {
+            const panel = panelById.get(measureTarget.panelId);
+            const panelPorts = portsByPanel.get(measureTarget.panelId) ?? [];
+            if (!panel) return null;
+            return (
+              <div className="rounded-md border border-border/60 bg-neutral-950/40 p-2">
+                <div className="mb-1.5 flex items-center justify-between px-1">
+                  <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                    Rack · {panel.code}
+                  </div>
+                  <div className="font-mono text-[10px] text-muted-foreground">
+                    port {measureTarget.portNumber}/{panel.portCount}
+                  </div>
+                </div>
+                <MiniPanelViz
+                  portCount={panel.portCount}
+                  ports={panelPorts}
+                  highlightPortId={measureTarget.id}
+                />
+              </div>
+            );
+          })()}
           <div className="space-y-2">
             <label className="font-mono text-[10px] uppercase text-muted-foreground">
               Poznámka (volitelná)
