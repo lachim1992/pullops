@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, CheckCircle2, ChevronDown, Layers, Ruler, Server, Undo2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ChevronDown, Layers, Ruler, Search, Server, Undo2, X } from "lucide-react";
 import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 import { AppShell } from "@/components/app-shell";
 import { Badge } from "@/components/ui/badge";
@@ -61,6 +63,15 @@ const PANEL_LABEL: Record<PanelCompletionStatus, string> = {
 
 const MEASURED_STATUSES = new Set(["TERMINATED", "TESTED", "DONE"]);
 
+function normalizeSearch(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[\s\-_/.]+/g, " ")
+    .trim();
+}
+
 type Tab = "endpoints" | "racks" | "measurement";
 type PortRow = {
   id: string;
@@ -103,6 +114,14 @@ function CompletionPlanEditor() {
   const [measureTarget, setMeasureTarget] = useState<PortRow | null>(null);
   const [measureNote, setMeasureNote] = useState("");
   const [measureBusy, setMeasureBusy] = useState(false);
+  const [searchQ, setSearchQ] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [highlightPortId, setHighlightPortId] = useState<string | null>(null);
+  const portRefs = useRef(new Map<string, HTMLButtonElement>());
+  const registerPortRef = useCallback((id: string, el: HTMLButtonElement | null) => {
+    if (el) portRefs.current.set(id, el);
+    else portRefs.current.delete(id);
+  }, []);
 
   const endpoints = q.data?.endpoints ?? [];
   const panels = q.data?.panels ?? [];
@@ -121,6 +140,74 @@ function CompletionPlanEditor() {
     for (const arr of m.values()) arr.sort((a, b) => a.portNumber - b.portNumber);
     return m;
   }, [ports]);
+
+  const panelById = useMemo(() => {
+    const m = new Map<string, (typeof panels)[number]>();
+    for (const p of panels) m.set(p.id, p);
+    return m;
+  }, [panels]);
+
+  const searchIndex = useMemo(() => {
+    return ports
+      .filter((p) => p.cable)
+      .map((p) => {
+        const panel = panelById.get(p.panelId);
+        const panelCode = panel?.code ?? "";
+        const haystack = normalizeSearch(
+          [
+            p.cable?.code ?? "",
+            p.cable?.peerEndpointCode ?? "",
+            p.cable?.notes ?? "",
+            `${panelCode}/${p.portNumber}`,
+            `${panelCode} ${p.portNumber}`,
+            `${panelCode}${p.portNumber}`,
+          ].join(" "),
+        );
+        return { port: p, panelCode, haystack };
+      });
+  }, [ports, panelById]);
+
+  const searchResults = useMemo(() => {
+    const q = normalizeSearch(searchQ).trim();
+    if (q.length === 0) return [] as typeof searchIndex;
+    const tokens = q.split(/\s+/).filter(Boolean);
+    const scored: Array<{ item: (typeof searchIndex)[number]; score: number }> = [];
+    for (const item of searchIndex) {
+      let ok = true;
+      let score = 0;
+      for (const t of tokens) {
+        const idx = item.haystack.indexOf(t);
+        if (idx < 0) {
+          ok = false;
+          break;
+        }
+        score += idx === 0 ? 3 : 1;
+      }
+      if (ok) scored.push({ item, score });
+    }
+    scored.sort((a, b) => b.score - a.score);
+    return scored.slice(0, 40).map((s) => s.item);
+  }, [searchIndex, searchQ]);
+
+  function pickSearchResult(port: PortRow) {
+    setSearchOpen(false);
+    setSearchQ("");
+    setHighlightPortId(port.id);
+    // ensure measurement tab visible
+    setTab("measurement");
+    requestAnimationFrame(() => {
+      const el = portRefs.current.get(port.id);
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    if (port.cable && canManage) {
+      setMeasureTarget(port);
+      setMeasureNote(port.cable.notes ?? "");
+    }
+    // clear highlight after a while
+    window.setTimeout(() => {
+      setHighlightPortId((cur) => (cur === port.id ? null : cur));
+    }, 4000);
+  }
 
 
   const cablesByEndpoint = useMemo(() => {
@@ -300,6 +387,21 @@ function CompletionPlanEditor() {
 
         {tab === "measurement" && (
           <section className="space-y-3">
+            {/* Sticky search bar */}
+            <div className="sticky top-0 z-30 -mx-2 border-b border-border/60 bg-background/95 px-2 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+              <button
+                type="button"
+                onClick={() => setSearchOpen(true)}
+                className="flex w-full items-center gap-2 rounded-sm border border-border bg-card px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:border-primary/50 active:scale-[0.99]"
+              >
+                <Search className="h-4 w-4 shrink-0" />
+                <span className="truncate">Hledat kabel, endpoint, PP/port…</span>
+                <span className="ml-auto shrink-0 rounded-sm border border-border px-1.5 py-0.5 font-mono text-[10px] uppercase text-muted-foreground">
+                  {searchIndex.length}
+                </span>
+              </button>
+            </div>
+
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
                 Měření kabelů podle portů
@@ -327,6 +429,8 @@ function CompletionPlanEditor() {
                     panel={p}
                     ports={rows}
                     canEdit={canManage}
+                    highlightPortId={highlightPortId}
+                    registerPortRef={registerPortRef}
                     onMeasure={(port) => {
                       setMeasureTarget(port);
                       setMeasureNote(port.cable?.notes ?? "");
@@ -394,6 +498,101 @@ function CompletionPlanEditor() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Search sheet — mobile-first bottom sheet */}
+      <Sheet open={searchOpen} onOpenChange={setSearchOpen}>
+        <SheetContent
+          side="bottom"
+          className="flex h-[85vh] flex-col gap-0 p-0 sm:h-[80vh]"
+        >
+          <SheetHeader className="border-b border-border px-4 py-3">
+            <SheetTitle className="font-mono text-sm uppercase">Hledat kabel</SheetTitle>
+          </SheetHeader>
+          <div className="border-b border-border px-3 py-2">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                autoFocus
+                value={searchQ}
+                onChange={(e) => setSearchQ(e.target.value)}
+                placeholder="Kód kabelu, endpoint, PP/port…"
+                enterKeyHint="search"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                className="h-11 pl-9 pr-9 font-mono text-base"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && searchResults[0]) {
+                    e.preventDefault();
+                    pickSearchResult(searchResults[0].port);
+                  }
+                }}
+              />
+              {searchQ.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQ("")}
+                  className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-sm text-muted-foreground hover:text-foreground"
+                  aria-label="Vymazat"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            <div className="mt-1.5 flex items-center justify-between font-mono text-[10px] uppercase text-muted-foreground">
+              <span>{searchQ.trim().length === 0 ? "Zadej alespoň 1 znak" : `${searchResults.length} výsledků`}</span>
+              <span>{searchIndex.length} kabelů celkem</span>
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto overscroll-contain">
+            {searchQ.trim().length === 0 ? (
+              <div className="p-6 text-center text-xs text-muted-foreground">
+                Napiš část kódu kabelu, endpointu (např. „CSO08"), nebo „PP2/17".
+              </div>
+            ) : searchResults.length === 0 ? (
+              <div className="p-6 text-center text-xs text-muted-foreground">
+                Nic nenalezeno.
+              </div>
+            ) : (
+              <ul className="divide-y divide-border">
+                {searchResults.map(({ port, panelCode }) => {
+                  const cable = port.cable!;
+                  const isMeasured = MEASURED_STATUSES.has(cable.status);
+                  return (
+                    <li key={port.id}>
+                      <button
+                        type="button"
+                        onClick={() => pickSearchResult(port)}
+                        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/40 active:bg-muted"
+                      >
+                        <span
+                          className={cn(
+                            "h-2 w-2 shrink-0 rounded-full",
+                            isMeasured
+                              ? "bg-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.9)]"
+                              : "bg-amber-400 shadow-[0_0_6px_rgba(245,158,11,0.9)]",
+                          )}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate font-mono text-sm font-bold">
+                            {cable.code}
+                          </div>
+                          <div className="truncate text-[11px] text-muted-foreground">
+                            {cable.peerEndpointCode ?? "—"}
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="shrink-0 font-mono text-[10px]">
+                          {panelCode}/{port.portNumber}
+                        </Badge>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
     </AppShell>
   );
 }
@@ -812,15 +1011,24 @@ function MeasurementPanelCard({
   ports,
   canEdit,
   onMeasure,
+  highlightPortId,
+  registerPortRef,
 }: {
   panel: { id: string; code: string; name: string | null; portCount: number };
   ports: PortRow[];
   canEdit: boolean;
   onMeasure: (port: PortRow) => void;
+  highlightPortId?: string | null;
+  registerPortRef?: (id: string, el: HTMLButtonElement | null) => void;
 }) {
   const measured = ports.filter((p) => p.cable && MEASURED_STATUSES.has(p.cable.status)).length;
   const withCable = ports.filter((p) => p.cable).length;
+  const hasHighlight = highlightPortId ? ports.some((p) => p.id === highlightPortId) : false;
   const [open, setOpen] = useState(true);
+  // auto-open when a search result targets a port in this panel
+  useEffect(() => {
+    if (hasHighlight) setOpen(true);
+  }, [hasHighlight]);
 
   // Normalize to portCount slots (fill missing with null so illustration matches real panel)
   const slots: Array<PortRow | null> = useMemo(() => {
@@ -892,9 +1100,11 @@ function MeasurementPanelCard({
                           cable!.peerEndpointCode ? ` → ${cable!.peerEndpointCode}` : ""
                         }${isMeasured ? " · proměřeno" : " · čeká"}`
                       : `Port ${port.portNumber} · bez kabelu`;
+                    const isHighlighted = highlightPortId === port.id;
                     return (
                       <button
                         key={port.id}
+                        ref={(el) => registerPortRef?.(port.id, el)}
                         type="button"
                         title={title}
                         disabled={!hasCable || !canEdit}
@@ -909,6 +1119,8 @@ function MeasurementPanelCard({
                             : "border-neutral-800 bg-neutral-900/80 text-neutral-600",
                           hasCable && canEdit && "cursor-pointer active:scale-95",
                           (!hasCable || !canEdit) && "cursor-default",
+                          isHighlighted &&
+                            "!border-sky-400 ring-2 ring-sky-400/70 ring-offset-1 ring-offset-neutral-950 animate-pulse",
                         )}
                       >
                         {/* LED */}
