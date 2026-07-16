@@ -78,6 +78,8 @@ type PortRow = {
     status: string;
     notes: string | null;
     peerEndpointCode: string | null;
+    terminated: boolean;
+    tested: boolean;
   } | null;
 };
 
