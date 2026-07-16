@@ -775,8 +775,9 @@ function MiniMap({
     const onStart = (e: TouchEvent) => {
       if (e.touches.length === 1) {
         if (isInteractive(e.target)) return;
-        const t = e.target as Element | null;
-        if (t && t instanceof SVGElement && t.tagName !== "svg") return;
+        // Allow pan-start even when the finger lands on SVG cables/endpoints.
+        // Tap vs drag is disambiguated by whether onMove ever fires with
+        // enough delta; a pure tap still lets the click event through.
         mode = "pan";
         sx = e.touches[0].clientX;
         sy = e.touches[0].clientY;

@@ -1062,7 +1062,9 @@ function PullMap({
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ tx: 0, ty: 0, s: 1 });
+  const viewRef = useRef({ tx: 0, ty: 0, s: 1 });
   const panRef = useRef<{ startX: number; startY: number; tx0: number; ty0: number } | null>(null);
+  useEffect(() => { viewRef.current = view; }, [view]);
   const selectedCable = cables.find((c) => c.id === selectedCableId) ?? null;
   const selectedEndpoint = endpoints.find((e) => e.id === selectedEndpointId) ?? null;
   const selectedEndpointCables = selectedEndpoint
@@ -1088,16 +1090,90 @@ function PullMap({
     return () => el.removeEventListener("wheel", handler);
   }, []);
 
+  // Touch pinch + pan (mobile)
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    let mode: "none" | "pan" | "pinch" = "none";
+    let sx = 0, sy = 0, ox = 0, oy = 0;
+    let pinchDist = 0, pinchZoom = 1;
+    let pinchCenter = { x: 0, y: 0 };
+    const dist = (a: Touch, b: Touch) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+    const isInteractive = (target: EventTarget | null) => {
+      const t = target as Element | null;
+      return !!t?.closest?.("button, a, input, textarea, select, [role='button'], [data-no-pan]");
+    };
+    const onStart = (e: TouchEvent) => {
+      if (e.touches.length === 1) {
+        if (isInteractive(e.target)) return;
+        mode = "pan";
+        sx = e.touches[0].clientX;
+        sy = e.touches[0].clientY;
+        ox = viewRef.current.tx;
+        oy = viewRef.current.ty;
+      } else if (e.touches.length === 2) {
+        mode = "pinch";
+        pinchDist = dist(e.touches[0], e.touches[1]);
+        pinchZoom = viewRef.current.s;
+        const rect = el.getBoundingClientRect();
+        pinchCenter = {
+          x: (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left,
+          y: (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top,
+        };
+        e.preventDefault();
+      }
+    };
+    const onMove = (e: TouchEvent) => {
+      if (mode === "pan" && e.touches.length === 1) {
+        const nx = ox + (e.touches[0].clientX - sx);
+        const ny = oy + (e.touches[0].clientY - sy);
+        viewRef.current = { ...viewRef.current, tx: nx, ty: ny };
+        setView((v) => ({ ...v, tx: nx, ty: ny }));
+        e.preventDefault();
+      } else if (mode === "pinch" && e.touches.length === 2 && pinchDist > 0) {
+        const d = dist(e.touches[0], e.touches[1]);
+        const ns = Math.min(8, Math.max(0.5, pinchZoom * (d / pinchDist)));
+        const v = viewRef.current;
+        if (ns !== v.s) {
+          const k = ns / v.s;
+          const nv = {
+            tx: pinchCenter.x - k * (pinchCenter.x - v.tx),
+            ty: pinchCenter.y - k * (pinchCenter.y - v.ty),
+            s: ns,
+          };
+          viewRef.current = nv;
+          setView(nv);
+        }
+        e.preventDefault();
+      }
+    };
+    const onEnd = (e: TouchEvent) => {
+      if (e.touches.length === 0) mode = "none";
+    };
+    el.addEventListener("touchstart", onStart, { passive: false });
+    el.addEventListener("touchmove", onMove, { passive: false });
+    el.addEventListener("touchend", onEnd);
+    el.addEventListener("touchcancel", onEnd);
+    return () => {
+      el.removeEventListener("touchstart", onStart);
+      el.removeEventListener("touchmove", onMove);
+      el.removeEventListener("touchend", onEnd);
+      el.removeEventListener("touchcancel", onEnd);
+    };
+  }, []);
+
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.pointerType === "mouse" && e.button !== 0 && e.button !== 1) return;
-    const target = e.target as SVGElement | HTMLElement;
-    if (target instanceof SVGElement && target.tagName !== "svg") return;
+    if (e.pointerType !== "mouse") return;
+    if (e.button !== 0 && e.button !== 1) return;
+    const target = e.target as Element;
+    if (target.closest?.("button, a, input, textarea, select, [role='button'], [data-no-pan]")) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     panRef.current = { startX: e.clientX, startY: e.clientY, tx0: view.tx, ty0: view.ty };
   };
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     const pan = panRef.current;
     if (!pan) return;
+    if (e.pointerType !== "mouse") return;
     const dx = e.clientX - pan.startX;
     const dy = e.clientY - pan.startY;
     setView((v) => ({ ...v, tx: pan.tx0 + dx, ty: pan.ty0 + dy }));
