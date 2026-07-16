@@ -2442,6 +2442,166 @@ export type Database = {
           },
         ]
       }
+      pull_round_items: {
+        Row: {
+          actual_length_m: number | null
+          cable_id: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          organization_id: string
+          planned_length_m: number | null
+          project_id: string
+          round_id: string
+          sequence: number
+          spool_id: string
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          actual_length_m?: number | null
+          cable_id: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          organization_id: string
+          planned_length_m?: number | null
+          project_id: string
+          round_id: string
+          sequence?: number
+          spool_id: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          actual_length_m?: number | null
+          cable_id?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          organization_id?: string
+          planned_length_m?: number | null
+          project_id?: string
+          round_id?: string
+          sequence?: number
+          spool_id?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pull_round_items_cable_id_fkey"
+            columns: ["cable_id"]
+            isOneToOne: false
+            referencedRelation: "cables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pull_round_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pull_round_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pull_round_items_round_id_fkey"
+            columns: ["round_id"]
+            isOneToOne: false
+            referencedRelation: "pull_rounds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pull_round_items_spool_id_fkey"
+            columns: ["spool_id"]
+            isOneToOne: false
+            referencedRelation: "spools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pull_rounds: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          created_by: string | null
+          day_plan_id: string
+          id: string
+          notes: string | null
+          organization_id: string
+          project_id: string
+          round_number: number
+          started_at: string | null
+          started_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          day_plan_id: string
+          id?: string
+          notes?: string | null
+          organization_id: string
+          project_id: string
+          round_number: number
+          started_at?: string | null
+          started_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          day_plan_id?: string
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          project_id?: string
+          round_number?: number
+          started_at?: string | null
+          started_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pull_rounds_day_plan_id_fkey"
+            columns: ["day_plan_id"]
+            isOneToOne: false
+            referencedRelation: "pull_day_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pull_rounds_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pull_rounds_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pull_station_layouts: {
         Row: {
           created_at: string
@@ -2924,6 +3084,11 @@ export type Database = {
         }
         Returns: undefined
       }
+      cancel_pull_round_tx: { Args: { p_round_id: string }; Returns: undefined }
+      complete_pull_round_tx: {
+        Args: { p_actuals: Json; p_round_id: string }
+        Returns: undefined
+      }
       create_organization_tx: { Args: { p_name: string }; Returns: string }
       create_project_tx: {
         Args: {
@@ -3018,6 +3183,10 @@ export type Database = {
         Returns: undefined
       }
       share_org: { Args: { _a: string; _b: string }; Returns: boolean }
+      start_pull_round_tx: {
+        Args: { p_day_plan_id: string; p_items: Json }
+        Returns: string
+      }
       unmark_plan_ready_for_completion_tx: {
         Args: { p_plan_id: string }
         Returns: undefined
