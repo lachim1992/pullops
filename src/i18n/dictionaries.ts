@@ -279,6 +279,7 @@ export const en = {
     tasks: "Tasks",
     photoArchive: "Photo archive",
     pulling: "Pulling",
+    pullManager: "Pull manager",
     defects: "Defects",
     protocols: "Protocols",
     completion: "Termination & test",
