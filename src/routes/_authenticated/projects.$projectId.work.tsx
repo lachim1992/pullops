@@ -1118,8 +1118,9 @@ function PullMap({
           title={plan?.name ?? "Plán"}
           empty="Plán nemá podkladový obrázek."
           fullscreenTargetRef={containerRef}
-          contentClassName="origin-top-left"
-          contentStyle={{ transform: `translate(${view.tx}px, ${view.ty}px) scale(${view.s})` }}
+          className="touch-none"
+          contentClassName="origin-top-left touch-none"
+          contentStyle={{ transform: `translate(${view.tx}px, ${view.ty}px) scale(${view.s})`, touchAction: "none" }}
           overlay={
             <div className="pointer-events-none absolute left-3 right-14 top-3 z-20 flex flex-wrap items-start gap-2">
               <div className="rounded-sm border border-border bg-background/90 px-2 py-1 font-mono text-[10px] shadow-sm backdrop-blur">
