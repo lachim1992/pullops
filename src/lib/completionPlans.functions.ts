@@ -75,7 +75,7 @@ export const listCompletionOverview = createServerFn({ method: "GET" })
     if (eperr) throw new Error(eperr.message);
     const epStatus = new Map<string, string>();
     for (const e of (endpointsRes as any[]) ?? []) {
-      epStatus.set(e.id as string, (e.completion_status as string) ?? "PENDING");
+      epStatus.set(e.id as string, (e.completion_status as string) ?? "PLANNED");
     }
 
     const fpById = new Map<string, { name: string; level: number; document_id: string | null }>();
@@ -268,7 +268,7 @@ export const getCompletionPlan = createServerFn({ method: "GET" })
           floorPlanId: (e.floor_plan_id as string | null) ?? null,
           normX: Number(e.norm_x ?? 0),
           normY: Number(e.norm_y ?? 0),
-          completionStatus: ((e.completion_status as string) ?? "PENDING") as EndpointCompletionStatus,
+          completionStatus: ((e.completion_status as string) ?? "PLANNED") as EndpointCompletionStatus,
         }));
       }
     }
@@ -302,7 +302,7 @@ export const getCompletionPlan = createServerFn({ method: "GET" })
         code: p.code as string,
         name: (p.name as string | null) ?? null,
         portCount: Number(p.port_count ?? 0),
-        completionStatus: ((p.completion_status as string) ?? "PENDING") as PanelCompletionStatus,
+        completionStatus: ((p.completion_status as string) ?? "PLANNED") as PanelCompletionStatus,
       }));
     }
 
