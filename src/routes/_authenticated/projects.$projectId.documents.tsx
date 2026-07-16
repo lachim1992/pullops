@@ -85,24 +85,29 @@ function DocumentsPage() {
   }
 
   async function openDoc(id: string) {
-    // Open blank tab synchronously so popup blockers (incl. preview iframe) allow it.
-    const tab = window.open("", "_blank", "noopener,noreferrer");
     try {
       const { url } = await signFn({ data: { id } });
-      if (tab) {
-        tab.location.href = url;
-      } else {
-        // Fallback: trigger a hidden anchor click
-        const a = document.createElement("a");
-        a.href = url;
-        a.target = "_blank";
-        a.rel = "noopener noreferrer";
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
+      // Prefer a real anchor click — works in sandboxed preview iframes where
+      // window.open is blocked. Uses target=_blank so the PDF opens in a new tab.
+      const a = document.createElement("a");
+      a.href = url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      // Fallback: if the click was suppressed, try window.open, then top-level nav.
+      const w = window.open(url, "_blank", "noopener,noreferrer");
+      if (!w) {
+        try {
+          if (window.top && window.top !== window.self) {
+            window.top.location.href = url;
+          }
+        } catch {
+          // cross-origin top — ignore
+        }
       }
     } catch (err) {
-      if (tab) tab.close();
       toast.error(err instanceof Error ? err.message : "Chyba");
     }
   }
