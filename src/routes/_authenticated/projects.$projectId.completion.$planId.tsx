@@ -89,7 +89,7 @@ function CompletionPlanEditor() {
   const dataFn = useServerFn(getCompletionPlan);
   const setEpFn = useServerFn(setEndpointCompletionStatus);
   const setPpFn = useServerFn(setPatchPanelCompletionStatus);
-  const setMeasuredFn = useServerFn(setCableMeasured);
+  const setTestedFn = useServerFn(setCableTested);
   const setCancelledFn = useServerFn(setCableCancelled);
   const unmarkFn = useServerFn(unmarkPlanReadyForCompletion);
   const capsFn = useServerFn(getMyProjectCapabilities);
