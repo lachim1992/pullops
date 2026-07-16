@@ -481,23 +481,47 @@ function CompletionPlanEditor() {
               rows={3}
             />
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-wrap gap-2 sm:justify-between">
             <Button
-              variant="outline"
-              onClick={() => {
-                setMeasureTarget(null);
-                setMeasureNote("");
+              variant="destructive"
+              onClick={async () => {
+                if (!measureTarget?.cable) return;
+                if (!confirm(`Opravdu zrušit kabel ${measureTarget.cable.code}?`)) return;
+                setMeasureBusy(true);
+                try {
+                  await setCancelledFn({ data: { cableId: measureTarget.cable.id } });
+                  toast.success(`Kabel ${measureTarget.cable.code} zrušen`);
+                  setMeasureTarget(null);
+                  setMeasureNote("");
+                  await qc.invalidateQueries({ queryKey: ["completion-plan", planId] });
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Chyba");
+                } finally {
+                  setMeasureBusy(false);
+                }
               }}
-              disabled={measureBusy}
-            >
-              Zrušit
-            </Button>
-            <Button
-              onClick={confirmMeasure}
               disabled={measureBusy || !measureTarget?.cable || !canManage}
             >
-              {measureBusy ? "Ukládám…" : "Potvrdit proměřeno"}
+              Zrušit kabel
             </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setMeasureTarget(null);
+                  setMeasureNote("");
+                }}
+                disabled={measureBusy}
+              >
+                Zavřít
+              </Button>
+              <Button
+                onClick={confirmMeasure}
+                disabled={measureBusy || !measureTarget?.cable || !canManage}
+              >
+                {measureBusy ? "Ukládám…" : "Potvrdit proměřeno"}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
