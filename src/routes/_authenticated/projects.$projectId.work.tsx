@@ -80,8 +80,10 @@ type SpoolRow = {
   used: number;
   capacity: number;
   wasted: number;
+  serialNo?: string | null;
   cables: Array<{ id: string; code: string; meters: number }>;
 };
+
 
 type DayBlock = {
   id: string;
