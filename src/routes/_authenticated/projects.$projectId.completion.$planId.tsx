@@ -266,13 +266,13 @@ function CompletionPlanEditor() {
     if (!measureTarget?.cable) return;
     setMeasureBusy(true);
     try {
-      await setMeasuredFn({
+      await setTestedFn({
         data: {
           cableId: measureTarget.cable.id,
-          note: measureNote.trim().length > 0 ? measureNote.trim() : null,
+          tested: true,
         },
       });
-      toast.success(`Port ${measureTarget.portNumber} proměřen`);
+      toast.success(`Kabel ${measureTarget.cable.code} proměřen`);
       setMeasureTarget(null);
       setMeasureNote("");
       await qc.invalidateQueries({ queryKey: ["completion-plan", planId] });
@@ -283,8 +283,19 @@ function CompletionPlanEditor() {
     }
   }
 
-  const measuredCount = ports.filter((p) => p.cable && MEASURED_STATUSES.has(p.cable.status)).length;
+  async function undoTest(cableId: string, code: string) {
+    try {
+      await setTestedFn({ data: { cableId, tested: false } });
+      toast.success(`Zrušeno proměření kabelu ${code}`);
+      await qc.invalidateQueries({ queryKey: ["completion-plan", planId] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Chyba");
+    }
+  }
+
+  const measuredCount = ports.filter((p) => p.cable?.tested).length;
   const totalWithCable = ports.filter((p) => p.cable).length;
+
 
 
   return (
