@@ -95,8 +95,8 @@ export function AppShell({ children, projectId, topBarExtra, contentClassName }:
       </aside>
 
       <main className="flex min-w-0 flex-1 flex-col [overflow-x:clip]">
-        <div className="sticky top-0 z-30 border-b border-border/40 bg-background/85 pt-[env(safe-area-inset-top)] backdrop-blur">
-          <div className="flex min-h-12 items-center gap-2 px-3 sm:px-4 md:h-12">
+        <div className="sticky top-0 z-30 border-b border-border/60 bg-background/90 pt-[env(safe-area-inset-top)] shadow-[0_1px_0_0_rgba(0,0,0,0.04)] backdrop-blur-md">
+          <div className="flex min-h-16 items-center gap-3 px-4 sm:px-6 md:h-16">
             {/* Mobile hamburger */}
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
@@ -141,10 +141,10 @@ export function AppShell({ children, projectId, topBarExtra, contentClassName }:
               className="flex items-center gap-2 md:hidden"
               onClick={() => setMobileOpen(false)}
             >
-              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-[color:var(--gold-soft)] to-[color:var(--accent)] text-primary-foreground">
-                <Cable className="h-3.5 w-3.5" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-md bg-gradient-to-br from-[color:var(--gold-soft)] to-[color:var(--accent)] text-primary-foreground shadow-[0_0_16px_-6px_var(--accent)]">
+                <Cable className="h-4 w-4" />
               </div>
-              <span className="font-display text-sm font-semibold tracking-tight">PullOps</span>
+              <span className="font-display text-base font-semibold tracking-tight">PullOps</span>
             </Link>
 
             <div className="ml-auto flex items-center gap-2">

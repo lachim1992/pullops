@@ -467,7 +467,7 @@ function CompletionPlanEditor() {
           }
         }}
       >
-        <DialogContent>
+        <DialogContent className="max-w-xl">
           <DialogHeader>
             <DialogTitle>Proměřeno?</DialogTitle>
             <DialogDescription>
@@ -482,6 +482,28 @@ function CompletionPlanEditor() {
               )}
             </DialogDescription>
           </DialogHeader>
+          {measureTarget && (() => {
+            const panel = panelById.get(measureTarget.panelId);
+            const panelPorts = portsByPanel.get(measureTarget.panelId) ?? [];
+            if (!panel) return null;
+            return (
+              <div className="rounded-md border border-border/60 bg-neutral-950/40 p-2">
+                <div className="mb-1.5 flex items-center justify-between px-1">
+                  <div className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                    Rack · {panel.code}
+                  </div>
+                  <div className="font-mono text-[10px] text-muted-foreground">
+                    port {measureTarget.portNumber}/{panel.portCount}
+                  </div>
+                </div>
+                <MiniPanelViz
+                  portCount={panel.portCount}
+                  ports={panelPorts}
+                  highlightPortId={measureTarget.id}
+                />
+              </div>
+            );
+          })()}
           <div className="space-y-2">
             <label className="font-mono text-[10px] uppercase text-muted-foreground">
               Poznámka (volitelná)
@@ -1184,13 +1206,8 @@ function MeasurementPanelCard({
                         }${isMeasured ? " · proměřeno" : " · čeká"}`
                       : `Port ${port.portNumber} · bez kabelu`;
                     const isHighlighted = highlightPortId === port.id;
-                    // Compact label: prefer peer endpoint code, else last segment of cable code.
-                    const rawLabel = hasCable
-                      ? cable!.peerEndpointCode ||
-                        (cable!.code.includes("-")
-                          ? cable!.code.split("-").pop()!
-                          : cable!.code)
-                      : "";
+                    // Label under the port shows the CABLE code (not the endpoint).
+                    const rawLabel = hasCable ? cable!.code : "";
                     return (
                       <div key={port.id} className="flex flex-col items-stretch gap-0.5">
                         <button
@@ -1267,5 +1284,70 @@ function LegendDot({ className, label }: { className: string; label: string }) {
       <span className={cn("inline-block h-1.5 w-1.5 rounded-full", className)} />
       {label}
     </span>
+  );
+}
+
+function MiniPanelViz({
+  portCount,
+  ports,
+  highlightPortId,
+}: {
+  portCount: number;
+  ports: PortRow[];
+  highlightPortId: string;
+}) {
+  const byNum = new Map<number, PortRow>();
+  for (const p of ports) byNum.set(p.portNumber, p);
+  const total = Math.max(portCount || 0, ports.length);
+  const slots: Array<PortRow | null> = [];
+  for (let i = 1; i <= total; i++) slots.push(byNum.get(i) ?? null);
+  const half = Math.ceil(slots.length / 2);
+  const rows = [slots.slice(0, half), slots.slice(half)];
+
+  return (
+    <div className="space-y-1 rounded-sm border border-neutral-800 bg-neutral-950/70 p-1.5 shadow-inner">
+      {rows.map((row, idx) =>
+        row.length === 0 ? null : (
+          <div
+            key={idx}
+            className="grid gap-0.5"
+            style={{ gridTemplateColumns: `repeat(${row.length}, minmax(0, 1fr))` }}
+          >
+            {row.map((port, i) => {
+              if (!port) {
+                return (
+                  <div
+                    key={`e-${idx}-${i}`}
+                    className="aspect-[3/4] rounded-[2px] border border-dashed border-neutral-800 bg-neutral-900/60"
+                  />
+                );
+              }
+              const cable = port.cable;
+              const hasCable = !!cable;
+              const isMeasured = hasCable && MEASURED_STATUSES.has(cable!.status);
+              const isHighlighted = port.id === highlightPortId;
+              return (
+                <div
+                  key={port.id}
+                  title={`Port ${port.portNumber}${cable ? ` · ${cable.code}` : ""}`}
+                  className={cn(
+                    "relative aspect-[3/4] rounded-[2px] border text-[8px] font-mono flex items-center justify-center",
+                    hasCable
+                      ? isMeasured
+                        ? "border-emerald-500/60 bg-emerald-500/15 text-emerald-200"
+                        : "border-amber-500/50 bg-amber-500/10 text-amber-200"
+                      : "border-neutral-800 bg-neutral-900/80 text-neutral-600",
+                    isHighlighted &&
+                      "!border-sky-400 ring-2 ring-sky-400/70 ring-offset-1 ring-offset-neutral-950 animate-pulse z-10",
+                  )}
+                >
+                  {port.portNumber}
+                </div>
+              );
+            })}
+          </div>
+        ),
+      )}
+    </div>
   );
 }
