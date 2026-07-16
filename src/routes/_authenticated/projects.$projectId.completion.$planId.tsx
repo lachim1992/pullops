@@ -22,10 +22,12 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   getCompletionPlan,
   setCableMeasured,
+  setCableCancelled,
   setEndpointCompletionStatus,
   setPatchPanelCompletionStatus,
   unmarkPlanReadyForCompletion,
   ENDPOINT_STATUSES,
+  
   PANEL_STATUSES,
   type EndpointCompletionStatus,
   type PanelCompletionStatus,
@@ -40,25 +42,25 @@ export const Route = createFileRoute("/_authenticated/projects/$projectId/comple
 });
 
 const EP_LABEL: Record<EndpointCompletionStatus, string> = {
-  PENDING: "Čeká",
+  PLANNED: "Naplánováno",
   PULLED: "Protaženo",
-  TERMINATED: "Proměřeno",
+  TERMINATED: "Zaterminováno",
   TESTED: "Otestováno",
   DONE: "Hotovo",
+  CANCELLED: "Zrušeno",
 };
 const EP_COLOR: Record<EndpointCompletionStatus, string> = {
-  PENDING: "hsl(0 0% 45%)",
+  PLANNED: "hsl(0 0% 45%)",
   PULLED: "hsl(45 90% 55%)",
   TERMINATED: "hsl(25 85% 55%)",
   TESTED: "hsl(210 85% 55%)",
   DONE: "hsl(140 60% 45%)",
+  CANCELLED: "hsl(0 70% 45%)",
 };
 const PANEL_LABEL: Record<PanelCompletionStatus, string> = {
-  PENDING: "Čeká",
-  WIRED: "Zapojeno",
-  LABELED: "Popsáno",
+  PLANNED: "Naplánováno",
+  WIRED: "Zapojeno + popsáno",
   MEASURED: "Proměřeno",
-  DONE: "Hotovo",
 };
 
 const MEASURED_STATUSES = new Set(["TERMINATED", "TESTED", "DONE"]);
@@ -96,6 +98,7 @@ function CompletionPlanEditor() {
   const setEpFn = useServerFn(setEndpointCompletionStatus);
   const setPpFn = useServerFn(setPatchPanelCompletionStatus);
   const setMeasuredFn = useServerFn(setCableMeasured);
+  const setCancelledFn = useServerFn(setCableCancelled);
   const unmarkFn = useServerFn(unmarkPlanReadyForCompletion);
   const capsFn = useServerFn(getMyProjectCapabilities);
 
@@ -242,6 +245,16 @@ function CompletionPlanEditor() {
       toast.error(e instanceof Error ? e.message : "Chyba");
     }
   }
+  async function cancelCable(cableId: string, code: string) {
+    if (!confirm(`Opravdu zrušit kabel ${code}?`)) return;
+    try {
+      await setCancelledFn({ data: { cableId } });
+      toast.success(`Kabel ${code} zrušen`);
+      await qc.invalidateQueries({ queryKey: ["completion-plan", planId] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Chyba");
+    }
+  }
   async function unmark() {
     try {
       await unmarkFn({ data: { planId } });
@@ -353,6 +366,8 @@ function CompletionPlanEditor() {
                     selected={selectedEndpointId === ep.id}
                     onSelect={() => setSelectedEndpointId(ep.id === selectedEndpointId ? null : ep.id)}
                     onSetStatus={(s) => setEpStatus(ep.id, s)}
+                    onCancelCable={cancelCable}
+                    canEdit={canManage}
                   />
                 ))}
               </div>
@@ -478,23 +493,47 @@ function CompletionPlanEditor() {
               rows={3}
             />
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-wrap gap-2 sm:justify-between">
             <Button
-              variant="outline"
-              onClick={() => {
-                setMeasureTarget(null);
-                setMeasureNote("");
+              variant="destructive"
+              onClick={async () => {
+                if (!measureTarget?.cable) return;
+                if (!confirm(`Opravdu zrušit kabel ${measureTarget.cable.code}?`)) return;
+                setMeasureBusy(true);
+                try {
+                  await setCancelledFn({ data: { cableId: measureTarget.cable.id } });
+                  toast.success(`Kabel ${measureTarget.cable.code} zrušen`);
+                  setMeasureTarget(null);
+                  setMeasureNote("");
+                  await qc.invalidateQueries({ queryKey: ["completion-plan", planId] });
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Chyba");
+                } finally {
+                  setMeasureBusy(false);
+                }
               }}
-              disabled={measureBusy}
-            >
-              Zrušit
-            </Button>
-            <Button
-              onClick={confirmMeasure}
               disabled={measureBusy || !measureTarget?.cable || !canManage}
             >
-              {measureBusy ? "Ukládám…" : "Potvrdit proměřeno"}
+              Zrušit kabel
             </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setMeasureTarget(null);
+                  setMeasureNote("");
+                }}
+                disabled={measureBusy}
+              >
+                Zavřít
+              </Button>
+              <Button
+                onClick={confirmMeasure}
+                disabled={measureBusy || !measureTarget?.cable || !canManage}
+              >
+                {measureBusy ? "Ukládám…" : "Potvrdit proměřeno"}
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -839,11 +878,23 @@ function MiniMap({
                   <Badge variant="outline" className="font-mono text-[10px]">{EP_LABEL[selectedEndpoint.completionStatus]}</Badge>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-1">
-                  {ENDPOINT_STATUSES.map((status) => (
-                    <Button key={status} size="sm" variant={status === selectedEndpoint.completionStatus ? "default" : "outline"} className="h-7 px-2 font-mono text-[10px]" onClick={() => onSetStatus(selectedEndpoint.id, status)}>
-                      {EP_LABEL[status]}
-                    </Button>
-                  ))}
+                  {ENDPOINT_STATUSES.map((status) => {
+                    const isPulled = status === "PULLED";
+                    return (
+                      <Button
+                        key={status}
+                        size="sm"
+                        variant={status === selectedEndpoint.completionStatus ? "default" : "outline"}
+                        className="h-7 px-2 font-mono text-[10px]"
+                        disabled={isPulled}
+                        title={isPulled ? "Řídí režim Tahání" : undefined}
+                        onClick={() => !isPulled && onSetStatus(selectedEndpoint.id, status)}
+                      >
+                        {EP_LABEL[status]}
+                        {isPulled && " 🔒"}
+                      </Button>
+                    );
+                  })}
                 </div>
                 <div className="mt-2 max-h-32 overflow-y-auto rounded-sm border border-border/60 bg-muted/30 p-2">
                   <div className="mb-1 font-mono text-[10px] uppercase text-muted-foreground">Kabely v bodě ({selectedCables.length})</div>
@@ -904,12 +955,16 @@ function EndpointCard({
   selected,
   onSelect,
   onSetStatus,
+  onCancelCable,
+  canEdit,
 }: {
   endpoint: { id: string; code: string; kind: string | null; completionStatus: EndpointCompletionStatus };
   cables: Array<{ id: string; code: string; status: string }>;
   selected: boolean;
   onSelect: () => void;
   onSetStatus: (s: EndpointCompletionStatus) => void;
+  onCancelCable: (cableId: string, code: string) => void;
+  canEdit: boolean;
 }) {
   const info = endpoint.kind ? endpointKindInfo(endpoint.kind) : null;
   return (
@@ -937,28 +992,53 @@ function EndpointCard({
       {selected && (
         <div className="mt-2 space-y-2">
           <div className="flex flex-wrap gap-1">
-            {ENDPOINT_STATUSES.map((s) => (
-              <Button
-                key={s}
-                size="sm"
-                variant={s === endpoint.completionStatus ? "default" : "outline"}
-                className="h-7 px-2 font-mono text-[10px]"
-                onClick={() => onSetStatus(s)}
-              >
-                {EP_LABEL[s]}
-              </Button>
-            ))}
+            {ENDPOINT_STATUSES.map((s) => {
+              const isPulled = s === "PULLED";
+              return (
+                <Button
+                  key={s}
+                  size="sm"
+                  variant={s === endpoint.completionStatus ? "default" : "outline"}
+                  className="h-7 px-2 font-mono text-[10px]"
+                  disabled={isPulled}
+                  title={isPulled ? "Řídí režim Tahání" : undefined}
+                  onClick={() => !isPulled && onSetStatus(s)}
+                >
+                  {EP_LABEL[s]}
+                  {isPulled && " 🔒"}
+                </Button>
+              );
+            })}
           </div>
           {cables.length > 0 && (
             <div className="rounded-sm border border-border/60 bg-muted/30 p-2">
               <div className="mb-1 font-mono text-[10px] uppercase text-muted-foreground">Kabely</div>
               <div className="space-y-0.5">
-                {cables.map((c) => (
-                  <div key={c.id} className="flex items-center justify-between text-[11px]">
-                    <span className="font-mono">{c.code}</span>
-                    <span className="font-mono text-muted-foreground">{c.status}</span>
-                  </div>
-                ))}
+                {cables.map((c) => {
+                  const isCancelled = c.status === "CANCELLED";
+                  return (
+                    <div key={c.id} className="flex items-center justify-between gap-2 text-[11px]">
+                      <span className={cn("font-mono", isCancelled && "line-through opacity-60")}>{c.code}</span>
+                      <span className="flex items-center gap-1">
+                        <span className="font-mono text-muted-foreground">{c.status}</span>
+                        {canEdit && !isCancelled && (
+                          <button
+                            type="button"
+                            aria-label={`Zrušit kabel ${c.code}`}
+                            title="Zrušit kabel"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onCancelCable(c.id, c.code);
+                            }}
+                            className="rounded-sm border border-destructive/40 px-1 text-[10px] text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
