@@ -1198,10 +1198,12 @@ function MeasurementPanelCard({
                     const cable = port.cable;
                     const hasCable = !!cable;
                     const isMeasured = hasCable && cable!.tested;
+                    const isTerminated = hasCable && cable!.terminated;
+                    const locked = hasCable && !isTerminated && !isMeasured;
                     const title = hasCable
                       ? `Port ${port.portNumber} · ${cable!.code}${
                           cable!.peerEndpointCode ? ` → ${cable!.peerEndpointCode}` : ""
-                        }${isMeasured ? " · proměřeno" : " · čeká"}`
+                        }${isMeasured ? " · proměřeno" : locked ? " · uzamčeno (chybí terminace)" : " · čeká"}`
                       : `Port ${port.portNumber} · bez kabelu`;
                     const isHighlighted = highlightPortId === port.id;
                     // Label under the port shows the CABLE code (not the endpoint).
@@ -1212,7 +1214,7 @@ function MeasurementPanelCard({
                           ref={(el) => registerPortRef?.(port.id, el)}
                           type="button"
                           title={title}
-                          disabled={!hasCable || !canEdit}
+                          disabled={!hasCable || !canEdit || locked}
                           onClick={() => onMeasure(port)}
                           className={cn(
                             "group relative aspect-[3/4] rounded-[3px] border text-[9px] font-mono transition-all",
@@ -1220,10 +1222,12 @@ function MeasurementPanelCard({
                             hasCable
                               ? isMeasured
                                 ? "border-emerald-500/70 bg-emerald-500/15 text-emerald-200 shadow-[0_0_6px_-1px_rgba(16,185,129,0.6)]"
-                                : "border-amber-500/60 bg-amber-500/10 text-amber-200 hover:border-amber-400 hover:bg-amber-500/20"
+                                : locked
+                                  ? "border-neutral-700 bg-neutral-900/80 text-neutral-500"
+                                  : "border-amber-500/60 bg-amber-500/10 text-amber-200 hover:border-amber-400 hover:bg-amber-500/20"
                               : "border-neutral-800 bg-neutral-900/80 text-neutral-600",
-                            hasCable && canEdit && "cursor-pointer active:scale-95",
-                            (!hasCable || !canEdit) && "cursor-default",
+                            hasCable && canEdit && !locked && "cursor-pointer active:scale-95",
+                            (!hasCable || !canEdit || locked) && "cursor-default",
                             isHighlighted &&
                               "!border-sky-400 ring-2 ring-sky-400/70 ring-offset-1 ring-offset-neutral-950 animate-pulse",
                           )}
@@ -1234,9 +1238,11 @@ function MeasurementPanelCard({
                               "h-1 w-1 rounded-full",
                               isMeasured
                                 ? "bg-emerald-400 shadow-[0_0_4px_rgba(16,185,129,0.9)]"
-                                : hasCable
-                                  ? "bg-amber-400 shadow-[0_0_4px_rgba(245,158,11,0.8)]"
-                                  : "bg-neutral-700",
+                                : locked
+                                  ? "bg-neutral-600"
+                                  : hasCable
+                                    ? "bg-amber-400 shadow-[0_0_4px_rgba(245,158,11,0.8)]"
+                                    : "bg-neutral-700",
                             )}
                           />
                           {/* RJ45 slit */}
@@ -1250,7 +1256,9 @@ function MeasurementPanelCard({
                             hasCable
                               ? isMeasured
                                 ? "text-emerald-300/90"
-                                : "text-amber-200/90"
+                                : locked
+                                  ? "text-neutral-500"
+                                  : "text-amber-200/90"
                               : "text-neutral-700",
                           )}
                         >
@@ -1268,6 +1276,7 @@ function MeasurementPanelCard({
           <div className="flex flex-wrap items-center gap-3 text-[10px] text-muted-foreground">
             <LegendDot className="bg-emerald-400 shadow-[0_0_4px_rgba(16,185,129,0.9)]" label="Proměřeno" />
             <LegendDot className="bg-amber-400 shadow-[0_0_4px_rgba(245,158,11,0.8)]" label="Čeká na proměření" />
+            <LegendDot className="bg-neutral-600" label="Uzamčeno – chybí terminace" />
             <LegendDot className="bg-neutral-700" label="Bez kabelu" />
           </div>
         </div>
