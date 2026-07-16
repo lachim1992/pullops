@@ -132,6 +132,74 @@ function CompletionPlanEditor() {
     return m;
   }, [ports]);
 
+  const panelById = useMemo(() => {
+    const m = new Map<string, (typeof panels)[number]>();
+    for (const p of panels) m.set(p.id, p);
+    return m;
+  }, [panels]);
+
+  const searchIndex = useMemo(() => {
+    return ports
+      .filter((p) => p.cable)
+      .map((p) => {
+        const panel = panelById.get(p.panelId);
+        const panelCode = panel?.code ?? "";
+        const haystack = normalizeSearch(
+          [
+            p.cable?.code ?? "",
+            p.cable?.peerEndpointCode ?? "",
+            p.cable?.notes ?? "",
+            `${panelCode}/${p.portNumber}`,
+            `${panelCode} ${p.portNumber}`,
+            `${panelCode}${p.portNumber}`,
+          ].join(" "),
+        );
+        return { port: p, panelCode, haystack };
+      });
+  }, [ports, panelById]);
+
+  const searchResults = useMemo(() => {
+    const q = normalizeSearch(searchQ).trim();
+    if (q.length === 0) return [] as typeof searchIndex;
+    const tokens = q.split(/\s+/).filter(Boolean);
+    const scored: Array<{ item: (typeof searchIndex)[number]; score: number }> = [];
+    for (const item of searchIndex) {
+      let ok = true;
+      let score = 0;
+      for (const t of tokens) {
+        const idx = item.haystack.indexOf(t);
+        if (idx < 0) {
+          ok = false;
+          break;
+        }
+        score += idx === 0 ? 3 : 1;
+      }
+      if (ok) scored.push({ item, score });
+    }
+    scored.sort((a, b) => b.score - a.score);
+    return scored.slice(0, 40).map((s) => s.item);
+  }, [searchIndex, searchQ]);
+
+  function pickSearchResult(port: PortRow) {
+    setSearchOpen(false);
+    setSearchQ("");
+    setHighlightPortId(port.id);
+    // ensure measurement tab visible
+    setTab("measurement");
+    requestAnimationFrame(() => {
+      const el = portRefs.current.get(port.id);
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    if (port.cable && canManage) {
+      setMeasureTarget(port);
+      setMeasureNote(port.cable.notes ?? "");
+    }
+    // clear highlight after a while
+    window.setTimeout(() => {
+      setHighlightPortId((cur) => (cur === port.id ? null : cur));
+    }, 4000);
+  }
+
 
   const cablesByEndpoint = useMemo(() => {
     const m = new Map<string, typeof cables>();
