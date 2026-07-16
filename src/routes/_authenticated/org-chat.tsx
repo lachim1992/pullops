@@ -33,13 +33,9 @@ function OrgChatPage() {
   const activeOrgId = search.org ?? orgs.data?.[0]?.id;
 
   return (
-    <AppShell>
-      <div className="mb-4 flex items-center gap-2">
-        <MessageSquare className="h-5 w-5 text-[color:var(--accent)]" />
-        <h1 className="font-display text-xl font-semibold tracking-tight">Firemní chat</h1>
-      </div>
+    <AppShell contentClassName="max-w-none px-0 py-0 sm:px-0 sm:py-0">
       {!activeOrgId ? (
-        <div className="text-sm text-muted-foreground">Vyberte organizaci na dashboardu.</div>
+        <div className="p-4 text-sm text-muted-foreground">Vyberte organizaci na dashboardu.</div>
       ) : (
         <ChatPanel organizationId={activeOrgId} orgName={orgs.data?.find((o) => o.id === activeOrgId)?.name ?? ""} />
       )}
@@ -116,8 +112,9 @@ function ChatPanel({ organizationId, orgName }: { organizationId: string; orgNam
   }, [messages.data]);
 
   return (
-    <div className="flex h-[calc(100vh-10rem)] min-h-[500px] flex-col overflow-hidden rounded-lg border border-border/60 bg-card">
-      <div className="border-b border-border/60 px-4 py-2 text-xs font-mono uppercase tracking-[0.2em] text-muted-foreground">
+    <div className="flex h-[calc(100dvh-3rem-env(safe-area-inset-top))] min-h-[400px] flex-col overflow-hidden bg-background">
+      <div className="border-b border-border/60 px-4 py-2 text-xs font-mono uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
+        <MessageSquare className="h-3.5 w-3.5 text-[color:var(--accent)]" />
         {orgName || "organizace"}
       </div>
 
