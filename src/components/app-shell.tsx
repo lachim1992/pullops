@@ -95,62 +95,65 @@ export function AppShell({ children, projectId, topBarExtra, contentClassName }:
       </aside>
 
       <main className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
-        <div className="sticky top-0 z-20 flex min-h-12 items-center gap-2 border-b border-border/40 bg-background/70 px-3 pt-[env(safe-area-inset-top)] backdrop-blur sm:px-4 md:h-12 md:pt-0">
-          {/* Mobile hamburger */}
-          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-            <SheetTrigger asChild>
+        <div className="sticky top-0 z-30 border-b border-border/40 bg-background/85 pt-[env(safe-area-inset-top)] backdrop-blur">
+          <div className="flex min-h-12 items-center gap-2 px-3 sm:px-4 md:h-12">
+            {/* Mobile hamburger */}
+            <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+              <SheetTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="md:hidden"
+                  aria-label="Menu"
+                >
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent
+                side="left"
+                className="w-72 border-sidebar-border bg-sidebar p-0 pt-[env(safe-area-inset-top)] text-sidebar-foreground [&>button]:top-[calc(env(safe-area-inset-top)+1rem)] [&>button]:text-sidebar-foreground"
+              >
+                {sidebar}
+              </SheetContent>
+            </Sheet>
+
+            {canGoBack && (
               <Button
                 variant="ghost"
-                size="icon"
-                className="md:hidden"
-                aria-label="Menu"
+                size="sm"
+                className="gap-1.5 px-2 text-muted-foreground hover:text-foreground"
+                onClick={() => {
+                  if (window.history.length > 1) {
+                    router.history.back();
+                  } else {
+                    navigate({ to: "/dashboard" });
+                  }
+                }}
+                aria-label="Zpět"
               >
-                <Menu className="h-5 w-5" />
+                <ArrowLeft className="h-4 w-4" />
+                <span className="hidden sm:inline">Zpět</span>
               </Button>
-            </SheetTrigger>
-            <SheetContent
-              side="left"
-              className="w-72 border-sidebar-border bg-sidebar p-0 pt-[env(safe-area-inset-top)] text-sidebar-foreground [&>button]:top-[calc(env(safe-area-inset-top)+1rem)] [&>button]:text-sidebar-foreground"
-            >
-              {sidebar}
-            </SheetContent>
-          </Sheet>
+            )}
 
-          {canGoBack && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="gap-1.5 px-2 text-muted-foreground hover:text-foreground"
-              onClick={() => {
-                if (window.history.length > 1) {
-                  router.history.back();
-                } else {
-                  navigate({ to: "/dashboard" });
-                }
-              }}
-              aria-label="Zpět"
+            <Link
+              to="/dashboard"
+              className="flex items-center gap-2 md:hidden"
+              onClick={() => setMobileOpen(false)}
             >
-              <ArrowLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Zpět</span>
-            </Button>
-          )}
+              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-[color:var(--gold-soft)] to-[color:var(--accent)] text-primary-foreground">
+                <Cable className="h-3.5 w-3.5" />
+              </div>
+              <span className="font-display text-sm font-semibold tracking-tight">PullOps</span>
+            </Link>
 
-          <Link
-            to="/dashboard"
-            className="flex items-center gap-2 md:hidden"
-            onClick={() => setMobileOpen(false)}
-          >
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-[color:var(--gold-soft)] to-[color:var(--accent)] text-primary-foreground">
-              <Cable className="h-3.5 w-3.5" />
+            <div className="ml-auto flex items-center gap-2">
+              <NotificationsBell />
             </div>
-            <span className="font-display text-sm font-semibold tracking-tight">PullOps</span>
-          </Link>
-
-          <div className="ml-auto flex items-center gap-2">
-            <NotificationsBell />
           </div>
+          {topBarExtra ? <div className="border-t border-border/40 bg-background/70">{topBarExtra}</div> : null}
         </div>
-        <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8">{children}</div>
+        <div className={cn("mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8", contentClassName)}>{children}</div>
       </main>
     </div>
   );
