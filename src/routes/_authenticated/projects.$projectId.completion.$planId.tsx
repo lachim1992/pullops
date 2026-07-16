@@ -245,6 +245,16 @@ function CompletionPlanEditor() {
       toast.error(e instanceof Error ? e.message : "Chyba");
     }
   }
+  async function cancelCable(cableId: string, code: string) {
+    if (!confirm(`Opravdu zrušit kabel ${code}?`)) return;
+    try {
+      await setCancelledFn({ data: { cableId } });
+      toast.success(`Kabel ${code} zrušen`);
+      await qc.invalidateQueries({ queryKey: ["completion-plan", planId] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Chyba");
+    }
+  }
   async function unmark() {
     try {
       await unmarkFn({ data: { planId } });
