@@ -40,7 +40,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useT } from "@/i18n";
 
-export function AppShell({ children, projectId }: { children: ReactNode; projectId?: string }) {
+export function AppShell({ children, projectId, topBarExtra, contentClassName }: { children: ReactNode; projectId?: string; topBarExtra?: ReactNode; contentClassName?: string }) {
   const navigate = useNavigate();
   const router = useRouter();
   const queryClient = useQueryClient();
