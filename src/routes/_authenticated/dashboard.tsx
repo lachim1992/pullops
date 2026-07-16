@@ -31,9 +31,12 @@ import {
   AreaChart,
   CartesianGrid,
   ResponsiveContainer,
+  Scatter,
+  ScatterChart,
   Tooltip as RTooltip,
   XAxis,
   YAxis,
+  ZAxis,
 } from "recharts";
 
 import { AppShell } from "@/components/app-shell";
@@ -75,7 +78,10 @@ import { updateFloorPlan } from "@/lib/floorPlans.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { useT } from "@/i18n";
 
-const searchSchema = z.object({ org: z.string().uuid().optional() });
+const searchSchema = z.object({
+  org: z.string().uuid().optional(),
+  tab: z.enum(["overview", "projects"]).optional(),
+});
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   validateSearch: searchSchema,
@@ -122,9 +128,31 @@ function DashboardPage() {
   }
 
   const k = dash.data?.kpis;
+  const tab: "overview" | "projects" = search.tab ?? "overview";
+
+  const tabBar = (
+    <div className="mx-auto flex w-full max-w-6xl items-stretch gap-1 px-3 sm:px-4">
+      <TabButton
+        active={tab === "overview"}
+        onClick={() =>
+          navigate({ to: "/dashboard", search: { org: activeOrgId, tab: "overview" } })
+        }
+      >
+        <Activity className="mr-1.5 h-3.5 w-3.5" /> Celkový dashboard
+      </TabButton>
+      <TabButton
+        active={tab === "projects"}
+        onClick={() =>
+          navigate({ to: "/dashboard", search: { org: activeOrgId, tab: "projects" } })
+        }
+      >
+        <FolderKanban className="mr-1.5 h-3.5 w-3.5" /> Moje projekty
+      </TabButton>
+    </div>
+  );
 
   return (
-    <AppShell>
+    <AppShell topBarExtra={tabBar}>
       {/* ── Header ───────────────────────────────────────────────────── */}
       <motion.header
         initial={{ opacity: 0, y: 8 }}
@@ -140,7 +168,7 @@ function DashboardPage() {
             <select
               className="min-w-0 max-w-[220px] truncate rounded-md border border-border bg-card px-2.5 py-1.5 font-display text-base font-semibold tracking-tight focus:border-accent/60 focus:outline-none focus:ring-2 focus:ring-ring/40 sm:max-w-none sm:px-3 sm:py-2 sm:text-lg"
               value={activeOrgId}
-              onChange={(e) => navigate({ to: "/dashboard", search: { org: e.target.value } })}
+              onChange={(e) => navigate({ to: "/dashboard", search: { org: e.target.value, tab } })}
             >
               {orgs.data.map((o) => (
                 <option key={o.id} value={o.id}>
@@ -166,28 +194,179 @@ function DashboardPage() {
 
       {dash.isLoading || !k ? (
         <DashboardSkeleton />
+      ) : tab === "projects" ? (
+        <ProjectsTable projects={dash.data!.topProjects} />
       ) : (
-        <>
-          {/* ── Projects table (FIRST, active first) ────────────────── */}
-          <ProjectsTable projects={dash.data!.topProjects} />
-
-          {/* ── HERO progress row ───────────────────────────────────── */}
-          <HeroProgress kpis={k} orgName={activeOrg?.name ?? ""} />
-
-          {/* ── KPI strip ────────────────────────────────────────────── */}
-          <KpiStrip kpis={k} />
-
-          {/* ── Fun / gamification ridge ─────────────────────────────── */}
-          <FunRidge fun={dash.data!.fun} kpis={k} />
-
-          {/* ── Chart + activity ─────────────────────────────────────── */}
-          <section className="mt-6 grid gap-4 lg:grid-cols-3">
-            <TrendChart daily={dash.data!.daily} />
-            <ActivityFeed activity={dash.data!.activity} />
-          </section>
-        </>
+        <OverviewBento
+          kpis={k}
+          fun={dash.data!.fun}
+          daily={dash.data!.daily}
+          activity={dash.data!.activity}
+          projects={dash.data!.topProjects}
+          orgName={activeOrg?.name ?? ""}
+        />
       )}
     </AppShell>
+  );
+}
+
+function TabButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`relative -mb-px inline-flex items-center border-b-2 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.22em] transition-colors ${
+        active
+          ? "border-[color:var(--accent)] text-accent"
+          : "border-transparent text-muted-foreground hover:text-foreground"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function OverviewBento({
+  kpis,
+  fun,
+  daily,
+  activity,
+  projects,
+  orgName,
+}: {
+  kpis: OrgDashboard["kpis"];
+  fun: OrgDashboard["fun"];
+  daily: OrgDashboard["daily"];
+  activity: OrgDashboard["activity"];
+  projects: OrgDashboard["topProjects"];
+  orgName: string;
+}) {
+  return (
+    <div className="grid grid-cols-1 gap-3 lg:grid-cols-6 lg:auto-rows-[minmax(0,1fr)]">
+      {/* Hero — full width, tall */}
+      <div className="lg:col-span-6">
+        <HeroProgress kpis={kpis} orgName={orgName} />
+      </div>
+
+      {/* KPI strip — full width */}
+      <div className="lg:col-span-6">
+        <KpiStrip kpis={kpis} />
+      </div>
+
+      {/* Trend chart — big */}
+      <div className="lg:col-span-4">
+        <TrendChart daily={daily} />
+      </div>
+
+      {/* Activity feed */}
+      <div className="lg:col-span-2">
+        <ActivityFeed activity={activity} />
+      </div>
+
+      {/* Bubble chart — big */}
+      <div className="lg:col-span-4">
+        <ProjectsBubbleChart projects={projects} />
+      </div>
+
+      {/* Fun / gamification */}
+      <div className="lg:col-span-2">
+        <FunRidge fun={fun} kpis={kpis} />
+      </div>
+    </div>
+  );
+}
+
+function ProjectsBubbleChart({ projects }: { projects: OrgDashboard["topProjects"] }) {
+  const navigate = useNavigate();
+  const data = projects.map((p, i) => ({
+    id: p.id,
+    code: p.code,
+    name: p.name,
+    x: p.progressPct,
+    y: i + 1, // rank on y so bubbles don't overlap
+    z: Math.max(p.cablesTotal, 1),
+    meters: p.meters,
+    openDefects: p.openDefects,
+    isDemo: p.is_demo,
+  }));
+
+  return (
+    <section className="h-full rounded-2xl border border-border/60 bg-card/40 p-4 backdrop-blur">
+      <div className="mb-2 flex items-center justify-between">
+        <h3 className="font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
+          Projekty · bubliny
+        </h3>
+        <span className="font-mono text-[9px] text-muted-foreground/70">
+          osa X = % hotovo · velikost = kabelů
+        </span>
+      </div>
+      {data.length === 0 ? (
+        <div className="grid h-56 place-items-center text-xs text-muted-foreground">
+          Zatím žádné projekty.
+        </div>
+      ) : (
+        <ResponsiveContainer width="100%" height={280}>
+          <ScatterChart margin={{ top: 8, right: 16, bottom: 8, left: 8 }}>
+            <CartesianGrid stroke="hsl(var(--border) / 0.4)" strokeDasharray="3 3" />
+            <XAxis
+              type="number"
+              dataKey="x"
+              name="Postup"
+              domain={[0, 100]}
+              unit="%"
+              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+              stroke="hsl(var(--border))"
+            />
+            <YAxis
+              type="number"
+              dataKey="y"
+              name="Projekt"
+              hide
+              domain={[0, data.length + 1]}
+            />
+            <ZAxis type="number" dataKey="z" range={[80, 900]} name="Kabelů" />
+            <RTooltip
+              cursor={{ strokeDasharray: "3 3" }}
+              contentStyle={{
+                background: "hsl(var(--card))",
+                border: "1px solid hsl(var(--border))",
+                borderRadius: 8,
+                fontSize: 11,
+              }}
+              formatter={(_v, _n, item) => {
+                const d = item.payload as (typeof data)[number];
+                return [
+                  `${d.x}% · ${d.z} kabelů · ${formatNumber(d.meters)} m${
+                    d.openDefects ? ` · ${d.openDefects} závad` : ""
+                  }`,
+                  d.name,
+                ];
+              }}
+            />
+            <Scatter
+              data={data}
+              fill="hsl(var(--accent))"
+              fillOpacity={0.55}
+              stroke="hsl(var(--accent))"
+              strokeOpacity={0.9}
+              onClick={(pt) => {
+                const d = pt.payload as (typeof data)[number];
+                navigate({ to: "/projects/$projectId", params: { projectId: d.id } });
+              }}
+              style={{ cursor: "pointer" }}
+            />
+          </ScatterChart>
+        </ResponsiveContainer>
+      )}
+    </section>
   );
 }
 
