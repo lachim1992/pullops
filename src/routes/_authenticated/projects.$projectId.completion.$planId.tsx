@@ -951,17 +951,23 @@ function EndpointCard({
       {selected && (
         <div className="mt-2 space-y-2">
           <div className="flex flex-wrap gap-1">
-            {ENDPOINT_STATUSES.map((s) => (
-              <Button
-                key={s}
-                size="sm"
-                variant={s === endpoint.completionStatus ? "default" : "outline"}
-                className="h-7 px-2 font-mono text-[10px]"
-                onClick={() => onSetStatus(s)}
-              >
-                {EP_LABEL[s]}
-              </Button>
-            ))}
+            {ENDPOINT_STATUSES.map((s) => {
+              const isPulled = s === "PULLED";
+              return (
+                <Button
+                  key={s}
+                  size="sm"
+                  variant={s === endpoint.completionStatus ? "default" : "outline"}
+                  className="h-7 px-2 font-mono text-[10px]"
+                  disabled={isPulled}
+                  title={isPulled ? "Řídí režim Tahání" : undefined}
+                  onClick={() => !isPulled && onSetStatus(s)}
+                >
+                  {EP_LABEL[s]}
+                  {isPulled && " 🔒"}
+                </Button>
+              );
+            })}
           </div>
           {cables.length > 0 && (
             <div className="rounded-sm border border-border/60 bg-muted/30 p-2">
