@@ -534,8 +534,9 @@ function TodaysPlansCard({
   const has = plans.length > 0;
   return (
     <Link
-      to="/projects/$projectId/work"
+      to="/projects/$projectId/lobby"
       params={{ projectId }}
+      search={{ tab: "tasks" as const }}
       className="flex items-start gap-3 rounded-xl border border-border/60 bg-card/50 p-3.5 transition-colors hover:bg-card/70"
     >
       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[color:var(--accent)]/30 bg-[color:var(--accent)]/10 text-accent">
