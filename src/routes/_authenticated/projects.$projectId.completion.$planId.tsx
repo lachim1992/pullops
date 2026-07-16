@@ -1184,13 +1184,8 @@ function MeasurementPanelCard({
                         }${isMeasured ? " · proměřeno" : " · čeká"}`
                       : `Port ${port.portNumber} · bez kabelu`;
                     const isHighlighted = highlightPortId === port.id;
-                    // Compact label: prefer peer endpoint code, else last segment of cable code.
-                    const rawLabel = hasCable
-                      ? cable!.peerEndpointCode ||
-                        (cable!.code.includes("-")
-                          ? cable!.code.split("-").pop()!
-                          : cable!.code)
-                      : "";
+                    // Label under the port shows the CABLE code (not the endpoint).
+                    const rawLabel = hasCable ? cable!.code : "";
                     return (
                       <div key={port.id} className="flex flex-col items-stretch gap-0.5">
                         <button
