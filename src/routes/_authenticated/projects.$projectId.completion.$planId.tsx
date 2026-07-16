@@ -1014,12 +1014,31 @@ function EndpointCard({
             <div className="rounded-sm border border-border/60 bg-muted/30 p-2">
               <div className="mb-1 font-mono text-[10px] uppercase text-muted-foreground">Kabely</div>
               <div className="space-y-0.5">
-                {cables.map((c) => (
-                  <div key={c.id} className="flex items-center justify-between text-[11px]">
-                    <span className="font-mono">{c.code}</span>
-                    <span className="font-mono text-muted-foreground">{c.status}</span>
-                  </div>
-                ))}
+                {cables.map((c) => {
+                  const isCancelled = c.status === "CANCELLED";
+                  return (
+                    <div key={c.id} className="flex items-center justify-between gap-2 text-[11px]">
+                      <span className={cn("font-mono", isCancelled && "line-through opacity-60")}>{c.code}</span>
+                      <span className="flex items-center gap-1">
+                        <span className="font-mono text-muted-foreground">{c.status}</span>
+                        {canEdit && !isCancelled && (
+                          <button
+                            type="button"
+                            aria-label={`Zrušit kabel ${c.code}`}
+                            title="Zrušit kabel"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onCancelCable(c.id, c.code);
+                            }}
+                            className="rounded-sm border border-destructive/40 px-1 text-[10px] text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
