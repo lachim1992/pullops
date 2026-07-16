@@ -2883,33 +2883,36 @@ function DayPlanCard({
         )}
       </div>
 
-      <div className="mb-2 grid grid-cols-2 gap-2">
-        <label className="text-[10px] text-muted-foreground">
-          Cívek
-          <Input
-            type="number"
-            min={1}
-            max={20}
-            value={dp.spoolCount}
-            onChange={(e) =>
-              onUpdate({ ...patchBase(), spoolCount: Math.max(1, Number(e.target.value) || 1) })
-            }
-            className="h-7 text-xs font-mono"
-          />
-        </label>
-        <label className="text-[10px] text-muted-foreground">
-          Metry/cívka
-          <Input
-            type="number"
-            min={1}
-            value={dp.spoolLengthM}
-            onChange={(e) =>
-              onUpdate({ ...patchBase(), spoolLengthM: Math.max(1, Number(e.target.value) || 1) })
-            }
-            className="h-7 text-xs font-mono"
-          />
-        </label>
-      </div>
+      {!hasPhysical && (
+        <div className="mb-2 grid grid-cols-2 gap-2">
+          <label className="text-[10px] text-muted-foreground">
+            Cívek
+            <Input
+              type="number"
+              min={1}
+              max={20}
+              value={dp.spoolCount}
+              onChange={(e) =>
+                onUpdate({ ...patchBase(), spoolCount: Math.max(1, Number(e.target.value) || 1) })
+              }
+              className="h-7 text-xs font-mono"
+            />
+          </label>
+          <label className="text-[10px] text-muted-foreground">
+            Metry/cívka
+            <Input
+              type="number"
+              min={1}
+              value={dp.spoolLengthM}
+              onChange={(e) =>
+                onUpdate({ ...patchBase(), spoolLengthM: Math.max(1, Number(e.target.value) || 1) })
+              }
+              className="h-7 text-xs font-mono"
+            />
+          </label>
+        </div>
+      )}
+
 
       {expanded && (
         <div className="mb-2 space-y-2 rounded-sm border border-dashed border-border bg-muted/30 p-2">
