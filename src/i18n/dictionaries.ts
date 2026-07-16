@@ -96,6 +96,7 @@ export const cs = {
     tasks: "Úkoly",
     photoArchive: "Fotodokumentace",
     pulling: "Tahání",
+    pullManager: "Manažer tahání",
     defects: "Závady",
     protocols: "Protokoly",
     completion: "Proměření & test",
