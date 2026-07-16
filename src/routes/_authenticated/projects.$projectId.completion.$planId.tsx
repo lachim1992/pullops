@@ -63,6 +63,15 @@ const PANEL_LABEL: Record<PanelCompletionStatus, string> = {
 
 const MEASURED_STATUSES = new Set(["TERMINATED", "TESTED", "DONE"]);
 
+function normalizeSearch(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[\s\-_/.]+/g, " ")
+    .trim();
+}
+
 type Tab = "endpoints" | "racks" | "measurement";
 type PortRow = {
   id: string;
