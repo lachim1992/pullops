@@ -678,7 +678,7 @@ export const getProjectHome = createServerFn({ method: "GET" })
     const cables = cablesRes.data ?? [];
     const total = cables.length;
     const pulled = cables.filter((c) =>
-      ["PULLED", "TERMINATED", "TESTED", "DONE"].includes(c.status as string),
+      ["PULLED", "TERMINATED", "DONE"].includes(c.status as string),
     ).length;
 
     const eps = (endpointsRes.data as Array<{ completion_status: string }> | null) ?? [];
