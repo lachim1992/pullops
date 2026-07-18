@@ -272,12 +272,13 @@ function PullManagerPage() {
           </Card>
         ) : (
           <Tabs defaultValue={activeRound ? "active" : "build"} className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="build">
-                <MapPin className="h-4 w-4 mr-1" /> Mapa & výběr
+            <TabsList className="h-12">
+              <TabsTrigger value="build" className="text-base px-4">
+                <ListChecks className="h-5 w-5 mr-2" /> Výběr
               </TabsTrigger>
-              <TabsTrigger value="active" disabled={!activeRound}>
-                <CableIcon className="h-4 w-4 mr-1" /> Aktuální kolo
+              <TabsTrigger value="active" disabled={!activeRound} className="text-base px-4">
+                <CableIcon className="h-5 w-5 mr-2" /> Aktuální kolo
+
                 {activeRound ? ` · #${activeRound.roundNumber}` : ""}
               </TabsTrigger>
               <TabsTrigger value="queue">
