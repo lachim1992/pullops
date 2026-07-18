@@ -591,12 +591,21 @@ export type ProjectHome = {
     photosTotal: number;
   };
   todaysPlans: Array<{ id: string; name: string; totalCables: number }>;
+  myTasks: Array<{
+    id: string;
+    title: string;
+    status: string;
+    priority: string | null;
+    dueDate: string | null;
+    isMine: boolean;
+  }>;
   recentActivity: Array<{
     id: string;
     createdAt: string;
     author: string;
     excerpt: string;
   }>;
+
 };
 
 
