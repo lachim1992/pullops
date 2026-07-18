@@ -382,16 +382,18 @@ function PullManagerPage() {
 
               {pairs.length > 0 && (
                 <Card>
-                  <CardHeader className="flex-row items-center justify-between space-y-0">
-                    <CardTitle className="text-base">Kabely v kole</CardTitle>
+                  <CardHeader className="flex-row items-center justify-between space-y-0 flex-wrap gap-2">
+                    <CardTitle className="text-lg">Krok 2 — Kabely a cívky</CardTitle>
                     <Button
-                      size="sm"
+                      size="lg"
+                      className="h-12 text-base"
                       onClick={onStartRound}
                       disabled={!!activeRound || pairs.length !== spoolCapacity}
                     >
-                      <Play className="h-4 w-4 mr-1" /> Spustit kolo
+                      <Play className="h-5 w-5 mr-2" /> Spustit kolo
                     </Button>
                   </CardHeader>
+
                   <CardContent className="space-y-2">
                     {pairs.map((p, i) => {
                       const epA = endpointById.get(p.fromEndpointId);
