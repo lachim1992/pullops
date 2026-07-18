@@ -209,7 +209,7 @@ function ProjectDetailPage() {
 
               <section className="grid gap-2.5 md:grid-cols-2">
                 <AlertsCard defectsOpen={home.data?.hub.defectsOpen ?? 0} projectId={projectId} />
-                <TodaysPlansCard plans={home.data?.todaysPlans ?? []} projectId={projectId} />
+                <TodaysPlansCard plans={home.data?.todaysPlans ?? []} tasks={home.data?.myTasks ?? []} projectId={projectId} />
               </section>
 
               <section>
