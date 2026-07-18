@@ -755,6 +755,21 @@ export const getProjectHome = createServerFn({ method: "GET" })
         name: p.name as string,
         totalCables: cablesPerPlan.get(p.id as string) ?? 0,
       })),
+      myTasks: ((tasksRes.data as Array<{
+        id: string;
+        title: string;
+        status: string;
+        priority: string | null;
+        due_date: string | null;
+        assigned_to: string | null;
+      }> | null) ?? []).map((t) => ({
+        id: t.id,
+        title: t.title,
+        status: t.status,
+        priority: t.priority,
+        dueDate: t.due_date,
+        isMine: t.assigned_to === userId,
+      })),
       recentActivity: msgs.map((m) => ({
         id: m.id,
         createdAt: m.created_at,
