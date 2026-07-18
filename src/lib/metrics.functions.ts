@@ -445,10 +445,9 @@ export const getOrgDashboard = createServerFn({ method: "GET" })
     // ── top projects (by progress) ──────────────────────────────────────────
     const topProjects = (projects ?? [])
       .map((p) => {
-        const stat = perProject.get(p.id) ?? { total: 0, pulled: 0, term: 0, test: 0, meters: 0 };
+        const stat = perProject.get(p.id) ?? { total: 0, score: 0, pulled: 0, term: 0, test: 0, meters: 0 };
         const denom = stat.total * 3;
-        const progressPct =
-          denom > 0 ? Math.round(((stat.pulled + stat.term + stat.test) / denom) * 100) : 0;
+        const progressPct = denom > 0 ? Math.round((stat.score / denom) * 100) : 0;
         return {
           id: p.id,
           code: p.code,
