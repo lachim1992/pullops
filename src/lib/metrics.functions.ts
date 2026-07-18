@@ -517,10 +517,15 @@ export const getOrgDashboard = createServerFn({ method: "GET" })
       topTechnician = { userId: uid, name: prof?.full_name || "Technik", count };
     }
 
-    const cablesTotal = cables.length;
+    const cablesTotal = cables.filter((c) => (c.status as string) !== "CANCELLED").length;
+    let scoreAll = 0;
+    for (const c of cables) {
+      const s = c.status as string;
+      if (s === "CANCELLED") continue;
+      scoreAll += s === "DONE" ? 3 : s === "TERMINATED" ? 2 : s === "PULLED" ? 1 : 0;
+    }
     const denomAll = cablesTotal * 3;
-    const progressPct =
-      denomAll > 0 ? Math.round(((cPulled + cTerm + cTest) / denomAll) * 100) : 0;
+    const progressPct = denomAll > 0 ? Math.round((scoreAll / denomAll) * 100) : 0;
 
     const projectsActive = (projects ?? []).filter(
       (p) => p.status && !["done", "archived", "cancelled"].includes(p.status as string),
