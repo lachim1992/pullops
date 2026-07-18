@@ -29,26 +29,29 @@ export const getProjectProgress = createServerFn({ method: "GET" })
     const { supabase } = context;
     const { data: cables, error: cErr } = await supabase
       .from("cables")
-      .select("status")
+      .select("status, tested_at")
       .eq("project_id", data.projectId);
     if (cErr) throw new Error(dbErrorMessage(cErr));
 
-    const total = cables?.length ?? 0;
-    // cable_status: PLANNED, PULLED, TERMINATED, TESTED, DONE, CANCELLED
-    // phases are cumulative — a TERMINATED cable is also pulled, etc.
-    const PULLED_SET = new Set(["PULLED", "TERMINATED", "TESTED", "DONE"]);
-    const TERM_SET = new Set(["TERMINATED", "TESTED", "DONE"]);
-    const TEST_SET = new Set(["TESTED", "DONE"]);
-    let pulled = 0,
+    // Canonical statuses: PLANNED → PULLED → TERMINATED → DONE (+CANCELLED).
+    // tested_at is separate. Progress score: PLANNED=0, PULLED=1, TERMINATED=2, DONE=3.
+    const PULLED_SET = new Set(["PULLED", "TERMINATED", "DONE"]);
+    const TERM_SET = new Set(["TERMINATED", "DONE"]);
+    let total = 0,
+      pulled = 0,
       terminated = 0,
       tested = 0,
-      done = 0;
+      done = 0,
+      scoreSum = 0;
     for (const c of cables ?? []) {
       const s = c.status as string;
+      if (s === "CANCELLED") continue;
+      total++;
       if (PULLED_SET.has(s)) pulled++;
       if (TERM_SET.has(s)) terminated++;
-      if (TEST_SET.has(s)) tested++;
+      if ((c as any).tested_at) tested++;
       if (s === "DONE") done++;
+      scoreSum += s === "DONE" ? 3 : s === "TERMINATED" ? 2 : s === "PULLED" ? 1 : 0;
     }
 
     const { count: epCount, error: eErr } = await supabase
@@ -67,7 +70,7 @@ export const getProjectProgress = createServerFn({ method: "GET" })
     const defOpen = defTotal - defResolved;
 
     const denom = total * 3;
-    const progressPct = denom > 0 ? Math.round(((pulled + terminated + tested) / denom) * 100) : 0;
+    const progressPct = denom > 0 ? Math.round((scoreSum / denom) * 100) : 0;
 
     return {
       cables: { total, pulled, terminated, tested, done },
@@ -105,11 +108,11 @@ export const getMyDashboardSummary = createServerFn({ method: "GET" })
     if (projectIds.length > 0) {
       const { data: cRows } = await supabase
         .from("cables")
-        .select("project_id, status")
+        .select("project_id, status, tested_at")
         .in("project_id", projectIds);
       for (const r of cRows ?? []) {
         const arr = cablesByProject.get(r.project_id) ?? [];
-        arr.push(r.status as string);
+        arr.push(`${r.status as string}|${(r as any).tested_at ? "T" : ""}`);
         cablesByProject.set(r.project_id, arr);
       }
 
@@ -124,7 +127,6 @@ export const getMyDashboardSummary = createServerFn({ method: "GET" })
         }
       }
 
-      // My open pull tasks across projects
       const { count: tCount } = await supabase
         .from("pull_tasks")
         .select("id", { count: "exact", head: true })
@@ -133,23 +135,18 @@ export const getMyDashboardSummary = createServerFn({ method: "GET" })
       myOpenTasks = tCount ?? 0;
     }
 
-    const PULLED_SET = new Set(["PULLED", "TERMINATED", "TESTED", "DONE"]);
-    const TERM_SET = new Set(["TERMINATED", "TESTED", "DONE"]);
-    const TEST_SET = new Set(["TESTED", "DONE"]);
-
     const projectsWithProgress = (projects ?? []).map((p) => {
-      const statuses = cablesByProject.get(p.id) ?? [];
-      const total = statuses.length;
-      let pulled = 0,
-        terminated = 0,
-        tested = 0;
-      for (const s of statuses) {
-        if (PULLED_SET.has(s)) pulled++;
-        if (TERM_SET.has(s)) terminated++;
-        if (TEST_SET.has(s)) tested++;
+      const rows = cablesByProject.get(p.id) ?? [];
+      let total = 0,
+        score = 0;
+      for (const row of rows) {
+        const s = row.split("|")[0];
+        if (s === "CANCELLED") continue;
+        total++;
+        score += s === "DONE" ? 3 : s === "TERMINATED" ? 2 : s === "PULLED" ? 1 : 0;
       }
       const denom = total * 3;
-      const progressPct = denom > 0 ? Math.round(((pulled + terminated + tested) / denom) * 100) : 0;
+      const progressPct = denom > 0 ? Math.round((score / denom) * 100) : 0;
       return {
         ...p,
         cablesTotal: total,
@@ -294,7 +291,7 @@ export const getOrgDashboard = createServerFn({ method: "GET" })
     ] = await Promise.all([
       supabase
         .from("cables")
-        .select("id, project_id, code, status, computed_length_m, override_length_m")
+        .select("id, project_id, code, status, tested_at, computed_length_m, override_length_m")
         .in("project_id", projectIds),
       supabase
         .from("endpoints")
@@ -336,9 +333,8 @@ export const getOrgDashboard = createServerFn({ method: "GET" })
 
     // ── cables aggregate ────────────────────────────────────────────────────
     const cables = cablesRes.data ?? [];
-    const PULLED_SET = new Set(["PULLED", "TERMINATED", "TESTED", "DONE"]);
-    const TERM_SET = new Set(["TERMINATED", "TESTED", "DONE"]);
-    const TEST_SET = new Set(["TESTED", "DONE"]);
+    const PULLED_SET = new Set(["PULLED", "TERMINATED", "DONE"]);
+    const TERM_SET = new Set(["TERMINATED", "DONE"]);
     let cPulled = 0,
       cTerm = 0,
       cTest = 0,
@@ -348,12 +344,14 @@ export const getOrgDashboard = createServerFn({ method: "GET" })
       mTerm = 0;
     const perProject = new Map<
       string,
-      { total: number; pulled: number; term: number; test: number; meters: number }
+      { total: number; score: number; pulled: number; term: number; test: number; meters: number }
     >();
 
     for (const c of cables) {
       const s = c.status as string;
+      const testedAt = (c as any).tested_at as string | null;
       const len = Number(c.override_length_m ?? c.computed_length_m ?? 0);
+      if (s === "CANCELLED") continue;
       mTotal += len;
       if (PULLED_SET.has(s)) {
         cPulled++;
@@ -363,14 +361,15 @@ export const getOrgDashboard = createServerFn({ method: "GET" })
         cTerm++;
         mTerm += len;
       }
-      if (TEST_SET.has(s)) cTest++;
+      if (testedAt) cTest++;
       if (s === "DONE") cDone++;
-      const pp = perProject.get(c.project_id) ?? { total: 0, pulled: 0, term: 0, test: 0, meters: 0 };
+      const pp = perProject.get(c.project_id) ?? { total: 0, score: 0, pulled: 0, term: 0, test: 0, meters: 0 };
       pp.total++;
       pp.meters += len;
+      pp.score += s === "DONE" ? 3 : s === "TERMINATED" ? 2 : s === "PULLED" ? 1 : 0;
       if (PULLED_SET.has(s)) pp.pulled++;
       if (TERM_SET.has(s)) pp.term++;
-      if (TEST_SET.has(s)) pp.test++;
+      if (testedAt) pp.test++;
       perProject.set(c.project_id, pp);
     }
 
@@ -446,10 +445,9 @@ export const getOrgDashboard = createServerFn({ method: "GET" })
     // ── top projects (by progress) ──────────────────────────────────────────
     const topProjects = (projects ?? [])
       .map((p) => {
-        const stat = perProject.get(p.id) ?? { total: 0, pulled: 0, term: 0, test: 0, meters: 0 };
+        const stat = perProject.get(p.id) ?? { total: 0, score: 0, pulled: 0, term: 0, test: 0, meters: 0 };
         const denom = stat.total * 3;
-        const progressPct =
-          denom > 0 ? Math.round(((stat.pulled + stat.term + stat.test) / denom) * 100) : 0;
+        const progressPct = denom > 0 ? Math.round((stat.score / denom) * 100) : 0;
         return {
           id: p.id,
           code: p.code,
@@ -519,10 +517,15 @@ export const getOrgDashboard = createServerFn({ method: "GET" })
       topTechnician = { userId: uid, name: prof?.full_name || "Technik", count };
     }
 
-    const cablesTotal = cables.length;
+    const cablesTotal = cables.filter((c) => (c.status as string) !== "CANCELLED").length;
+    let scoreAll = 0;
+    for (const c of cables) {
+      const s = c.status as string;
+      if (s === "CANCELLED") continue;
+      scoreAll += s === "DONE" ? 3 : s === "TERMINATED" ? 2 : s === "PULLED" ? 1 : 0;
+    }
     const denomAll = cablesTotal * 3;
-    const progressPct =
-      denomAll > 0 ? Math.round(((cPulled + cTerm + cTest) / denomAll) * 100) : 0;
+    const progressPct = denomAll > 0 ? Math.round((scoreAll / denomAll) * 100) : 0;
 
     const projectsActive = (projects ?? []).filter(
       (p) => p.status && !["done", "archived", "cancelled"].includes(p.status as string),
@@ -675,7 +678,7 @@ export const getProjectHome = createServerFn({ method: "GET" })
     const cables = cablesRes.data ?? [];
     const total = cables.length;
     const pulled = cables.filter((c) =>
-      ["PULLED", "TERMINATED", "TESTED", "DONE"].includes(c.status as string),
+      ["PULLED", "TERMINATED", "DONE"].includes(c.status as string),
     ).length;
 
     const eps = (endpointsRes.data as Array<{ completion_status: string }> | null) ?? [];
