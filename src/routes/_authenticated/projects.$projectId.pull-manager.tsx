@@ -3,7 +3,7 @@ import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Play, X, CheckCircle2, Cable as CableIcon, MapPin, History } from "lucide-react";
+import { Play, X, CheckCircle2, Cable as CableIcon, ListChecks, History, ChevronLeft, ChevronRight, Search } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
@@ -53,6 +53,9 @@ function PullManagerPage() {
   const [selected, setSelected] = useState<string[]>([]);
   const [pairs, setPairs] = useState<Pair[]>([]);
   const [actuals, setActuals] = useState<Record<string, string>>({});
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [endpointFilter, setEndpointFilter] = useState("");
+
 
   const stateFn = useServerFn(getPullManagerState);
   const proposeFn = useServerFn(proposePullRoundItems);
@@ -269,82 +272,128 @@ function PullManagerPage() {
           </Card>
         ) : (
           <Tabs defaultValue={activeRound ? "active" : "build"} className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="build">
-                <MapPin className="h-4 w-4 mr-1" /> Mapa & výběr
+            <TabsList className="h-12">
+              <TabsTrigger value="build" className="text-base px-4">
+                <ListChecks className="h-5 w-5 mr-2" /> Výběr
               </TabsTrigger>
-              <TabsTrigger value="active" disabled={!activeRound}>
-                <CableIcon className="h-4 w-4 mr-1" /> Aktuální kolo
+              <TabsTrigger value="active" disabled={!activeRound} className="text-base px-4">
+                <CableIcon className="h-5 w-5 mr-2" /> Aktuální kolo
+
                 {activeRound ? ` · #${activeRound.roundNumber}` : ""}
               </TabsTrigger>
-              <TabsTrigger value="queue">
-                <History className="h-4 w-4 mr-1" /> Fronta kol
+              <TabsTrigger value="queue" className="text-base px-4">
+                <History className="h-5 w-5 mr-2" /> Fronta kol
               </TabsTrigger>
+
             </TabsList>
 
             <TabsContent value="build" className="space-y-4">
               <Card>
-                <CardHeader className="flex-row items-center justify-between gap-2 space-y-0">
-                  <CardTitle className="text-base">
-                    Endpointy ({endpoints.length}) — vyberte dva a přidejte relaci
+                <CardHeader className="flex-row items-center justify-between gap-2 space-y-0 flex-wrap">
+                  <CardTitle className="text-lg">
+                    Krok 1 — Vyberte endpointy ({endpoints.length})
                   </CardTitle>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="secondary" className="text-sm">
                       Cívky na plánu: {spoolCapacity}
                     </Badge>
-                    <Badge variant={pairs.length === spoolCapacity ? "default" : "outline"}>
+                    <Badge variant={pairs.length === spoolCapacity ? "default" : "outline"} className="text-sm">
                       Kabelů v kole: {pairs.length}/{spoolCapacity}
                     </Badge>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 max-h-72 overflow-y-auto">
-                    {endpoints.map((e: any) => {
-                      const sel = selected.includes(e.id);
-                      return (
-                        <button
-                          key={e.id}
-                          onClick={() => toggleEndpoint(e.id)}
-                          className={`text-left px-2 py-1.5 rounded border text-xs ${
-                            sel
-                              ? "bg-primary text-primary-foreground border-primary"
-                              : "bg-card hover:bg-muted border-border"
-                          }`}
-                        >
-                          <div className="font-mono font-medium truncate">{e.code}</div>
-                          <div className="truncate opacity-70">{e.label ?? e.endpoint_kind ?? "—"}</div>
-                        </button>
-                      );
-                    })}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                    <Input
+                      value={endpointFilter}
+                      onChange={(e) => setEndpointFilter(e.target.value)}
+                      placeholder="Hledat kód, popisek, patro, místnost…"
+                      className="pl-9 h-11 text-base"
+                    />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline">
-                      Vybráno: {selected.map((id) => endpointById.get(id)?.code ?? "?").join(" ↔ ") || "—"}
-                    </Badge>
-                    <Button size="sm" onClick={addPair} disabled={selected.length !== 2 || !!activeRound}>
-                      Spojit vybrané → kabel
+                  <div className="rounded-md border divide-y max-h-[55vh] overflow-y-auto">
+                    {endpoints
+                      .filter((e: any) => {
+                        const q = endpointFilter.trim().toLowerCase();
+                        if (!q) return true;
+                        return [e.code, e.label, e.endpoint_kind]
+                          .filter(Boolean)
+                          .some((v: string) => String(v).toLowerCase().includes(q));
+                      })
+                      .map((e: any) => {
+                        const sel = selected.includes(e.id);
+                        const order = sel ? selected.indexOf(e.id) + 1 : null;
+                        return (
+                          <button
+                            key={e.id}
+                            onClick={() => toggleEndpoint(e.id)}
+                            className={`w-full flex items-center gap-3 px-3 py-3 text-left transition-colors ${
+                              sel
+                                ? "bg-primary/10 hover:bg-primary/15"
+                                : "bg-card hover:bg-muted"
+                            }`}
+                          >
+                            <div
+                              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-md border-2 font-mono text-sm font-bold ${
+                                sel
+                                  ? "bg-primary text-primary-foreground border-primary"
+                                  : "border-border text-muted-foreground"
+                              }`}
+                            >
+                              {order ?? ""}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="font-mono font-semibold text-base truncate">{e.code}</div>
+                              <div className="text-xs text-muted-foreground truncate">
+                                {e.label ?? "—"} · {e.endpoint_kind ?? "—"}
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                  </div>
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <div className="flex-1 rounded-md border bg-muted/40 px-3 py-2 font-mono text-sm min-h-[42px] flex items-center">
+                      {selected.length === 0
+                        ? "Vyberte první endpoint…"
+                        : selected.length === 1
+                          ? `${endpointById.get(selected[0])?.code} ↔ ?`
+                          : `${endpointById.get(selected[0])?.code} ↔ ${endpointById.get(selected[1])?.code}`}
+                    </div>
+                    <Button
+                      size="lg"
+                      className="h-12 text-base"
+                      onClick={addPair}
+                      disabled={selected.length !== 2 || !!activeRound}
+                    >
+                      Spojit → kabel
                     </Button>
                     {pairs.length > 0 && (
-                      <Button size="sm" variant="outline" onClick={reproposeAll}>
-                        Přepočítat návrh
+                      <Button size="lg" variant="outline" className="h-12" onClick={reproposeAll}>
+                        Přepočítat
                       </Button>
                     )}
                   </div>
                 </CardContent>
               </Card>
 
+
+
               {pairs.length > 0 && (
                 <Card>
-                  <CardHeader className="flex-row items-center justify-between space-y-0">
-                    <CardTitle className="text-base">Kabely v kole</CardTitle>
+                  <CardHeader className="flex-row items-center justify-between space-y-0 flex-wrap gap-2">
+                    <CardTitle className="text-lg">Krok 2 — Kabely a cívky</CardTitle>
                     <Button
-                      size="sm"
+                      size="lg"
+                      className="h-12 text-base"
                       onClick={onStartRound}
                       disabled={!!activeRound || pairs.length !== spoolCapacity}
                     >
-                      <Play className="h-4 w-4 mr-1" /> Spustit kolo
+                      <Play className="h-5 w-5 mr-2" /> Spustit kolo
                     </Button>
                   </CardHeader>
+
                   <CardContent className="space-y-2">
                     {pairs.map((p, i) => {
                       const epA = endpointById.get(p.fromEndpointId);
@@ -436,72 +485,210 @@ function PullManagerPage() {
               {!activeRound ? (
                 <Card>
                   <CardContent className="p-8 text-center text-muted-foreground">
-                    Žádné běžící kolo. Vytvořte kabely v záložce „Mapa & výběr" a spusťte kolo.
+                    Žádné běžící kolo. Vytvořte kabely v záložce „Výběr" a spusťte kolo.
                   </CardContent>
                 </Card>
-              ) : (
-                <>
-                  <div className="flex items-center gap-2">
-                    <Badge>Kolo #{activeRound.roundNumber}</Badge>
-                    <div className="ml-auto flex gap-2">
-                      <Button size="sm" variant="destructive" onClick={onCancelRound}>
-                        Zrušit kolo
-                      </Button>
-                      <Button size="sm" onClick={onCompleteRound}>
-                        <CheckCircle2 className="h-4 w-4 mr-1" /> Ukončit kolo
-                      </Button>
+              ) : (() => {
+                const items = activeRound.items ?? [];
+                const total = items.length;
+                const doneCount = items.filter((x: any) => x.status === "DONE" || actuals[x.id] || x.actual_length_m != null).length;
+                const idx = Math.min(activeIndex, Math.max(0, total - 1));
+                const it = items[idx];
+                const spool = it ? spoolById.get(it.spool_id) : null;
+                const epA = it ? endpointById.get(it.from_endpoint_id) : null;
+                const epB = it ? endpointById.get(it.to_endpoint_id) : null;
+                const planned = it?.planned_length_m != null ? Number(it.planned_length_m) : null;
+                const actualStr = it ? (actuals[it.id] ?? (it.actual_length_m != null ? String(it.actual_length_m) : "")) : "";
+                const setActual = (v: string) => it && setActuals((prev) => ({ ...prev, [it.id]: v }));
+                const bump = (delta: number) => {
+                  const base = actualStr ? Number(actualStr) : planned ?? 0;
+                  const next = Math.max(0, Math.round((base + delta) * 10) / 10);
+                  setActual(String(next));
+                };
+                return (
+                  <>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge className="text-sm">Kolo #{activeRound.roundNumber}</Badge>
+                      <Badge variant="outline" className="text-sm">
+                        Hotovo {doneCount}/{total}
+                      </Badge>
+                      <div className="ml-auto flex gap-2">
+                        <Button size="lg" variant="destructive" className="h-11" onClick={onCancelRound}>
+                          Zrušit kolo
+                        </Button>
+                        <Button
+                          size="lg"
+                          className="h-11 text-base"
+                          onClick={onCompleteRound}
+                        >
+                          <CheckCircle2 className="h-5 w-5 mr-2" /> Ukončit kolo
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {activeRound.items.map((it: any, idx: number) => {
-                      const spool = spoolById.get(it.spool_id);
-                      return (
-                        <Card key={it.id}>
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-sm flex items-center justify-between">
-                              <span>#{idx + 1} · Cívka {spool?.serial_no ?? it.spool_id.slice(0, 6)}</span>
-                              <Badge variant="outline">
-                                {it.status === "DONE" ? "Hotovo" : "Čeká"}
-                              </Badge>
+
+                    {it && (
+                      <Card className="border-2 border-primary/40">
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <CardTitle className="text-2xl font-mono">
+                              Kabel {idx + 1} / {total}
                             </CardTitle>
-                          </CardHeader>
-                          <CardContent className="text-sm space-y-2">
-                            <div className="text-xs text-muted-foreground">
-                              Kabel <span className="font-mono">{it.cable_id.slice(0, 8)}</span>
+                            <Badge
+                              variant={it.status === "DONE" ? "default" : "outline"}
+                              className="text-sm"
+                            >
+                              {it.status === "DONE" ? "Hotovo" : "Čeká"}
+                            </Badge>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-5">
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="rounded-lg border bg-muted/30 p-4">
+                              <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
+                                Kabel
+                              </div>
+                              <div className="font-mono text-xl font-bold">
+                                {it.cable_code ?? it.cable_id.slice(0, 8)}
+                              </div>
+                              <div className="mt-2 font-mono text-base">
+                                {epA?.code ?? "?"} <span className="text-muted-foreground">→</span>{" "}
+                                {epB?.code ?? "?"}
+                              </div>
+                              <div className="text-xs text-muted-foreground mt-1">
+                                {(epA?.label || epA?.endpoint_kind) ?? ""}
+                                {epB?.label || epB?.endpoint_kind ? ` → ${epB?.label ?? epB?.endpoint_kind}` : ""}
+                              </div>
                             </div>
-                            <div>
-                              Plánovaná délka:{" "}
-                              <strong>
-                                {it.planned_length_m != null
-                                  ? `${Number(it.planned_length_m).toFixed(1)} m`
-                                  : "—"}
-                              </strong>
+                            <div className="rounded-lg border bg-muted/30 p-4">
+                              <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
+                                Cívka
+                              </div>
+                              <div className="font-mono text-xl font-bold">
+                                {spool?.serial_no ?? it.spool_id.slice(0, 6)}
+                              </div>
+                              <div className="text-sm mt-2">
+                                Typ: <span className="font-mono">{cableTypeCode(spool?.cable_type_id ?? null)}</span>
+                              </div>
+                              <div className="text-sm">
+                                Zbývá:{" "}
+                                <span className="font-mono font-semibold">
+                                  {spool?.current_length_m != null
+                                    ? `${Number(spool.current_length_m).toFixed(0)} m`
+                                    : "—"}
+                                </span>
+                              </div>
                             </div>
+                          </div>
+
+                          <div className="rounded-lg border p-4 space-y-3">
+                            <div className="flex items-baseline justify-between">
+                              <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                                Plánovaná délka
+                              </div>
+                              <div className="font-mono text-3xl font-bold">
+                                {planned != null ? `${planned.toFixed(1)} m` : "—"}
+                              </div>
+                            </div>
+                            <Label className="text-sm font-semibold">Skutečně nataženo (m)</Label>
                             <div className="flex items-center gap-2">
-                              <Label className="text-xs">Skutečné m</Label>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="h-14 w-14 text-2xl font-bold shrink-0"
+                                onClick={() => bump(-1)}
+                              >
+                                −
+                              </Button>
                               <Input
+                                inputMode="decimal"
                                 type="number"
                                 step="0.1"
-                                className="h-8 w-28"
-                                value={actuals[it.id] ?? ""}
-                                onChange={(e) =>
-                                  setActuals((prev) => ({ ...prev, [it.id]: e.target.value }))
-                                }
-                                placeholder={
-                                  it.planned_length_m != null
-                                    ? Number(it.planned_length_m).toFixed(1)
-                                    : ""
-                                }
+                                className="h-14 text-2xl font-mono text-center"
+                                value={actualStr}
+                                onChange={(e) => setActual(e.target.value)}
+                                placeholder={planned != null ? planned.toFixed(1) : "0.0"}
                               />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="h-14 w-14 text-2xl font-bold shrink-0"
+                                onClick={() => bump(1)}
+                              >
+                                +
+                              </Button>
                             </div>
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
+                            {planned != null && (
+                              <div className="flex flex-wrap gap-2">
+                                <Button size="sm" variant="secondary" onClick={() => setActual(planned.toFixed(1))}>
+                                  = plán ({planned.toFixed(1)} m)
+                                </Button>
+                                <Button size="sm" variant="secondary" onClick={() => bump(0.5)}>
+                                  +0,5 m
+                                </Button>
+                                <Button size="sm" variant="secondary" onClick={() => bump(5)}>
+                                  +5 m
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="lg"
+                              className="h-12 flex-1"
+                              onClick={() => setActiveIndex((n) => Math.max(0, n - 1))}
+                              disabled={idx === 0}
+                            >
+                              <ChevronLeft className="h-5 w-5 mr-1" /> Předchozí
+                            </Button>
+                            <Button
+                              size="lg"
+                              className="h-12 flex-1"
+                              onClick={() => setActiveIndex((n) => Math.min(total - 1, n + 1))}
+                              disabled={idx >= total - 1}
+                            >
+                              Další <ChevronRight className="h-5 w-5 ml-1" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    <div className="grid gap-2 sm:grid-cols-2 md:grid-cols-3">
+                      {items.map((x: any, i: number) => {
+                        const active = i === idx;
+                        const hasActual = !!actuals[x.id] || x.actual_length_m != null;
+                        return (
+                          <button
+                            key={x.id}
+                            onClick={() => setActiveIndex(i)}
+                            className={`text-left rounded-md border p-2 transition-colors ${
+                              active
+                                ? "border-primary bg-primary/10"
+                                : hasActual
+                                  ? "border-green-500/40 bg-green-500/5"
+                                  : "hover:bg-muted"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="font-mono font-bold">#{i + 1}</span>
+                              <span className="text-muted-foreground">
+                                {hasActual ? "✓" : x.planned_length_m != null ? `${Number(x.planned_length_m).toFixed(0)} m` : ""}
+                              </span>
+                            </div>
+                            <div className="mt-1 font-mono text-xs truncate">
+                              {x.cable_code ?? x.cable_id.slice(0, 6)}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                );
+              })()}
             </TabsContent>
+
 
             <TabsContent value="queue">
               <Card>

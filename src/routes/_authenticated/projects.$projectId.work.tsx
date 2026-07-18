@@ -1272,7 +1272,7 @@ function PullMap({
                   : "var(--accent)";
             const width = selected ? 0.006 : hovered ? 0.007 : 0.0035;
             return (
-              <g key={c.id} onClick={() => onSelectCable(c.id)} style={{ cursor: "pointer" }}>
+              <g key={c.id} data-no-pan onClick={() => onSelectCable(c.id)} style={{ cursor: "pointer" }} pointerEvents="all">
                 <polyline
                   points={points}
                   fill="none"
@@ -1311,9 +1311,11 @@ function PullMap({
             const leftPath = `M ${ep.x} ${ep.y - r} A ${r} ${r} 0 0 0 ${ep.x} ${ep.y + r} Z`;
             const rightPath = `M ${ep.x} ${ep.y - r} A ${r} ${r} 0 0 1 ${ep.x} ${ep.y + r} Z`;
             return (
-              <g key={ep.id} onClick={() => onSelectEndpoint(ep.id)} style={{ cursor: "pointer" }}>
+              <g key={ep.id} data-no-pan onClick={() => onSelectEndpoint(ep.id)} style={{ cursor: "pointer" }} pointerEvents="all">
+                <circle cx={ep.x} cy={ep.y} r={Math.max(r * 2.2, 0.022 / view.s)} fill="transparent" />
                 <path d={leftPath} fill={info.color} stroke={stroke} strokeWidth={sw} />
                 <path d={rightPath} fill={rightFill} stroke={stroke} strokeWidth={sw} />
+
                 <text x={ep.x} y={ep.y - r - 0.004} textAnchor="middle" fontSize={0.012 / view.s} fill="var(--foreground)">
                   {ep.code}
                 </text>
