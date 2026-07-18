@@ -28,7 +28,7 @@ import {
 import { listCableTypes } from "@/lib/cableTypes.functions";
 import { listEndpoints } from "@/lib/endpoints.functions";
 
-const STATUSES = ["PLANNED", "PULLED", "TERMINATED", "TESTED", "CANCELLED"] as const;
+const STATUSES = ["PLANNED", "PULLED", "TERMINATED", "DONE", "CANCELLED"] as const;
 type Status = (typeof STATUSES)[number];
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/cables/")({

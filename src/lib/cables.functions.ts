@@ -5,7 +5,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { computeCableLength, type NormPoint } from "@/lib/length";
 import { dbErrorMessage } from "@/lib/dbErrors";
 
-const CableStatus = z.enum(["PLANNED", "PULLED", "TERMINATED", "TESTED", "CANCELLED"]);
+const CableStatus = z.enum(["PLANNED", "PULLED", "TERMINATED", "DONE", "CANCELLED"]);
 
 const CreateInput = z.object({
   projectId: z.string().uuid(),
