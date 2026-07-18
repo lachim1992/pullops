@@ -3,7 +3,7 @@ import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Play, X, CheckCircle2, Cable as CableIcon, MapPin, History } from "lucide-react";
+import { Play, X, CheckCircle2, Cable as CableIcon, ListChecks, History, ChevronLeft, ChevronRight, Search } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
