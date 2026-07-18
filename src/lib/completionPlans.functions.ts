@@ -253,7 +253,7 @@ export const getCompletionPlan = createServerFn({ method: "GET" })
       .eq("day_plan_id", data.planId)
       .order("sort_order", { ascending: true });
     if (dpcerr) throw new Error(dpcerr.message);
-    const cableIds = (dpc ?? []).map((r) => r.cable_id as string);
+    const explicitIds = (dpc ?? []).map((r) => r.cable_id as string);
 
     type RawCable = {
       id: string;
@@ -268,13 +268,34 @@ export const getCompletionPlan = createServerFn({ method: "GET" })
     };
     let rawCables: RawCable[] = [];
     const endpointIds = new Set<string>();
-    if (cableIds.length > 0) {
-      const { data: cbs, error: cerr } = await supabase
-        .from("cables")
-        .select(
-          "id, code, status, notes, from_endpoint_id, to_endpoint_id, from_port_id, to_port_id, tested_at" as never,
-        )
-        .in("id", cableIds);
+
+    // Prefer explicit plan cables; fall back to all cables on this floor plan.
+    let cableQuery = supabase
+      .from("cables")
+      .select(
+        "id, code, status, notes, from_endpoint_id, to_endpoint_id, from_port_id, to_port_id, tested_at" as never,
+      )
+      .eq("project_id", projectId);
+    if (explicitIds.length > 0) {
+      cableQuery = cableQuery.in("id", explicitIds);
+    } else if (floorPlanId) {
+      // Cables touching an endpoint on this floor
+      const { data: epsOnFloor } = await supabase
+        .from("endpoints")
+        .select("id")
+        .eq("project_id", projectId)
+        .eq("floor_plan_id", floorPlanId);
+      const epIds = (epsOnFloor ?? []).map((e) => e.id as string);
+      if (epIds.length > 0) {
+        cableQuery = cableQuery.or(
+          `from_endpoint_id.in.(${epIds.join(",")}),to_endpoint_id.in.(${epIds.join(",")})`,
+        );
+      } else {
+        cableQuery = cableQuery.eq("id", "00000000-0000-0000-0000-000000000000");
+      }
+    }
+    {
+      const { data: cbs, error: cerr } = await cableQuery;
       if (cerr) throw new Error(cerr.message);
       rawCables = ((cbs as any[]) ?? []).map((c) => {
         const from = (c.from_endpoint_id as string | null) ?? null;
