@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { CheckCircle2, XCircle, FlaskConical, Scissors, Cable as CableIcon, ArrowLeft } from "lucide-react";
+import { CheckCircle2, XCircle, FlaskConical, Scissors, Cable as CableIcon, RotateCcw, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/app-shell";
@@ -28,13 +28,12 @@ const COLUMNS: Array<{
   label: string;
   icon: React.ReactNode;
   tone: string;
-  next: CompletionStatus[];
 }> = [
-  { key: "PULLED", label: "Nataženo", icon: <CableIcon className="h-4 w-4" />, tone: "bg-muted", next: ["TERMINATED", "CANCELLED"] },
-  { key: "TERMINATED", label: "Proměřeno", icon: <Scissors className="h-4 w-4" />, tone: "bg-amber-500/10 text-amber-700 dark:text-amber-400", next: ["TESTED", "CANCELLED"] },
-  { key: "TESTED", label: "Otestováno", icon: <FlaskConical className="h-4 w-4" />, tone: "bg-blue-500/10 text-blue-700 dark:text-blue-400", next: ["DONE", "CANCELLED"] },
-  { key: "DONE", label: "Hotovo", icon: <CheckCircle2 className="h-4 w-4" />, tone: "bg-green-500/10 text-green-700 dark:text-green-400", next: [] },
-  { key: "CANCELLED", label: "Zrušeno", icon: <XCircle className="h-4 w-4" />, tone: "bg-red-500/10 text-red-700 dark:text-red-400", next: [] },
+  { key: "PLANNED", label: "Naplánováno", icon: <CableIcon className="h-4 w-4" />, tone: "bg-muted" },
+  { key: "PULLED", label: "Nataženo", icon: <CableIcon className="h-4 w-4" />, tone: "bg-slate-500/10 text-slate-700 dark:text-slate-300" },
+  { key: "TERMINATED", label: "Zaterminováno", icon: <Scissors className="h-4 w-4" />, tone: "bg-amber-500/10 text-amber-700 dark:text-amber-400" },
+  { key: "DONE", label: "Hotovo (+ otestováno)", icon: <CheckCircle2 className="h-4 w-4" />, tone: "bg-green-500/10 text-green-700 dark:text-green-400" },
+  { key: "CANCELLED", label: "Zrušeno", icon: <XCircle className="h-4 w-4" />, tone: "bg-red-500/10 text-red-700 dark:text-red-400" },
 ];
 
 function KanbanPage() {
@@ -51,20 +50,19 @@ function KanbanPage() {
   const [cancelFor, setCancelFor] = useState<string | null>(null);
   const [reason, setReason] = useState("");
 
-  async function move(taskId: string, status: CompletionStatus) {
-    if (status === "CANCELLED") { setCancelFor(taskId); return; }
-    try {
-      await setStatusFn({ data: { taskId, status } });
-      qc.invalidateQueries({ queryKey: ["completion", projectId] });
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Chyba"); }
-  }
-
   async function confirmCancel() {
     if (!cancelFor) return;
     try {
       await setStatusFn({ data: { taskId: cancelFor, status: "CANCELLED", cancelledReason: reason || null } });
       qc.invalidateQueries({ queryKey: ["completion", projectId] });
       setCancelFor(null); setReason("");
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Chyba"); }
+  }
+
+  async function restore(taskId: string) {
+    try {
+      await setStatusFn({ data: { taskId, status: "RESTORE" } });
+      qc.invalidateQueries({ queryKey: ["completion", projectId] });
     } catch (e) { toast.error(e instanceof Error ? e.message : "Chyba"); }
   }
 
@@ -77,6 +75,11 @@ function KanbanPage() {
               Projekt / Kompletace / Kanban kabelů
             </div>
             <h1 className="mt-1 font-mono text-2xl font-bold">Kanban kabelů</h1>
+            <p className="mt-1 max-w-2xl text-xs text-muted-foreground">
+              Stav se odvozuje automaticky ze skutečných událostí (natažení v Manažeru tahání,
+              zaterminování endpointu, zapojení a popsání patch panelu, změření v záložce Měření).
+              Ručně lze pouze <b>zrušit</b> kabel nebo <b>obnovit</b> zrušený.
+            </p>
           </div>
           <Button variant="outline" size="sm" asChild>
             <Link to="/projects/$projectId/completion" params={{ projectId }}>
@@ -103,15 +106,20 @@ function KanbanPage() {
                   {items.map((t) => (
                     <Card key={t.id} className="animate-fade-in border-border/60">
                       <CardContent className="space-y-2 p-3">
-                        <div className="font-mono text-xs font-semibold">{t.cableCode}</div>
-                        {col.next.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
-                            {col.next.map((n) => (
-                              <Button key={n} size="sm" variant="outline" className="h-6 px-2 font-mono text-[10px]" onClick={() => move(t.id, n)}>
-                                → {COLUMNS.find((c) => c.key === n)?.label}
-                              </Button>
-                            ))}
-                          </div>
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="font-mono text-xs font-semibold">{t.cableCode}</div>
+                          {t.testedAt && col.key !== "CANCELLED" && (
+                            <FlaskConical className="h-3.5 w-3.5 text-blue-500" aria-label="Otestováno" />
+                          )}
+                        </div>
+                        {col.key === "CANCELLED" ? (
+                          <Button size="sm" variant="outline" className="h-6 px-2 font-mono text-[10px]" onClick={() => restore(t.id)}>
+                            <RotateCcw className="mr-1 h-3 w-3" /> Obnovit
+                          </Button>
+                        ) : (
+                          <Button size="sm" variant="ghost" className="h-6 px-2 font-mono text-[10px] text-red-600 hover:text-red-700" onClick={() => setCancelFor(t.id)}>
+                            <XCircle className="mr-1 h-3 w-3" /> Zrušit
+                          </Button>
                         )}
                       </CardContent>
                     </Card>
