@@ -348,6 +348,7 @@ export type Database = {
           organization_id: string
           override_length_m: number | null
           project_id: string
+          pulled_at: string | null
           route_id: string | null
           status: Database["public"]["Enums"]["cable_status"]
           tested_at: string | null
@@ -371,6 +372,7 @@ export type Database = {
           organization_id: string
           override_length_m?: number | null
           project_id: string
+          pulled_at?: string | null
           route_id?: string | null
           status?: Database["public"]["Enums"]["cable_status"]
           tested_at?: string | null
@@ -394,6 +396,7 @@ export type Database = {
           organization_id?: string
           override_length_m?: number | null
           project_id?: string
+          pulled_at?: string | null
           route_id?: string | null
           status?: Database["public"]["Enums"]["cable_status"]
           tested_at?: string | null
@@ -3088,6 +3091,10 @@ export type Database = {
       complete_pull_round_tx: {
         Args: { p_actuals: Json; p_round_id: string }
         Returns: undefined
+      }
+      compute_cable_status: {
+        Args: { p_cable_id: string }
+        Returns: Database["public"]["Enums"]["cable_status"]
       }
       create_organization_tx: { Args: { p_name: string }; Returns: string }
       create_project_tx: {
