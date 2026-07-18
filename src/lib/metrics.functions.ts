@@ -591,12 +591,21 @@ export type ProjectHome = {
     photosTotal: number;
   };
   todaysPlans: Array<{ id: string; name: string; totalCables: number }>;
+  myTasks: Array<{
+    id: string;
+    title: string;
+    status: string;
+    priority: string | null;
+    dueDate: string | null;
+    isMine: boolean;
+  }>;
   recentActivity: Array<{
     id: string;
     createdAt: string;
     author: string;
     excerpt: string;
   }>;
+
 };
 
 
@@ -609,7 +618,8 @@ export const getProjectHome = createServerFn({ method: "GET" })
     const todayISO = new Date().toISOString().slice(0, 10);
     const dayAgoISO = new Date(Date.now() - 24 * 3600_000).toISOString();
 
-    const [cablesRes, defRes, protoRes, chatRecentRes, plansRes, chatMsgs, endpointsRes] =
+    const userId = context.userId;
+    const [cablesRes, defRes, protoRes, chatRecentRes, plansRes, chatMsgs, endpointsRes, tasksRes] =
       await Promise.all([
         supabase.from("cables").select("status").eq("project_id", projectId),
         supabase.from("defects").select("status").eq("project_id", projectId),
@@ -638,7 +648,17 @@ export const getProjectHome = createServerFn({ method: "GET" })
           .from("endpoints")
           .select("completion_status" as never)
           .eq("project_id", projectId),
+        supabase
+          .from("project_tasks" as never)
+          .select("id, title, status, priority, due_date, assigned_to, created_by, sort_order")
+          .eq("project_id", projectId)
+          .in("status", ["TODO", "IN_PROGRESS"])
+          .or(`assigned_to.eq.${userId},created_by.eq.${userId}`)
+          .order("due_date", { ascending: true, nullsFirst: false })
+          .order("sort_order", { ascending: true })
+          .limit(8),
       ]);
+
 
     for (const r of [cablesRes, defRes, protoRes, chatRecentRes, plansRes, chatMsgs, endpointsRes]) {
       if (r.error) throw new Error(dbErrorMessage(r.error));
@@ -734,6 +754,21 @@ export const getProjectHome = createServerFn({ method: "GET" })
         id: p.id as string,
         name: p.name as string,
         totalCables: cablesPerPlan.get(p.id as string) ?? 0,
+      })),
+      myTasks: ((tasksRes.data as Array<{
+        id: string;
+        title: string;
+        status: string;
+        priority: string | null;
+        due_date: string | null;
+        assigned_to: string | null;
+      }> | null) ?? []).map((t) => ({
+        id: t.id,
+        title: t.title,
+        status: t.status,
+        priority: t.priority,
+        dueDate: t.due_date,
+        isMine: t.assigned_to === userId,
       })),
       recentActivity: msgs.map((m) => ({
         id: m.id,
