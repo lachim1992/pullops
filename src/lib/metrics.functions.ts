@@ -108,11 +108,11 @@ export const getMyDashboardSummary = createServerFn({ method: "GET" })
     if (projectIds.length > 0) {
       const { data: cRows } = await supabase
         .from("cables")
-        .select("project_id, status")
+        .select("project_id, status, tested_at")
         .in("project_id", projectIds);
       for (const r of cRows ?? []) {
         const arr = cablesByProject.get(r.project_id) ?? [];
-        arr.push(r.status as string);
+        arr.push(`${r.status as string}|${(r as any).tested_at ? "T" : ""}`);
         cablesByProject.set(r.project_id, arr);
       }
 
@@ -127,7 +127,6 @@ export const getMyDashboardSummary = createServerFn({ method: "GET" })
         }
       }
 
-      // My open pull tasks across projects
       const { count: tCount } = await supabase
         .from("pull_tasks")
         .select("id", { count: "exact", head: true })
@@ -136,23 +135,18 @@ export const getMyDashboardSummary = createServerFn({ method: "GET" })
       myOpenTasks = tCount ?? 0;
     }
 
-    const PULLED_SET = new Set(["PULLED", "TERMINATED", "TESTED", "DONE"]);
-    const TERM_SET = new Set(["TERMINATED", "TESTED", "DONE"]);
-    const TEST_SET = new Set(["TESTED", "DONE"]);
-
     const projectsWithProgress = (projects ?? []).map((p) => {
-      const statuses = cablesByProject.get(p.id) ?? [];
-      const total = statuses.length;
-      let pulled = 0,
-        terminated = 0,
-        tested = 0;
-      for (const s of statuses) {
-        if (PULLED_SET.has(s)) pulled++;
-        if (TERM_SET.has(s)) terminated++;
-        if (TEST_SET.has(s)) tested++;
+      const rows = cablesByProject.get(p.id) ?? [];
+      let total = 0,
+        score = 0;
+      for (const row of rows) {
+        const s = row.split("|")[0];
+        if (s === "CANCELLED") continue;
+        total++;
+        score += s === "DONE" ? 3 : s === "TERMINATED" ? 2 : s === "PULLED" ? 1 : 0;
       }
       const denom = total * 3;
-      const progressPct = denom > 0 ? Math.round(((pulled + terminated + tested) / denom) * 100) : 0;
+      const progressPct = denom > 0 ? Math.round((score / denom) * 100) : 0;
       return {
         ...p,
         cablesTotal: total,
