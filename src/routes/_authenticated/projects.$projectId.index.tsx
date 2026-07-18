@@ -526,12 +526,17 @@ function AlertsCard({ defectsOpen, projectId }: { defectsOpen: number; projectId
 
 function TodaysPlansCard({
   plans,
+  tasks,
   projectId,
 }: {
   plans: Array<{ id: string; name: string; totalCables: number }>;
+  tasks: Array<{ id: string; title: string; status: string; priority: string | null; dueDate: string | null; isMine: boolean }>;
   projectId: string;
 }) {
-  const has = plans.length > 0;
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const hasTasks = tasks.length > 0;
+  const hasPlans = plans.length > 0;
+  const has = hasTasks || hasPlans;
   return (
     <Link
       to="/projects/$projectId/lobby"
@@ -547,30 +552,62 @@ function TodaysPlansCard({
           Dnešní úkoly
         </div>
         {has ? (
-          <div className="mt-0.5 space-y-0.5">
-            {plans.slice(0, 2).map((p) => (
-              <div key={p.id} className="truncate font-display text-sm font-semibold">
-                {p.name}
-                <span className="ml-1.5 font-mono text-[10px] font-normal text-muted-foreground">
-                  · {p.totalCables} kabelů
-                </span>
-              </div>
-            ))}
-            {plans.length > 2 && (
+          <div className="mt-1 space-y-1">
+            {tasks.slice(0, 3).map((t) => {
+              const overdue = t.dueDate && t.dueDate < todayISO;
+              const dueToday = t.dueDate === todayISO;
+              const critical = t.priority === "CRITICAL" || t.priority === "HIGH";
+              return (
+                <div key={t.id} className="flex items-center gap-1.5 truncate font-display text-sm">
+                  <span
+                    className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${
+                      overdue
+                        ? "bg-red-500"
+                        : dueToday
+                          ? "bg-amber-500"
+                          : critical
+                            ? "bg-orange-500"
+                            : t.status === "IN_PROGRESS"
+                              ? "bg-blue-500"
+                              : "bg-muted-foreground"
+                    }`}
+                  />
+                  <span className="truncate font-semibold">{t.title}</span>
+                  <span className="ml-auto shrink-0 font-mono text-[10px] text-muted-foreground">
+                    {t.status === "IN_PROGRESS" ? "probíhá" : overdue ? "po termínu" : dueToday ? "dnes" : "k řešení"}
+                  </span>
+                </div>
+              );
+            })}
+            {tasks.length > 3 && (
               <div className="font-mono text-[10px] text-muted-foreground">
-                +{plans.length - 2} další
+                +{tasks.length - 3} dalších úkolů
+              </div>
+            )}
+            {hasPlans && (
+              <div className="mt-1.5 border-t border-border/40 pt-1.5">
+                {plans.slice(0, 2).map((p) => (
+                  <div key={p.id} className="flex items-center gap-1.5 truncate font-display text-xs text-muted-foreground">
+                    <Cable className="h-3 w-3 shrink-0 text-accent" />
+                    <span className="truncate">{p.name}</span>
+                    <span className="ml-auto shrink-0 font-mono text-[10px]">
+                      {p.totalCables} kab.
+                    </span>
+                  </div>
+                ))}
               </div>
             )}
           </div>
         ) : (
           <div className="mt-0.5 font-display text-sm text-muted-foreground">
-            Žádný day plán na dnes
+            Žádné úkoly ani plán na dnes
           </div>
         )}
       </div>
     </Link>
   );
 }
+
 
 /* ---------------- Recent activity ---------------- */
 
