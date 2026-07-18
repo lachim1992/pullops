@@ -85,8 +85,27 @@ export const getPullManagerState = createServerFn({ method: "GET" })
         )
         .eq("round_id", active.id)
         .order("sequence");
-      activeItems = items ?? [];
+      const cableIds = (items ?? []).map((it: any) => it.cable_id);
+      let cablesById = new Map<string, any>();
+      if (cableIds.length) {
+        const { data: cabs } = await supabase
+          .from("cables")
+          .select("id, code, from_endpoint_id, to_endpoint_id, cable_type_id")
+          .in("id", cableIds);
+        for (const c of cabs ?? []) cablesById.set(c.id, c);
+      }
+      activeItems = (items ?? []).map((it: any) => {
+        const c = cablesById.get(it.cable_id);
+        return {
+          ...it,
+          cable_code: c?.code ?? null,
+          from_endpoint_id: c?.from_endpoint_id ?? null,
+          to_endpoint_id: c?.to_endpoint_id ?? null,
+          cable_type_id: c?.cable_type_id ?? null,
+        };
+      });
     }
+
 
     return {
       plans: plansRes.data ?? [],
