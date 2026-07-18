@@ -29,26 +29,29 @@ export const getProjectProgress = createServerFn({ method: "GET" })
     const { supabase } = context;
     const { data: cables, error: cErr } = await supabase
       .from("cables")
-      .select("status")
+      .select("status, tested_at")
       .eq("project_id", data.projectId);
     if (cErr) throw new Error(dbErrorMessage(cErr));
 
-    const total = cables?.length ?? 0;
-    // cable_status: PLANNED, PULLED, TERMINATED, TESTED, DONE, CANCELLED
-    // phases are cumulative — a TERMINATED cable is also pulled, etc.
-    const PULLED_SET = new Set(["PULLED", "TERMINATED", "TESTED", "DONE"]);
-    const TERM_SET = new Set(["TERMINATED", "TESTED", "DONE"]);
-    const TEST_SET = new Set(["TESTED", "DONE"]);
-    let pulled = 0,
+    // Canonical statuses: PLANNED → PULLED → TERMINATED → DONE (+CANCELLED).
+    // tested_at is separate. Progress score: PLANNED=0, PULLED=1, TERMINATED=2, DONE=3.
+    const PULLED_SET = new Set(["PULLED", "TERMINATED", "DONE"]);
+    const TERM_SET = new Set(["TERMINATED", "DONE"]);
+    let total = 0,
+      pulled = 0,
       terminated = 0,
       tested = 0,
-      done = 0;
+      done = 0,
+      scoreSum = 0;
     for (const c of cables ?? []) {
       const s = c.status as string;
+      if (s === "CANCELLED") continue;
+      total++;
       if (PULLED_SET.has(s)) pulled++;
       if (TERM_SET.has(s)) terminated++;
-      if (TEST_SET.has(s)) tested++;
+      if ((c as any).tested_at) tested++;
       if (s === "DONE") done++;
+      scoreSum += s === "DONE" ? 3 : s === "TERMINATED" ? 2 : s === "PULLED" ? 1 : 0;
     }
 
     const { count: epCount, error: eErr } = await supabase
@@ -67,7 +70,7 @@ export const getProjectProgress = createServerFn({ method: "GET" })
     const defOpen = defTotal - defResolved;
 
     const denom = total * 3;
-    const progressPct = denom > 0 ? Math.round(((pulled + terminated + tested) / denom) * 100) : 0;
+    const progressPct = denom > 0 ? Math.round((scoreSum / denom) * 100) : 0;
 
     return {
       cables: { total, pulled, terminated, tested, done },
