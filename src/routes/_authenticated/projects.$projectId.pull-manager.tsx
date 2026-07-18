@@ -53,6 +53,9 @@ function PullManagerPage() {
   const [selected, setSelected] = useState<string[]>([]);
   const [pairs, setPairs] = useState<Pair[]>([]);
   const [actuals, setActuals] = useState<Record<string, string>>({});
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [endpointFilter, setEndpointFilter] = useState("");
+
 
   const stateFn = useServerFn(getPullManagerState);
   const proposeFn = useServerFn(proposePullRoundItems);
