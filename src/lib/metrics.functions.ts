@@ -291,7 +291,7 @@ export const getOrgDashboard = createServerFn({ method: "GET" })
     ] = await Promise.all([
       supabase
         .from("cables")
-        .select("id, project_id, code, status, computed_length_m, override_length_m")
+        .select("id, project_id, code, status, tested_at, computed_length_m, override_length_m")
         .in("project_id", projectIds),
       supabase
         .from("endpoints")
@@ -333,9 +333,8 @@ export const getOrgDashboard = createServerFn({ method: "GET" })
 
     // ── cables aggregate ────────────────────────────────────────────────────
     const cables = cablesRes.data ?? [];
-    const PULLED_SET = new Set(["PULLED", "TERMINATED", "TESTED", "DONE"]);
-    const TERM_SET = new Set(["TERMINATED", "TESTED", "DONE"]);
-    const TEST_SET = new Set(["TESTED", "DONE"]);
+    const PULLED_SET = new Set(["PULLED", "TERMINATED", "DONE"]);
+    const TERM_SET = new Set(["TERMINATED", "DONE"]);
     let cPulled = 0,
       cTerm = 0,
       cTest = 0,
@@ -345,12 +344,14 @@ export const getOrgDashboard = createServerFn({ method: "GET" })
       mTerm = 0;
     const perProject = new Map<
       string,
-      { total: number; pulled: number; term: number; test: number; meters: number }
+      { total: number; score: number; pulled: number; term: number; test: number; meters: number }
     >();
 
     for (const c of cables) {
       const s = c.status as string;
+      const testedAt = (c as any).tested_at as string | null;
       const len = Number(c.override_length_m ?? c.computed_length_m ?? 0);
+      if (s === "CANCELLED") continue;
       mTotal += len;
       if (PULLED_SET.has(s)) {
         cPulled++;
@@ -360,14 +361,15 @@ export const getOrgDashboard = createServerFn({ method: "GET" })
         cTerm++;
         mTerm += len;
       }
-      if (TEST_SET.has(s)) cTest++;
+      if (testedAt) cTest++;
       if (s === "DONE") cDone++;
-      const pp = perProject.get(c.project_id) ?? { total: 0, pulled: 0, term: 0, test: 0, meters: 0 };
+      const pp = perProject.get(c.project_id) ?? { total: 0, score: 0, pulled: 0, term: 0, test: 0, meters: 0 };
       pp.total++;
       pp.meters += len;
+      pp.score += s === "DONE" ? 3 : s === "TERMINATED" ? 2 : s === "PULLED" ? 1 : 0;
       if (PULLED_SET.has(s)) pp.pulled++;
       if (TERM_SET.has(s)) pp.term++;
-      if (TEST_SET.has(s)) pp.test++;
+      if (testedAt) pp.test++;
       perProject.set(c.project_id, pp);
     }
 
