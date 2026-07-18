@@ -281,9 +281,10 @@ function PullManagerPage() {
 
                 {activeRound ? ` · #${activeRound.roundNumber}` : ""}
               </TabsTrigger>
-              <TabsTrigger value="queue">
-                <History className="h-4 w-4 mr-1" /> Fronta kol
+              <TabsTrigger value="queue" className="text-base px-4">
+                <History className="h-5 w-5 mr-2" /> Fronta kol
               </TabsTrigger>
+
             </TabsList>
 
             <TabsContent value="build" className="space-y-4">
