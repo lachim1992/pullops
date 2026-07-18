@@ -1272,7 +1272,7 @@ function PullMap({
                   : "var(--accent)";
             const width = selected ? 0.006 : hovered ? 0.007 : 0.0035;
             return (
-              <g key={c.id} onClick={() => onSelectCable(c.id)} style={{ cursor: "pointer" }}>
+              <g key={c.id} data-no-pan onClick={() => onSelectCable(c.id)} style={{ cursor: "pointer" }} pointerEvents="all">
                 <polyline
                   points={points}
                   fill="none"
