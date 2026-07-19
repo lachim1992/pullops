@@ -1208,7 +1208,7 @@ function PullMap({
                 Zoom {Math.round(view.s * 100)}% · tažením posun
               </div>
               {selectedCable && (
-                <div className="max-w-[320px] rounded-sm border-2 border-accent bg-card/95 p-2 text-xs shadow-lg backdrop-blur">
+                <div className="pointer-events-auto max-w-[320px] rounded-sm border-2 border-accent bg-card/95 p-2 text-xs shadow-lg backdrop-blur" data-no-pan>
                   <div className="font-mono text-sm font-bold">{selectedCable.code}</div>
                   <div className="text-muted-foreground">
                     {selectedCable.fromEndpointCode ?? "?"} → {selectedCable.toEndpointCode ?? "?"} · {selectedCable.typeCode} · {selectedCable.meters == null ? "—" : `${selectedCable.meters.toFixed(1)} m`}
@@ -1216,6 +1216,26 @@ function PullMap({
                   <div className="mt-1 font-mono text-[10px] uppercase text-foreground">
                     {selectedCable.status === "PULLED" ? "Nataženo" : "K natažení"}
                   </div>
+                  {onToggle && (
+                    <div className="mt-2 grid grid-cols-2 gap-1">
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); onToggle(selectedCable, true); }}
+                        disabled={selectedCable.status === "PULLED"}
+                        className="rounded-sm border border-primary bg-primary px-2 py-1 font-mono text-[10px] uppercase text-primary-foreground disabled:opacity-50"
+                      >
+                        Hotovo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); onToggle(selectedCable, false); }}
+                        disabled={selectedCable.status !== "PULLED"}
+                        className="rounded-sm border border-border px-2 py-1 font-mono text-[10px] uppercase disabled:opacity-50"
+                      >
+                        Vrátit
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
               {selectedEndpoint && (
