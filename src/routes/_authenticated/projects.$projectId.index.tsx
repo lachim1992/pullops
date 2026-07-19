@@ -447,7 +447,7 @@ function ProjectStats({
     { label: "Kabelů celkem", value: progress.cables.total },
     { label: "Endpointů celkem", value: progress.endpoints.total },
     { label: "Nataženo", value: `${progress.cables.pulled} / ${progress.cables.total}`, tone: "accent" },
-    { label: "Proměřeno", value: `${progress.cables.terminated} / ${progress.cables.total}`, tone: "accent" },
+    { label: "Zaterminováno", value: `${progress.cables.terminated} / ${progress.cables.total}`, tone: "accent" },
     { label: "Změřeno", value: `${progress.cables.tested} / ${progress.cables.total}`, tone: "accent" },
     { label: "Hotovo", value: `${progress.cables.done} / ${progress.cables.total}`, tone: "ok" },
     { label: "Otevřené závady", value: home.hub.defectsOpen, tone: home.hub.defectsOpen > 0 ? "warn" : "ok" },
