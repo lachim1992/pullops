@@ -380,7 +380,8 @@ function CompactProgress({
 
       <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
         <MiniBar label="Nataženo" done={progress.cables.pulled} total={progress.cables.total} pct={progress.pulledPct} color="var(--chart-2)" />
-        <MiniBar label="Proměřeno" done={progress.cables.terminated} total={progress.cables.total} pct={progress.terminatedPct} color="var(--accent)" />
+        <MiniBar label="Zaterminováno" done={progress.cables.terminated} total={progress.cables.total} pct={progress.terminatedPct} color="var(--accent)" />
+        {/* Kumulativně: každý „zaterminovaný" už je nutně natažený, každý „změřený" už je nutně zaterminovaný. */}
         <MiniBar label="Změřeno" done={progress.cables.tested} total={progress.cables.total} pct={progress.testedPct} color="var(--chart-5)" />
         <MiniBar label="Hotovo" done={progress.cables.done} total={progress.cables.total} pct={donePct} color="var(--chart-4)" />
       </div>
@@ -446,7 +447,7 @@ function ProjectStats({
     { label: "Kabelů celkem", value: progress.cables.total },
     { label: "Endpointů celkem", value: progress.endpoints.total },
     { label: "Nataženo", value: `${progress.cables.pulled} / ${progress.cables.total}`, tone: "accent" },
-    { label: "Proměřeno", value: `${progress.cables.terminated} / ${progress.cables.total}`, tone: "accent" },
+    { label: "Zaterminováno", value: `${progress.cables.terminated} / ${progress.cables.total}`, tone: "accent" },
     { label: "Změřeno", value: `${progress.cables.tested} / ${progress.cables.total}`, tone: "accent" },
     { label: "Hotovo", value: `${progress.cables.done} / ${progress.cables.total}`, tone: "ok" },
     { label: "Otevřené závady", value: home.hub.defectsOpen, tone: home.hub.defectsOpen > 0 ? "warn" : "ok" },
@@ -722,7 +723,7 @@ function PersonalDashboard({
         </div>
         <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-5">
           <ActPill icon={Cable} label="Nataženo" value={act.pull.pulled} />
-          <ActPill icon={Cable} label="Proměřeno" value={act.pull.terminated} />
+          <ActPill icon={Cable} label="Zaterminováno" value={act.pull.terminated} />
           <ActPill icon={Cable} label="Změřeno" value={act.pull.tested} />
           <ActPill icon={CheckSquare} label="Endpoint" value={act.completion.endpoints} />
           <ActPill icon={CheckSquare} label="Panel" value={act.completion.panels} />
