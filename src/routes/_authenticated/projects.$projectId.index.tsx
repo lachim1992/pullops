@@ -723,7 +723,7 @@ function PersonalDashboard({
         </div>
         <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-5">
           <ActPill icon={Cable} label="Nataženo" value={act.pull.pulled} />
-          <ActPill icon={Cable} label="Proměřeno" value={act.pull.terminated} />
+          <ActPill icon={Cable} label="Zaterminováno" value={act.pull.terminated} />
           <ActPill icon={Cable} label="Změřeno" value={act.pull.tested} />
           <ActPill icon={CheckSquare} label="Endpoint" value={act.completion.endpoints} />
           <ActPill icon={CheckSquare} label="Panel" value={act.completion.panels} />
