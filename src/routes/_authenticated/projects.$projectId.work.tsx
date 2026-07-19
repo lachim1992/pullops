@@ -377,6 +377,7 @@ function PlanWorkspace(props: {
                 setSelectedEndpointId(id);
                 setSelectedCableId(null);
               }}
+              onToggle={onToggleCable}
             />
           </section>
 
@@ -1048,7 +1049,7 @@ function SpoolDrum({ pulledPct }: { pulledPct: number }) {
 /* ----------------------------- Map ----------------------------- */
 
 function PullMap({
-  plan, bundles, endpoints, cables, selectedCableId, selectedEndpointId, hoveredCableId, onSelectCable, onSelectEndpoint,
+  plan, bundles, endpoints, cables, selectedCableId, selectedEndpointId, hoveredCableId, onSelectCable, onSelectEndpoint, onToggle,
 }: {
   plan: Plan | null;
   bundles: Bundle[];
@@ -1059,6 +1060,7 @@ function PullMap({
   hoveredCableId?: string | null;
   onSelectCable: (id: string) => void;
   onSelectEndpoint: (id: string) => void;
+  onToggle?: (c: PullCable, done: boolean) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ tx: 0, ty: 0, s: 1 });
@@ -1206,7 +1208,7 @@ function PullMap({
                 Zoom {Math.round(view.s * 100)}% · tažením posun
               </div>
               {selectedCable && (
-                <div className="max-w-[320px] rounded-sm border-2 border-accent bg-card/95 p-2 text-xs shadow-lg backdrop-blur">
+                <div className="pointer-events-auto max-w-[320px] rounded-sm border-2 border-accent bg-card/95 p-2 text-xs shadow-lg backdrop-blur" data-no-pan>
                   <div className="font-mono text-sm font-bold">{selectedCable.code}</div>
                   <div className="text-muted-foreground">
                     {selectedCable.fromEndpointCode ?? "?"} → {selectedCable.toEndpointCode ?? "?"} · {selectedCable.typeCode} · {selectedCable.meters == null ? "—" : `${selectedCable.meters.toFixed(1)} m`}
@@ -1214,23 +1216,57 @@ function PullMap({
                   <div className="mt-1 font-mono text-[10px] uppercase text-foreground">
                     {selectedCable.status === "PULLED" ? "Nataženo" : "K natažení"}
                   </div>
+                  {onToggle && (
+                    <div className="mt-2 grid grid-cols-2 gap-1">
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); onToggle(selectedCable, true); }}
+                        disabled={selectedCable.status === "PULLED"}
+                        className="rounded-sm border border-primary bg-primary px-2 py-1 font-mono text-[10px] uppercase text-primary-foreground disabled:opacity-50"
+                      >
+                        Hotovo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); onToggle(selectedCable, false); }}
+                        disabled={selectedCable.status !== "PULLED"}
+                        className="rounded-sm border border-border px-2 py-1 font-mono text-[10px] uppercase disabled:opacity-50"
+                      >
+                        Vrátit
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
               {selectedEndpoint && (
-                <div className="max-w-[340px] rounded-sm border-2 border-primary bg-card/95 p-2 text-xs shadow-lg backdrop-blur">
+                <div className="pointer-events-auto max-w-[340px] rounded-sm border-2 border-primary bg-card/95 p-2 text-xs shadow-lg backdrop-blur" data-no-pan>
                   <div className="flex items-center justify-between gap-3">
                     <div className="font-mono text-sm font-bold">{selectedEndpoint.code}</div>
                     <Badge variant="outline" className="font-mono text-[10px]">
                       {selectedEndpointCables.filter((c) => c.status === "PULLED").length}/{selectedEndpointCables.length} hotovo
                     </Badge>
                   </div>
-                  <div className="mt-1 max-h-28 space-y-1 overflow-y-auto">
-                    {selectedEndpointCables.map((c) => (
-                      <div key={c.id} className="flex justify-between gap-2 font-mono text-[10px] text-muted-foreground">
-                        <span>{c.code}</span>
-                        <span>{c.status === "PULLED" ? "HOTOVO" : "TAHAT"}</span>
-                      </div>
-                    ))}
+                  <div className="mt-1 max-h-40 space-y-1 overflow-y-auto">
+                    {selectedEndpointCables.map((c) => {
+                      const cdone = c.status === "PULLED";
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); onToggle?.(c, !cdone); }}
+                          disabled={!onToggle}
+                          className={`flex w-full items-center justify-between gap-2 rounded-sm border px-2 py-1 font-mono text-[10px] transition-colors ${
+                            cdone
+                              ? "border-primary/40 bg-primary/10 text-foreground"
+                              : "border-border hover:border-primary hover:bg-primary/5 text-muted-foreground"
+                          }`}
+                          title={cdone ? "Klikni pro vrácení na TAHAT" : "Klikni pro označení HOTOVO"}
+                        >
+                          <span>{c.code}</span>
+                          <span className={cdone ? "text-primary" : "text-accent"}>{cdone ? "HOTOVO" : "TAHAT →"}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
