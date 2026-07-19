@@ -1239,20 +1239,34 @@ function PullMap({
                 </div>
               )}
               {selectedEndpoint && (
-                <div className="max-w-[340px] rounded-sm border-2 border-primary bg-card/95 p-2 text-xs shadow-lg backdrop-blur">
+                <div className="pointer-events-auto max-w-[340px] rounded-sm border-2 border-primary bg-card/95 p-2 text-xs shadow-lg backdrop-blur" data-no-pan>
                   <div className="flex items-center justify-between gap-3">
                     <div className="font-mono text-sm font-bold">{selectedEndpoint.code}</div>
                     <Badge variant="outline" className="font-mono text-[10px]">
                       {selectedEndpointCables.filter((c) => c.status === "PULLED").length}/{selectedEndpointCables.length} hotovo
                     </Badge>
                   </div>
-                  <div className="mt-1 max-h-28 space-y-1 overflow-y-auto">
-                    {selectedEndpointCables.map((c) => (
-                      <div key={c.id} className="flex justify-between gap-2 font-mono text-[10px] text-muted-foreground">
-                        <span>{c.code}</span>
-                        <span>{c.status === "PULLED" ? "HOTOVO" : "TAHAT"}</span>
-                      </div>
-                    ))}
+                  <div className="mt-1 max-h-40 space-y-1 overflow-y-auto">
+                    {selectedEndpointCables.map((c) => {
+                      const cdone = c.status === "PULLED";
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); onToggle?.(c, !cdone); }}
+                          disabled={!onToggle}
+                          className={`flex w-full items-center justify-between gap-2 rounded-sm border px-2 py-1 font-mono text-[10px] transition-colors ${
+                            cdone
+                              ? "border-primary/40 bg-primary/10 text-foreground"
+                              : "border-border hover:border-primary hover:bg-primary/5 text-muted-foreground"
+                          }`}
+                          title={cdone ? "Klikni pro vrácení na TAHAT" : "Klikni pro označení HOTOVO"}
+                        >
+                          <span>{c.code}</span>
+                          <span className={cdone ? "text-primary" : "text-accent"}>{cdone ? "HOTOVO" : "TAHAT →"}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}
