@@ -377,6 +377,7 @@ function PlanWorkspace(props: {
                 setSelectedEndpointId(id);
                 setSelectedCableId(null);
               }}
+              onToggle={onToggleCable}
             />
           </section>
 
