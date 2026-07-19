@@ -1049,7 +1049,7 @@ function SpoolDrum({ pulledPct }: { pulledPct: number }) {
 /* ----------------------------- Map ----------------------------- */
 
 function PullMap({
-  plan, bundles, endpoints, cables, selectedCableId, selectedEndpointId, hoveredCableId, onSelectCable, onSelectEndpoint,
+  plan, bundles, endpoints, cables, selectedCableId, selectedEndpointId, hoveredCableId, onSelectCable, onSelectEndpoint, onToggle,
 }: {
   plan: Plan | null;
   bundles: Bundle[];
@@ -1060,6 +1060,7 @@ function PullMap({
   hoveredCableId?: string | null;
   onSelectCable: (id: string) => void;
   onSelectEndpoint: (id: string) => void;
+  onToggle?: (c: PullCable, done: boolean) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ tx: 0, ty: 0, s: 1 });
