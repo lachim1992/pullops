@@ -803,19 +803,17 @@ export const getMyProjectDashboard = createServerFn({ method: "GET" })
     const now = new Date();
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
 
-    const [tasksRes, pullRes, epRes, panelRes] = await Promise.all([
+    const [tasksRes, cablesRes, epRes, panelRes] = await Promise.all([
       supabase
         .from("project_tasks")
         .select("status, updated_at, created_at")
         .eq("project_id", projectId)
         .eq("assigned_to", userId),
       supabase
-        .from("pull_tasks")
-        .select("started_at, terminated_at, tested_at, done_at")
+        .from("cables")
+        .select("status, pulled_at, tested_at, updated_at")
         .eq("project_id", projectId)
-        .or(
-          `started_at.gte.${startOfDay},terminated_at.gte.${startOfDay},tested_at.gte.${startOfDay},done_at.gte.${startOfDay}`,
-        ),
+        .or(`pulled_at.gte.${startOfDay},tested_at.gte.${startOfDay},updated_at.gte.${startOfDay}`),
       supabase
         .from("endpoints")
         .select("completion_status, updated_at" as never)
@@ -845,20 +843,25 @@ export const getMyProjectDashboard = createServerFn({ method: "GET" })
       if (ts && ts >= startOfDay) today[b]++;
     }
 
+    // Denní aktivita se počítá přímo z registru kabelů (canonical source of truth).
+    // Statusy jsou kumulativní: PULLED ⊂ TERMINATED ⊂ DONE; test (tested_at) je
+    // samostatná dimenze, ale zároveň vyžaduje předchozí terminaci.
     let pulled = 0,
       terminated = 0,
       tested = 0,
       done = 0;
-    for (const r of (pullRes.data ?? []) as Array<{
-      started_at: string | null;
-      terminated_at: string | null;
+    for (const r of (cablesRes.data ?? []) as Array<{
+      status: string | null;
+      pulled_at: string | null;
       tested_at: string | null;
-      done_at: string | null;
+      updated_at: string | null;
     }>) {
-      if (r.started_at && r.started_at >= startOfDay) pulled++;
-      if (r.terminated_at && r.terminated_at >= startOfDay) terminated++;
+      if (r.pulled_at && r.pulled_at >= startOfDay) pulled++;
       if (r.tested_at && r.tested_at >= startOfDay) tested++;
-      if (r.done_at && r.done_at >= startOfDay) done++;
+      if (r.updated_at && r.updated_at >= startOfDay) {
+        if (r.status === "TERMINATED" || r.status === "DONE") terminated++;
+        if (r.status === "DONE") done++;
+      }
     }
 
     const eps = (epRes.data as Array<{ completion_status: string }> | null) ?? [];
