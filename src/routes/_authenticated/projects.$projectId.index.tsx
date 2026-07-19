@@ -380,7 +380,8 @@ function CompactProgress({
 
       <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
         <MiniBar label="Nataženo" done={progress.cables.pulled} total={progress.cables.total} pct={progress.pulledPct} color="var(--chart-2)" />
-        <MiniBar label="Proměřeno" done={progress.cables.terminated} total={progress.cables.total} pct={progress.terminatedPct} color="var(--accent)" />
+        <MiniBar label="Zaterminováno" done={progress.cables.terminated} total={progress.cables.total} pct={progress.terminatedPct} color="var(--accent)" />
+        {/* Kumulativně: každý „zaterminovaný" už je nutně natažený, každý „změřený" už je nutně zaterminovaný. */}
         <MiniBar label="Změřeno" done={progress.cables.tested} total={progress.cables.total} pct={progress.testedPct} color="var(--chart-5)" />
         <MiniBar label="Hotovo" done={progress.cables.done} total={progress.cables.total} pct={donePct} color="var(--chart-4)" />
       </div>
