@@ -1,15 +1,25 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Cable as CableIcon, Link2Off, Plug } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { getPatchPanel, updatePatchPanel, updatePatchPort } from "@/lib/patchPanels.functions";
+import { listCables, updateCable } from "@/lib/cables.functions";
+import { listEndpoints } from "@/lib/endpoints.functions";
 
 export const Route = createFileRoute("/_authenticated/projects/$projectId/patch-panels/$panelId")({
   head: () => ({
@@ -25,17 +35,29 @@ function PatchPanelDetailPage() {
   const getFn = useServerFn(getPatchPanel);
   const updateFn = useServerFn(updatePatchPanel);
   const updatePortFn = useServerFn(updatePatchPort);
+  const listCablesFn = useServerFn(listCables);
+  const listEndpointsFn = useServerFn(listEndpoints);
+  const updateCableFn = useServerFn(updateCable);
   const qc = useQueryClient();
 
   const panel = useQuery({
     queryKey: ["patch-panel", panelId],
     queryFn: () => getFn({ data: { id: panelId } }),
   });
+  const cablesQ = useQuery({
+    queryKey: ["cables", projectId],
+    queryFn: () => listCablesFn({ data: { projectId } }),
+  });
+  const endpointsQ = useQuery({
+    queryKey: ["endpoints", projectId],
+    queryFn: () => listEndpointsFn({ data: { projectId } }),
+  });
 
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [notes, setNotes] = useState("");
   const [labels, setLabels] = useState<Record<string, string>>({});
+  const [assignPortId, setAssignPortId] = useState<string | null>(null);
 
   useEffect(() => {
     const d = panel.data;
@@ -47,6 +69,26 @@ function PatchPanelDetailPage() {
     for (const p of d.ports) map[p.id] = p.label ?? "";
     setLabels(map);
   }, [panel.data]);
+
+  const endpointById = useMemo(() => {
+    const m = new Map<string, { code: string; label: string | null }>();
+    for (const e of endpointsQ.data ?? []) m.set(e.id, { code: e.code, label: e.label });
+    return m;
+  }, [endpointsQ.data]);
+
+  const usedFromPorts = useMemo(() => {
+    const s = new Set<string>();
+    for (const c of cablesQ.data ?? []) {
+      const fp = (c as { from_port_id?: string | null }).from_port_id;
+      if (fp) s.add(fp);
+    }
+    return s;
+  }, [cablesQ.data]);
+
+  const panelPortIds = useMemo(
+    () => new Set((panel.data?.ports ?? []).map((p: any) => p.id as string)),
+    [panel.data],
+  );
 
   async function saveHeader() {
     try {
@@ -78,6 +120,19 @@ function PatchPanelDetailPage() {
     }
   }
 
+  async function assignCable(cableId: string, portId: string | null) {
+    try {
+      await updateCableFn({ data: { id: cableId, fromPortId: portId } });
+      toast.success(portId ? "Kabel přiřazen k portu" : "Kabel odpojen");
+      setAssignPortId(null);
+      qc.invalidateQueries({ queryKey: ["patch-panel", panelId] });
+      qc.invalidateQueries({ queryKey: ["cables", projectId] });
+      qc.invalidateQueries({ queryKey: ["cable", cableId] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Chyba");
+    }
+  }
+
   if (panel.isLoading) {
     return (
       <AppShell projectId={projectId}>
@@ -92,6 +147,13 @@ function PatchPanelDetailPage() {
       </AppShell>
     );
   }
+
+  const cablesForAssign = (cablesQ.data ?? []).filter((c: any) => {
+    if (c.status === "CANCELLED") return false;
+    const fp = c.from_port_id as string | null;
+    // Show cables that are unassigned OR already sit somewhere on THIS panel (allow move)
+    return !fp || panelPortIds.has(fp);
+  });
 
   return (
     <AppShell projectId={projectId}>
@@ -131,43 +193,114 @@ function PatchPanelDetailPage() {
         Porty ({panel.data.ports.length})
       </h2>
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {panel.data.ports.map((p: any) => (
-          <div key={p.id} className="rounded-sm border border-border p-2">
-            <div className="flex items-center gap-2">
-              <span className="w-10 shrink-0 font-mono text-xs text-muted-foreground">
-                #{p.port_number}
-              </span>
-              <Input
-                value={labels[p.id] ?? ""}
-                onChange={(e) => setLabels((prev) => ({ ...prev, [p.id]: e.target.value }))}
-                placeholder="popis / label"
-                className="h-8"
-              />
-              <Button size="sm" variant="outline" onClick={() => savePort(p.id)}>
-                OK
-              </Button>
-            </div>
-            <div className="mt-1.5 flex items-center gap-2 pl-12 text-xs">
-              {p.cable ? (
-                <Link
-                  to="/projects/$projectId/cables/$cableId"
-                  params={{ projectId, cableId: p.cable.id }}
-                  className="font-mono text-primary hover:underline"
-                >
-                  {p.cable.code}
-                </Link>
-              ) : (
-                <span className="text-muted-foreground italic">volný port</span>
-              )}
-              {p.cable && (
-                <span className="font-mono text-[10px] text-muted-foreground">
-                  {p.cable.status}
+        {panel.data.ports.map((p: any) => {
+          const cable = p.cable as {
+            id: string;
+            code: string;
+            status: string;
+            to_endpoint_id: string | null;
+          } | null;
+          const ep = cable?.to_endpoint_id ? endpointById.get(cable.to_endpoint_id) : null;
+          return (
+            <div key={p.id} className="rounded-sm border border-border p-2">
+              <div className="flex items-center gap-2">
+                <span className="w-10 shrink-0 font-mono text-xs text-muted-foreground">
+                  #{p.port_number}
                 </span>
-              )}
+                <Input
+                  value={labels[p.id] ?? ""}
+                  onChange={(e) => setLabels((prev) => ({ ...prev, [p.id]: e.target.value }))}
+                  placeholder="popis / label"
+                  className="h-8"
+                />
+                <Button size="sm" variant="outline" onClick={() => savePort(p.id)}>
+                  OK
+                </Button>
+              </div>
+              <div className="mt-2 flex items-center gap-2 pl-12 text-xs">
+                {cable ? (
+                  <>
+                    <Plug className="h-3.5 w-3.5 text-primary" />
+                    <Link
+                      to="/projects/$projectId/cables/$cableId"
+                      params={{ projectId, cableId: cable.id }}
+                      className="font-mono text-primary hover:underline"
+                    >
+                      {cable.code}
+                    </Link>
+                    {ep && (
+                      <span className="text-muted-foreground truncate">
+                        → {ep.code}
+                        {ep.label ? ` (${ep.label})` : ""}
+                      </span>
+                    )}
+                    <span className="ml-auto flex items-center gap-1">
+                      <span className="font-mono text-[10px] text-muted-foreground">
+                        {cable.status}
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 px-1.5"
+                        onClick={() => assignCable(cable.id, null)}
+                        title="Odpojit kabel od portu"
+                      >
+                        <Link2Off className="h-3.5 w-3.5" />
+                      </Button>
+                    </span>
+                  </>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => setAssignPortId(p.id)}
+                  >
+                    <CableIcon className="mr-1 h-3.5 w-3.5" />
+                    Přiřadit kabel…
+                  </Button>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
+
+      <CommandDialog
+        open={assignPortId !== null}
+        onOpenChange={(o) => !o && setAssignPortId(null)}
+      >
+        <CommandInput placeholder="Hledat kabel podle kódu, endpointu…" />
+        <CommandList>
+          <CommandEmpty>Žádné volné kabely nenalezeny.</CommandEmpty>
+          <CommandGroup heading="Volné kabely">
+            {cablesForAssign.map((c: any) => {
+              const ep = c.to_endpoint_id ? endpointById.get(c.to_endpoint_id) : null;
+              const already = c.from_port_id && c.from_port_id !== assignPortId;
+              const searchStr = [c.code, ep?.code, ep?.label, c.status].filter(Boolean).join(" ");
+              return (
+                <CommandItem
+                  key={c.id}
+                  value={`${searchStr} ${c.id}`}
+                  onSelect={() => assignPortId && assignCable(c.id, assignPortId)}
+                  className="flex items-center gap-2"
+                >
+                  <span className="font-mono text-sm">{c.code}</span>
+                  {ep && (
+                    <span className="text-xs text-muted-foreground truncate">
+                      → {ep.code}
+                      {ep.label ? ` · ${ep.label}` : ""}
+                    </span>
+                  )}
+                  <span className="ml-auto font-mono text-[10px] text-muted-foreground">
+                    {already ? "přesun z jiného portu" : c.status}
+                  </span>
+                </CommandItem>
+              );
+            })}
+          </CommandGroup>
+        </CommandList>
+      </CommandDialog>
     </AppShell>
   );
 }
