@@ -1525,6 +1525,64 @@ export type Database = {
           },
         ]
       }
+      plan_cable_bundles: {
+        Row: {
+          bundle_key: string
+          cable_id: string
+          color: string | null
+          created_at: string
+          created_by: string | null
+          day_plan_id: string
+          id: string
+          organization_id: string
+          project_id: string
+        }
+        Insert: {
+          bundle_key: string
+          cable_id: string
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          day_plan_id: string
+          id?: string
+          organization_id: string
+          project_id: string
+        }
+        Update: {
+          bundle_key?: string
+          cable_id?: string
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          day_plan_id?: string
+          id?: string
+          organization_id?: string
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_cable_bundles_cable_id_fkey"
+            columns: ["cable_id"]
+            isOneToOne: false
+            referencedRelation: "cables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_cable_bundles_day_plan_id_fkey"
+            columns: ["day_plan_id"]
+            isOneToOne: false
+            referencedRelation: "pull_day_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plan_cable_bundles_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           active: boolean
