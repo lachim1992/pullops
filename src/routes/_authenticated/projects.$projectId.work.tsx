@@ -44,7 +44,9 @@ type PullCable = {
   branchPoints: NormPoint[];
   bundleId: string | null;
   notes: string | null;
+  queuedForPull: boolean;
 };
+
 
 type Endpoint = {
   id: string;
