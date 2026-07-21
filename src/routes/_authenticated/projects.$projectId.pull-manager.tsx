@@ -55,6 +55,8 @@ function PullManagerPage() {
   const [actuals, setActuals] = useState<Record<string, string>>({});
   const [activeIndex, setActiveIndex] = useState(0);
   const [endpointFilter, setEndpointFilter] = useState("");
+  const [rollerGroups, setRollerGroups] = useState<string[][]>([]);
+  const [groupPick, setGroupPick] = useState<string[]>([]);
 
 
   const stateFn = useServerFn(getPullManagerState);
