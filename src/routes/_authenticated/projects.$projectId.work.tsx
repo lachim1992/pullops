@@ -203,7 +203,7 @@ function WorkModePage() {
           endpoints={pull.data.endpoints.filter((e) => e.floorPlanId === selectedPlanId)}
           patchPanels={pull.data.patchPanels.filter((p) => p.floorPlanId === selectedPlanId)}
           cables={pull.data.cables.filter((c) => c.floorPlanId === selectedPlanId)}
-          allSpools={pull.data.spools}
+          planBlock={pull.data.planBlocks?.find((b) => b.floorPlanId === selectedPlanId) ?? null}
           allDayBlocks={pull.data.dayBlocks ?? []}
           tab={tab}
           setTab={setTab}
@@ -216,8 +216,10 @@ function WorkModePage() {
           note={note}
           setNote={setNote}
           onToggleCable={toggleCable}
+          onToggleQueue={toggleQueue}
         />
       )}
+
     </AppShell>
   );
 }
