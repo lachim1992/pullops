@@ -107,6 +107,7 @@ function WorkModePage() {
   const qc = useQueryClient();
   const pullDataFn = useServerFn(getPullModeData);
   const setStatusFn = useServerFn(setCablePullStatus);
+  const setQueuedFn = useServerFn(setCableQueuedForPull);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("map");
   const [selectedCableId, setSelectedCableId] = useState<string | null>(null);
@@ -131,6 +132,23 @@ function WorkModePage() {
       toast.error(err instanceof Error ? err.message : "Chyba");
     }
   }
+
+  async function toggleQueue(cable: PullCable) {
+    // If already pulled — this button acts as return-to-queue (unset PULLED).
+    if (cable.status === "PULLED") {
+      await toggleCable(cable, false);
+      return;
+    }
+    try {
+      const next = !cable.queuedForPull;
+      await setQueuedFn({ data: { cableId: cable.id, queued: next } });
+      await qc.invalidateQueries({ queryKey: ["pull-mode", projectId] });
+      toast.success(next ? `Ve frontě: ${cable.code}` : `Odebráno z fronty: ${cable.code}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Chyba");
+    }
+  }
+
 
   return (
     <AppShell projectId={projectId}>
