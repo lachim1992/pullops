@@ -180,10 +180,18 @@ function CablesPage() {
                   </td>
                   <td className="p-2">{c.cable_type_id ? typeById.get(c.cable_type_id) : "—"}</td>
                   <td className="p-2 font-mono text-xs">
-                    {c.from_endpoint_id ? epById.get(c.from_endpoint_id) : "—"}
+                    {c.from_port_id
+                      ? portLabel.get(c.from_port_id) ?? "port"
+                      : c.from_endpoint_id
+                        ? epById.get(c.from_endpoint_id)
+                        : "—"}
                   </td>
                   <td className="p-2 font-mono text-xs">
-                    {c.to_endpoint_id ? epById.get(c.to_endpoint_id) : "—"}
+                    {c.to_port_id
+                      ? portLabel.get(c.to_port_id) ?? "port"
+                      : c.to_endpoint_id
+                        ? epById.get(c.to_endpoint_id)
+                        : "—"}
                   </td>
                   <td className="p-2">
                     <select
