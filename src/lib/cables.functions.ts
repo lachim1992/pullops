@@ -129,6 +129,8 @@ export const updateCable = createServerFn({ method: "POST" })
       data.routeId !== undefined ||
       data.fromEndpointId !== undefined ||
       data.toEndpointId !== undefined ||
+      data.fromPortId !== undefined ||
+      data.toPortId !== undefined ||
       data.overrideLengthM !== undefined;
     if (shouldRecompute) {
       const { data: c } = await supabase
