@@ -3173,3 +3173,256 @@ function DayPlanCard({
     </div>
   );
 }
+
+const BUNDLE_COLORS = [
+  "#ef4444",
+  "#f97316",
+  "#eab308",
+  "#22c55e",
+  "#0ea5e9",
+  "#a855f7",
+  "#ec4899",
+];
+
+function MeteragePanel({ projectId, floorPlanId }: { projectId: string; floorPlanId: string }) {
+  const qc = useQueryClient();
+  const meterageFn = useServerFn(getPlanMeterage);
+  const bundleFn = useServerFn(setPlanCableBundle);
+  const [selected, setSelected] = useState<Record<string, Set<string>>>({});
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+
+  const q = useQuery({
+    queryKey: ["plan-meterage", projectId, floorPlanId],
+    queryFn: () => meterageFn({ data: { projectId, floorPlanId } }),
+  });
+
+  const plans = q.data?.plans ?? [];
+
+  function toggleSel(planId: string, cableId: string) {
+    setSelected((prev) => {
+      const s = new Set(prev[planId] ?? []);
+      if (s.has(cableId)) s.delete(cableId);
+      else s.add(cableId);
+      return { ...prev, [planId]: s };
+    });
+  }
+
+  async function makeBundle(planId: string) {
+    const ids = Array.from(selected[planId] ?? []);
+    if (ids.length < 2) {
+      toast.error("Vyberte alespoň 2 kabely.");
+      return;
+    }
+    const key = `B-${Date.now().toString(36)}`;
+    const color = BUNDLE_COLORS[Math.floor(Math.random() * BUNDLE_COLORS.length)];
+    try {
+      await bundleFn({ data: { projectId, dayPlanId: planId, cableIds: ids, bundleKey: key, color } });
+      toast.success(`Svazek vytvořen (${ids.length} kabelů)`);
+      setSelected((prev) => ({ ...prev, [planId]: new Set() }));
+      qc.invalidateQueries({ queryKey: ["plan-meterage", projectId, floorPlanId] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Chyba");
+    }
+  }
+
+  async function clearBundle(planId: string, cableId: string) {
+    try {
+      await bundleFn({ data: { projectId, dayPlanId: planId, cableIds: [cableId], bundleKey: null } });
+      qc.invalidateQueries({ queryKey: ["plan-meterage", projectId, floorPlanId] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Chyba");
+    }
+  }
+
+  if (q.isLoading) {
+    return <div className="rounded-sm border border-border p-3 text-xs text-muted-foreground">Načítám metráž…</div>;
+  }
+
+  if (plans.length === 0) {
+    return (
+      <div className="rounded-sm border border-border p-3 text-xs text-muted-foreground">
+        Zatím žádný denní plán. Vytvořte plán v záložce „5 · Zadat plán".
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {plans.map((p: any) => {
+        const isOpen = expanded[p.id] ?? true;
+        const sum = p.summary;
+        const deficit = sum.deficitM > 0;
+        const sel = selected[p.id] ?? new Set();
+        return (
+          <div key={p.id} className="rounded-sm border border-border">
+            <button
+              type="button"
+              onClick={() => setExpanded((prev) => ({ ...prev, [p.id]: !isOpen }))}
+              className="flex w-full items-center justify-between gap-2 border-b border-border bg-muted/40 px-3 py-2 text-left"
+            >
+              <div className="flex items-center gap-2">
+                {isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                <span className="font-semibold text-sm">{p.name}</span>
+                {p.plannedDate && (
+                  <span className="text-[10px] text-muted-foreground">{p.plannedDate}</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2 text-[10px] font-mono">
+                <span>{sum.cableCount} kab.</span>
+                <span>{sum.bundleCount} svazků</span>
+                <span
+                  className={
+                    deficit
+                      ? "rounded-sm bg-destructive/15 px-1.5 py-0.5 text-destructive"
+                      : "rounded-sm bg-emerald-500/15 px-1.5 py-0.5 text-emerald-600 dark:text-emerald-400"
+                  }
+                >
+                  {sum.neededM.toFixed(0)} m / {sum.availableM.toFixed(0)} m
+                </span>
+              </div>
+            </button>
+            {isOpen && (
+              <div className="space-y-2 p-3">
+                {/* Summary card */}
+                <div className="grid grid-cols-2 gap-2 text-[10px] md:grid-cols-4">
+                  <div className="rounded-sm border border-border p-2">
+                    <div className="text-muted-foreground">Potřeba (min)</div>
+                    <div className="font-mono text-sm">{sum.neededM.toFixed(1)} m</div>
+                  </div>
+                  <div className="rounded-sm border border-border p-2">
+                    <div className="text-muted-foreground">Materiál celkem</div>
+                    <div className="font-mono text-sm">{sum.materialTotalM.toFixed(1)} m</div>
+                  </div>
+                  <div className="rounded-sm border border-border p-2">
+                    <div className="text-muted-foreground">Cívky ({sum.spoolCount})</div>
+                    <div className="font-mono text-sm">{sum.availableM.toFixed(1)} m</div>
+                  </div>
+                  <div className={`rounded-sm border p-2 ${deficit ? "border-destructive/50 bg-destructive/10" : "border-emerald-500/40 bg-emerald-500/5"}`}>
+                    <div className="text-muted-foreground">{deficit ? "Deficit" : "Rezerva"}</div>
+                    <div className="font-mono text-sm">
+                      {deficit
+                        ? `-${sum.deficitM.toFixed(1)} m`
+                        : `+${(sum.availableM - sum.neededM).toFixed(1)} m`}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Coverage by type */}
+                {sum.coverage.length > 0 && (
+                  <div className="rounded-sm border border-border">
+                    <div className="border-b border-border bg-muted/30 px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+                      Pokrytí dle typu kabelu
+                    </div>
+                    <div className="divide-y divide-border">
+                      {sum.coverage.map((c: any, idx: number) => (
+                        <div key={idx} className="flex items-center justify-between gap-2 px-2 py-1 text-[10px] font-mono">
+                          <span>{c.typeCode ?? "— bez typu —"}</span>
+                          <span className="text-muted-foreground">
+                            {c.neededM.toFixed(0)} m potřeba / {c.availableM.toFixed(0)} m spulek
+                          </span>
+                          <span className={c.deficitM > 0 ? "text-destructive" : "text-emerald-600 dark:text-emerald-400"}>
+                            {c.deficitM > 0 ? `-${c.deficitM.toFixed(0)} m` : "OK"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Cables table */}
+                {p.cables.length === 0 ? (
+                  <div className="rounded-sm border border-dashed border-border p-3 text-center text-[11px] text-muted-foreground">
+                    Zatím žádný kabel není přiřazen k tomuto plánu (záložka „5 · Zadat plán").
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-[10px] text-muted-foreground">
+                        {sel.size > 0 ? `${sel.size} vybráno` : "Zaškrtnutím vytvoříte svazek souběžných kabelů"}
+                      </div>
+                      {sel.size >= 2 && (
+                        <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => makeBundle(p.id)}>
+                          Označit jako svazek
+                        </Button>
+                      )}
+                    </div>
+                    <div className="overflow-x-auto rounded-sm border border-border">
+                      <table className="w-full text-[10px]">
+                        <thead className="bg-muted/40 text-muted-foreground">
+                          <tr>
+                            <th className="px-2 py-1 text-left"></th>
+                            <th className="px-2 py-1 text-left">Kód</th>
+                            <th className="px-2 py-1 text-left">Typ</th>
+                            <th className="px-2 py-1 text-left">Trasa</th>
+                            <th className="px-2 py-1 text-right">Trasa m</th>
+                            <th className="px-2 py-1 text-right">Rezerva</th>
+                            <th className="px-2 py-1 text-right font-semibold">Celkem</th>
+                            <th className="px-2 py-1 text-left">Svazek</th>
+                            <th className="px-2 py-1 text-left">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                          {p.cables.map((c: any) => {
+                            const routeLen = c.lengthM != null && c.reserveM != null ? c.lengthM - c.reserveM : null;
+                            return (
+                              <tr key={c.cableId} className="hover:bg-muted/30">
+                                <td className="px-2 py-1">
+                                  <input
+                                    type="checkbox"
+                                    checked={sel.has(c.cableId)}
+                                    onChange={() => toggleSel(p.id, c.cableId)}
+                                  />
+                                </td>
+                                <td className="px-2 py-1 font-mono font-semibold">{c.code}</td>
+                                <td className="px-2 py-1 font-mono">{c.cableTypeCode ?? "—"}</td>
+                                <td className="px-2 py-1 truncate max-w-[160px]">
+                                  {c.fromLabel} → {c.toLabel}
+                                </td>
+                                <td className="px-2 py-1 text-right font-mono">
+                                  {routeLen != null ? routeLen.toFixed(1) : "—"}
+                                </td>
+                                <td className="px-2 py-1 text-right font-mono">{c.reserveM.toFixed(1)}</td>
+                                <td className="px-2 py-1 text-right font-mono font-semibold">
+                                  {c.totalM != null ? c.totalM.toFixed(1) : "—"}
+                                </td>
+                                <td className="px-2 py-1">
+                                  {c.bundleKey ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => clearBundle(p.id, c.cableId)}
+                                      className="inline-flex items-center gap-1 rounded-sm border px-1.5 py-0.5 font-mono hover:bg-destructive/10 hover:text-destructive"
+                                      title="Odebrat ze svazku"
+                                      style={{ borderColor: c.bundleColor ?? undefined, color: c.bundleColor ?? undefined }}
+                                    >
+                                      <span
+                                        className="h-2 w-2 rounded-full"
+                                        style={{ background: c.bundleColor ?? "hsl(var(--foreground))" }}
+                                      />
+                                      {c.bundleKey.slice(-4)}
+                                    </button>
+                                  ) : (
+                                    <span className="text-muted-foreground">—</span>
+                                  )}
+                                </td>
+                                <td className="px-2 py-1 font-mono">
+                                  <span className={c.note ? "text-amber-600 dark:text-amber-400" : ""} title={c.note ?? undefined}>
+                                    {c.status}
+                                    {c.note ? " ⚠" : ""}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
