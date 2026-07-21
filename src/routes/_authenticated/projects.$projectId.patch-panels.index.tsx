@@ -263,11 +263,24 @@ function PanelRow({
 }) {
   const [open, setOpen] = useState(false);
   const getFn = useServerFn(getPatchPanel);
+  const updateCableFn = useServerFn(updateCable);
+  const qc = useQueryClient();
   const detail = useQuery({
     queryKey: ["patch-panel", panel.id],
     queryFn: () => getFn({ data: { id: panel.id } }),
     enabled: open,
   });
+
+  async function unassign(cableId: string) {
+    try {
+      await updateCableFn({ data: { id: cableId, fromPortId: null } });
+      toast.success("Kabel odpojen");
+      qc.invalidateQueries({ queryKey: ["patch-panel", panel.id] });
+      qc.invalidateQueries({ queryKey: ["cables", projectId] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Chyba");
+    }
+  }
 
   return (
     <div>
