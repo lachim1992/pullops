@@ -405,6 +405,8 @@ function PlanWorkspace(props: {
                 setSelectedCableId(null);
               }}
               onToggle={onToggleCable}
+              onToggleQueue={onToggleQueue}
+
             />
           </section>
 
