@@ -193,6 +193,22 @@ export async function recomputeOne(supabase: any, cable: any): Promise<number | 
     resolveEndpointReserve(supabase, cable.to_endpoint_id, cableTypeReserve),
   ]);
 
+  // --- Trunk-aware routing: if the cable has a rack side (via from_port_id or
+  //     to_port_id) and the other side is an endpoint, prefer routing through
+  //     the nearest kmen (bundle) on the endpoint's floor plan.
+  const trunkResult = await tryTrunkRoute(supabase, cable, {
+    reserveFromM,
+    reserveToM,
+    overrideM: cable.override_length_m ?? null,
+  });
+  if (trunkResult != null) {
+    await supabase
+      .from("cables")
+      .update({ computed_length_m: trunkResult })
+      .eq("id", cable.id);
+    return trunkResult;
+  }
+
   let manualRouteLengthM: number | null = null;
   let routePoints: NormPoint[] = [];
   let calibration: any = null;
@@ -241,8 +257,95 @@ export async function recomputeOne(supabase: any, cable: any): Promise<number | 
   return result.meters;
 }
 
+/**
+ * Try to compute cable length via a trunk (kmen). Returns meters when a
+ * usable rack + endpoint + calibration + bundle combination exists on the
+ * same floor plan; otherwise null so the caller can fall back.
+ */
+async function tryTrunkRoute(
+  supabase: any,
+  cable: any,
+  ctx: { reserveFromM: number; reserveToM: number; overrideM: number | null },
+): Promise<number | null> {
+  if (ctx.overrideM != null && ctx.overrideM >= 0) return ctx.overrideM;
+  const rackPortId: string | null = cable.from_port_id ?? cable.to_port_id ?? null;
+  if (!rackPortId) return null;
+  const otherEndpointId: string | null =
+    cable.from_port_id ? cable.to_endpoint_id : cable.from_endpoint_id;
+  if (!otherEndpointId) return null;
+
+  // Resolve rack anchor (x,y on floor plan) from the port -> panel -> rack chain.
+  const { data: port } = await supabase
+    .from("patch_ports")
+    .select("panel_id")
+    .eq("id", rackPortId)
+    .maybeSingle();
+  if (!port?.panel_id) return null;
+  const { data: panel } = await supabase
+    .from("patch_panels")
+    .select("rack_id")
+    .eq("id", port.panel_id)
+    .maybeSingle();
+  if (!panel?.rack_id) return null;
+  const { data: rack } = await supabase
+    .from("racks")
+    .select("id, floor_plan_id, x, y")
+    .eq("id", panel.rack_id)
+    .maybeSingle();
+  if (!rack) return null;
+
+  const { data: ep } = await supabase
+    .from("endpoints")
+    .select("norm_x, norm_y, floor_plan_id")
+    .eq("id", otherEndpointId)
+    .maybeSingle();
+  if (!ep || ep.floor_plan_id !== rack.floor_plan_id) return null;
+
+  const [{ data: bundles }, { data: cal }] = await Promise.all([
+    supabase
+      .from("cable_bundles")
+      .select("id, points, rack_id, is_primary")
+      .eq("floor_plan_id", rack.floor_plan_id),
+    supabase
+      .from("floor_plan_calibrations")
+      .select("point_a_norm_x, point_a_norm_y, point_b_norm_x, point_b_norm_y, real_distance_m")
+      .eq("floor_plan_id", rack.floor_plan_id)
+      .maybeSingle(),
+  ]);
+
+  if (!bundles || bundles.length === 0) return null;
+  const calibration = cal
+    ? {
+        a: { x: Number(cal.point_a_norm_x), y: Number(cal.point_a_norm_y) },
+        b: { x: Number(cal.point_b_norm_x), y: Number(cal.point_b_norm_y) },
+        real_distance_m: Number(cal.real_distance_m),
+      }
+    : null;
+  const mpu = metersPerNormUnit(calibration);
+  if (mpu == null) return null;
+
+  const parsed: Bundle[] = bundles.map((b: any) => ({
+    id: b.id as string,
+    rackId: (b.rack_id as string | null) ?? null,
+    isPrimary: Boolean(b.is_primary),
+    points: Array.isArray(b.points)
+      ? (b.points as any[])
+          .map((p) => ({ x: Number(p.x ?? p.norm_x), y: Number(p.y ?? p.norm_y) }))
+          .filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y))
+      : [],
+  }));
+  const route = computeRouteViaTrunk({
+    rack: { x: Number(rack.x), y: Number(rack.y) },
+    endpoint: { x: Number(ep.norm_x), y: Number(ep.norm_y) },
+    bundles: parsed,
+    rackId: rack.id as string,
+  });
+  if (!route) return null;
+  return route.normLen * mpu + ctx.reserveFromM + ctx.reserveToM;
+}
+
 const CABLE_RECOMPUTE_COLS =
-  "id, cable_type_id, route_id, override_length_m, from_endpoint_id, to_endpoint_id";
+  "id, cable_type_id, route_id, override_length_m, from_endpoint_id, to_endpoint_id, from_port_id, to_port_id";
 
 export async function recomputeCablesByRoute(supabase: any, routeId: string): Promise<number> {
   const { data: cables } = await supabase
