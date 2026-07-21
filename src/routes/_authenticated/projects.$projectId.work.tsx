@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PlanCanvasSurface } from "@/components/plan-canvas-surface";
-import { getPullModeData, setCablePullStatus } from "@/lib/pullTasks.functions";
+import { getPullModeData, setCablePullStatus, setCableQueuedForPull } from "@/lib/pullTasks.functions";
 import { endpointKindInfo } from "@/lib/endpointKinds";
 import type { NormPoint } from "@/lib/length";
 
@@ -44,7 +44,9 @@ type PullCable = {
   branchPoints: NormPoint[];
   bundleId: string | null;
   notes: string | null;
+  queuedForPull: boolean;
 };
+
 
 type Endpoint = {
   id: string;
@@ -105,6 +107,7 @@ function WorkModePage() {
   const qc = useQueryClient();
   const pullDataFn = useServerFn(getPullModeData);
   const setStatusFn = useServerFn(setCablePullStatus);
+  const setQueuedFn = useServerFn(setCableQueuedForPull);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("map");
   const [selectedCableId, setSelectedCableId] = useState<string | null>(null);
@@ -129,6 +132,23 @@ function WorkModePage() {
       toast.error(err instanceof Error ? err.message : "Chyba");
     }
   }
+
+  async function toggleQueue(cable: PullCable) {
+    // If already pulled — this button acts as return-to-queue (unset PULLED).
+    if (cable.status === "PULLED") {
+      await toggleCable(cable, false);
+      return;
+    }
+    try {
+      const next = !cable.queuedForPull;
+      await setQueuedFn({ data: { cableId: cable.id, queued: next } });
+      await qc.invalidateQueries({ queryKey: ["pull-mode", projectId] });
+      toast.success(next ? `Ve frontě: ${cable.code}` : `Odebráno z fronty: ${cable.code}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Chyba");
+    }
+  }
+
 
   return (
     <AppShell projectId={projectId}>
@@ -183,7 +203,7 @@ function WorkModePage() {
           endpoints={pull.data.endpoints.filter((e) => e.floorPlanId === selectedPlanId)}
           patchPanels={pull.data.patchPanels.filter((p) => p.floorPlanId === selectedPlanId)}
           cables={pull.data.cables.filter((c) => c.floorPlanId === selectedPlanId)}
-          allSpools={pull.data.spools}
+          planBlock={pull.data.planBlocks?.find((b) => b.floorPlanId === selectedPlanId) ?? null}
           allDayBlocks={pull.data.dayBlocks ?? []}
           tab={tab}
           setTab={setTab}
@@ -196,8 +216,10 @@ function WorkModePage() {
           note={note}
           setNote={setNote}
           onToggleCable={toggleCable}
+          onToggleQueue={toggleQueue}
         />
       )}
+
     </AppShell>
   );
 }
@@ -285,14 +307,17 @@ function PlanWorkspace(props: {
   endpoints: Endpoint[];
   patchPanels: PatchPanel[];
   cables: PullCable[];
-  allSpools: Array<{
-    typeCode: string;
-    index: number;
-    used: number;
-    capacity: number;
-    wasted: number;
-    cables: Array<{ id: string; code: string; meters: number }>;
-  }>;
+  planBlock: {
+    id: string;
+    floorPlanId: string;
+    name: string;
+    spoolCount: number;
+    spoolLengthM: number;
+    totalUsed: number;
+    totalCapacity: number;
+    hasPhysical: boolean;
+    spools: SpoolRow[];
+  } | null;
   allDayBlocks: DayBlock[];
   tab: Tab;
   setTab: (t: Tab) => void;
@@ -305,13 +330,15 @@ function PlanWorkspace(props: {
   note: string;
   setNote: (v: string) => void;
   onToggleCable: (c: PullCable, done: boolean) => void;
+  onToggleQueue: (c: PullCable) => void;
 }) {
   const {
-    plan, bundles, endpoints, patchPanels, cables, allSpools, allDayBlocks,
+    plan, bundles, endpoints, patchPanels, cables, planBlock, allDayBlocks,
     tab, setTab, selectedCableId, setSelectedCableId,
     selectedEndpointId, setSelectedEndpointId,
-    onlyTodo, setOnlyTodo, note, setNote, onToggleCable,
+    onlyTodo, setOnlyTodo, note, setNote, onToggleCable, onToggleQueue,
   } = props;
+
   const [hoveredCableId, setHoveredCableId] = useState<string | null>(null);
 
 
@@ -378,6 +405,8 @@ function PlanWorkspace(props: {
                 setSelectedCableId(null);
               }}
               onToggle={onToggleCable}
+              onToggleQueue={onToggleQueue}
+
             />
           </section>
 
@@ -422,21 +451,15 @@ function PlanWorkspace(props: {
 
       {tab === "queue" && (
         <QueueTab
-          cables={filteredCables}
-          bundles={bundles}
-          onlyTodo={onlyTodo}
-          setOnlyTodo={setOnlyTodo}
-          note={note}
-          setNote={setNote}
-          selectedCableId={selectedCableId}
-          setSelectedCableId={setSelectedCableId}
+          cables={cables}
           onToggle={onToggleCable}
+          onToggleQueue={onToggleQueue}
         />
       )}
 
       {tab === "spools" && (
         <SpoolsTab
-          spools={allSpools}
+          planBlock={planBlock}
           dayBlocks={allDayBlocks.filter(
             (b) => b.floorPlanId == null || b.floorPlanId === plan?.id,
           )}
@@ -444,6 +467,7 @@ function PlanWorkspace(props: {
           onToggle={onToggleCable}
         />
       )}
+
     </div>
   );
 }
@@ -621,93 +645,139 @@ function Attr({ label, value }: { label: string; value: string }) {
 /* ----------------------------- Queue tab ----------------------------- */
 
 function QueueTab({
-  cables, bundles, onlyTodo, setOnlyTodo, note, setNote, selectedCableId, setSelectedCableId, onToggle,
+  cables,
+  onToggle,
+  onToggleQueue,
 }: {
   cables: PullCable[];
-  bundles: Bundle[];
-  onlyTodo: boolean;
-  setOnlyTodo: (v: boolean) => void;
-  note: string;
-  setNote: (v: string) => void;
-  selectedCableId: string | null;
-  setSelectedCableId: (id: string | null) => void;
   onToggle: (c: PullCable, done: boolean) => void;
+  onToggleQueue: (c: PullCable) => void;
 }) {
-  const selected = cables.find((c) => c.id === selectedCableId) ?? null;
+  const queued = cables.filter((c) => c.queuedForPull && c.status !== "PULLED");
+  const pulled = cables.filter((c) => c.status === "PULLED");
+  const queuedMeters = queued.reduce((a, c) => a + (c.meters ?? 0), 0);
+  const pulledMeters = pulled.reduce((a, c) => a + (c.meters ?? 0), 0);
+
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-      <section className="rounded-sm border border-border bg-card">
-        <div className="flex items-center justify-between border-b border-border p-3">
-          <div className="font-mono text-sm font-semibold uppercase">Fronta tahání</div>
-          <label className="flex items-center gap-2 text-xs text-muted-foreground">
-            <input type="checkbox" checked={onlyTodo} onChange={(e) => setOnlyTodo(e.target.checked)} />
-            jen nehotové
-          </label>
+    <div className="space-y-4">
+      <section className="rounded-sm border-2 border-accent bg-card">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border p-3">
+          <div className="flex items-center gap-2">
+            <Circle className="h-4 w-4 text-accent" />
+            <h2 className="font-mono text-sm font-bold uppercase">Označené k tahání</h2>
+            <Badge variant="outline" className="font-mono text-[10px]">
+              {queued.length} kabelů · {queuedMeters.toFixed(1)} m
+            </Badge>
+          </div>
+          <Button
+            size="sm"
+            disabled={queued.length === 0}
+            onClick={() =>
+              toast.info(
+                `Fronta ${queued.length} kabelů je připravena. Přejdi do Manažera tahání.`,
+              )
+            }
+          >
+            Odeslat k tahání
+          </Button>
         </div>
-        <div className="max-h-[560px] divide-y divide-border overflow-y-auto">
-          {cables.map((c) => {
-            const done = c.status === "PULLED";
-            const active = c.id === selectedCableId;
-            return (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => setSelectedCableId(c.id)}
-                className={`flex w-full items-center gap-2 p-3 text-left transition-colors hover:bg-muted/50 ${
-                  active ? "bg-muted" : ""
-                }`}
-              >
-                {done ? (
-                  <CheckCircle2 className="h-5 w-5 text-accent" />
-                ) : (
-                  <Circle className="h-5 w-5 text-muted-foreground" />
-                )}
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-mono text-sm font-semibold">{c.code}</span>
-                  <span className="block truncate text-xs text-muted-foreground">
-                    {c.fromEndpointCode ?? "?"} → {c.toEndpointCode ?? "?"} · {c.typeCode} ·{" "}
-                    {c.meters == null ? "—" : `${c.meters.toFixed(1)} m`}
-                  </span>
-                </span>
-                <Badge variant={done ? "secondary" : "outline"} className="font-mono text-[10px]">
-                  {done ? "HOTOVO" : "TAHAT"}
-                </Badge>
-              </button>
-            );
-          })}
-          {cables.length === 0 && (
-            <div className="p-6 text-center text-sm text-muted-foreground">Ve frontě nic není.</div>
+        <div className="max-h-[400px] divide-y divide-border overflow-y-auto">
+          {queued.length === 0 && (
+            <div className="p-6 text-center text-sm text-muted-foreground">
+              Na mapě klikni na endpoint a u kabelu vyber „TAHAT" — objeví se zde.
+            </div>
           )}
+          {queued.map((c) => (
+            <div key={c.id} className="flex items-center gap-2 p-3">
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-mono text-sm font-semibold">{c.code}</span>
+                <span className="block truncate text-xs text-muted-foreground">
+                  {c.fromEndpointCode ?? "?"} → {c.toEndpointCode ?? "?"} · {c.typeCode} ·{" "}
+                  {c.meters == null ? "—" : `${c.meters.toFixed(1)} m`}
+                </span>
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onToggleQueue(c)}
+                className="h-8 px-2 font-mono text-[10px]"
+              >
+                Odebrat
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => onToggle(c, true)}
+                className="h-8 px-2 font-mono text-[10px]"
+              >
+                Nataženo
+              </Button>
+            </div>
+          ))}
         </div>
       </section>
-      <aside>
-        {selected ? (
-          <CableDetail
-            cable={selected}
-            bundleCode={bundles.find((b) => b.id === selected.bundleId)?.code ?? null}
-            note={note}
-            setNote={setNote}
-            onToggle={onToggle}
-          />
-        ) : (
-          <div className="rounded-sm border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-            Vyber kabel z fronty.
+
+      <section className="rounded-sm border border-border bg-card">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border p-3">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-primary" />
+            <h2 className="font-mono text-sm font-bold uppercase">Nataženo</h2>
+            <Badge variant="outline" className="font-mono text-[10px]">
+              {pulled.length} kabelů · {pulledMeters.toFixed(1)} m
+            </Badge>
           </div>
-        )}
-      </aside>
+        </div>
+        <div className="max-h-[400px] divide-y divide-border overflow-y-auto">
+          {pulled.length === 0 && (
+            <div className="p-6 text-center text-sm text-muted-foreground">
+              Zatím žádný natažený kabel.
+            </div>
+          )}
+          {pulled.map((c) => (
+            <div key={c.id} className="flex items-center gap-2 p-3">
+              <CheckCircle2 className="h-5 w-5 shrink-0 text-primary" />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-mono text-sm font-semibold">{c.code}</span>
+                <span className="block truncate text-xs text-muted-foreground">
+                  {c.fromEndpointCode ?? "?"} → {c.toEndpointCode ?? "?"} · {c.typeCode} ·{" "}
+                  {c.meters == null ? "—" : `${c.meters.toFixed(1)} m`}
+                </span>
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onToggle(c, false)}
+                className="h-8 px-2 font-mono text-[10px]"
+              >
+                Vrátit
+              </Button>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
 
+
 /* ----------------------------- Spools tab ----------------------------- */
 
 function SpoolsTab({
-  spools,
+  planBlock,
   dayBlocks,
   cables,
   onToggle,
 }: {
-  spools: SpoolRow[];
+  planBlock: {
+    id: string;
+    floorPlanId: string;
+    name: string;
+    spoolCount: number;
+    spoolLengthM: number;
+    totalUsed: number;
+    totalCapacity: number;
+    hasPhysical: boolean;
+    spools: SpoolRow[];
+  } | null;
   dayBlocks: DayBlock[];
   cables: PullCable[];
   onToggle: (c: PullCable, done: boolean) => void;
@@ -718,20 +788,15 @@ function SpoolsTab({
     return m;
   }, [cables]);
 
-  const byType = new Map<string, SpoolRow[]>();
-  for (const s of spools) {
-    const arr = byType.get(s.typeCode) ?? [];
-    arr.push(s);
-    byType.set(s.typeCode, arr);
-  }
-
-  if (spools.length === 0 && dayBlocks.length === 0) {
+  if ((!planBlock || planBlock.spools.length === 0) && dayBlocks.length === 0) {
     return (
       <div className="rounded-sm border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
-        Spulky nejde nasimulovat, dokud kabely nemají trasu a kalibraci.
+        Pro tento plán nejsou přiřazené fyzické špulky ani žádné kabely ve frontě. V editoru plánu
+        přiřaď špulky v záložce „Metráž & Špulky" a na mapě označ kabely k tahání.
       </div>
     );
   }
+
 
   const hasBlocks = dayBlocks.length > 0;
 
@@ -782,52 +847,36 @@ function SpoolsTab({
           );
         })}
 
-      {spools.length > 0 && (
-        <>
-          {hasBlocks && (
-            <div className="border-t border-dashed border-border pt-2 font-mono text-xs uppercase tracking-wide text-muted-foreground">
-              Nezařazené kabely (bez denního bloku)
+      {planBlock && planBlock.spools.length > 0 && (
+        <section className="rounded-sm border border-border bg-card">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border p-3">
+            <div className="flex items-center gap-2">
+              <PackageOpen className="h-4 w-4 text-muted-foreground" />
+              <h2 className="font-mono text-sm font-bold uppercase">{planBlock.name}</h2>
+              <Badge variant="outline" className="font-mono text-[10px]">
+                {planBlock.hasPhysical ? "Fyzické špulky" : "Odhad"}
+              </Badge>
+              <Badge variant="outline" className="font-mono text-[10px]">
+                {planBlock.spoolCount} ks
+              </Badge>
             </div>
-          )}
-          {Array.from(byType.entries()).map(([typeCode, list]) => {
-            let typePulled = 0;
-            let typePlanned = 0;
-            for (const s of list) {
-              typePlanned += s.used;
-              for (const c of s.cables) {
-                if (cableById.get(c.id)?.status === "PULLED") typePulled += c.meters;
-              }
-            }
-            return (
-              <section key={typeCode} className="rounded-sm border border-border bg-card">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border p-3">
-                  <div className="flex items-center gap-2">
-                    <PackageOpen className="h-4 w-4 text-muted-foreground" />
-                    <h2 className="font-mono text-sm font-bold uppercase">{typeCode}</h2>
-                    <Badge variant="outline" className="font-mono text-[10px]">
-                      {list.length} {list.length === 1 ? "spulka" : list.length < 5 ? "spulky" : "spulek"}
-                    </Badge>
-                  </div>
-                  <div className="font-mono text-xs text-muted-foreground">
-                    nataženo {typePulled.toFixed(1)} / plán {typePlanned.toFixed(1)} m ·{" "}
-                    zbývá {Math.max(0, typePlanned - typePulled).toFixed(1)} m
-                  </div>
-                </div>
-                <div className="grid gap-4 p-4 lg:grid-cols-2">
-                  {list.map((spool) => (
-                    <SpoolCard
-                      key={`${typeCode}-${spool.index}`}
-                      spool={spool}
-                      cableById={cableById}
-                      onToggle={onToggle}
-                    />
-                  ))}
-                </div>
-              </section>
-            );
-          })}
-        </>
+            <div className="font-mono text-xs text-muted-foreground">
+              využito {planBlock.totalUsed.toFixed(1)} / {planBlock.totalCapacity.toFixed(0)} m
+            </div>
+          </div>
+          <div className="grid gap-4 p-4 lg:grid-cols-2">
+            {planBlock.spools.map((spool) => (
+              <SpoolCard
+                key={`${planBlock.id}-${spool.index}`}
+                spool={spool}
+                cableById={cableById}
+                onToggle={onToggle}
+              />
+            ))}
+          </div>
+        </section>
       )}
+
     </div>
   );
 }
@@ -1049,7 +1098,7 @@ function SpoolDrum({ pulledPct }: { pulledPct: number }) {
 /* ----------------------------- Map ----------------------------- */
 
 function PullMap({
-  plan, bundles, endpoints, cables, selectedCableId, selectedEndpointId, hoveredCableId, onSelectCable, onSelectEndpoint, onToggle,
+  plan, bundles, endpoints, cables, selectedCableId, selectedEndpointId, hoveredCableId, onSelectCable, onSelectEndpoint, onToggle, onToggleQueue,
 }: {
   plan: Plan | null;
   bundles: Bundle[];
@@ -1061,7 +1110,9 @@ function PullMap({
   onSelectCable: (id: string) => void;
   onSelectEndpoint: (id: string) => void;
   onToggle?: (c: PullCable, done: boolean) => void;
+  onToggleQueue?: (c: PullCable) => void;
 }) {
+
   const containerRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ tx: 0, ty: 0, s: 1 });
   const viewRef = useRef({ tx: 0, ty: 0, s: 1 });
@@ -1249,24 +1300,35 @@ function PullMap({
                   <div className="mt-1 max-h-40 space-y-1 overflow-y-auto">
                     {selectedEndpointCables.map((c) => {
                       const cdone = c.status === "PULLED";
+                      const queued = c.queuedForPull;
+                      const label = cdone ? "HOTOVO" : queued ? "VE FRONTĚ" : "TAHAT →";
+                      const tone = cdone
+                        ? "border-primary/40 bg-primary/10 text-foreground"
+                        : queued
+                          ? "border-accent bg-accent/10 text-foreground"
+                          : "border-border hover:border-primary hover:bg-primary/5 text-muted-foreground";
                       return (
                         <button
                           key={c.id}
                           type="button"
-                          onClick={(e) => { e.stopPropagation(); onToggle?.(c, !cdone); }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (cdone) {
+                              onToggle?.(c, false);
+                            } else {
+                              onToggleQueue?.(c);
+                            }
+                          }}
                           disabled={!onToggle}
-                          className={`flex w-full items-center justify-between gap-2 rounded-sm border px-2 py-1 font-mono text-[10px] transition-colors ${
-                            cdone
-                              ? "border-primary/40 bg-primary/10 text-foreground"
-                              : "border-border hover:border-primary hover:bg-primary/5 text-muted-foreground"
-                          }`}
-                          title={cdone ? "Klikni pro vrácení na TAHAT" : "Klikni pro označení HOTOVO"}
+                          className={`flex w-full items-center justify-between gap-2 rounded-sm border px-2 py-1 font-mono text-[10px] transition-colors ${tone}`}
+                          title={cdone ? "Klikni pro vrácení" : queued ? "Klikni pro odebrání z fronty" : "Klikni pro zařazení do fronty"}
                         >
                           <span>{c.code}</span>
-                          <span className={cdone ? "text-primary" : "text-accent"}>{cdone ? "HOTOVO" : "TAHAT →"}</span>
+                          <span className={cdone ? "text-primary" : queued ? "text-accent" : "text-accent"}>{label}</span>
                         </button>
                       );
                     })}
+
                   </div>
                 </div>
               )}
