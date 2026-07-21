@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PlanCanvasSurface } from "@/components/plan-canvas-surface";
-import { getPullModeData, setCablePullStatus } from "@/lib/pullTasks.functions";
+import { getPullModeData, setCablePullStatus, setCableQueuedForPull } from "@/lib/pullTasks.functions";
 import { endpointKindInfo } from "@/lib/endpointKinds";
 import type { NormPoint } from "@/lib/length";
 
