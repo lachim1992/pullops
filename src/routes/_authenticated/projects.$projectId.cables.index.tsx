@@ -27,6 +27,7 @@ import {
 } from "@/lib/cables.functions";
 import { listCableTypes } from "@/lib/cableTypes.functions";
 import { listEndpoints } from "@/lib/endpoints.functions";
+import { listPatchPortsForProject } from "@/lib/patchPanels.functions";
 
 const STATUSES = ["PLANNED", "PULLED", "TERMINATED", "DONE", "CANCELLED"] as const;
 type Status = (typeof STATUSES)[number];
