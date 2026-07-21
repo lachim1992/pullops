@@ -3,7 +3,16 @@ import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { ArrowLeft, Cable as CableIcon, Link2Off, Plug } from "lucide-react";
+import { ArrowLeft, Cable as CableIcon, Link2Off, Plug, Plus, Search, X } from "lucide-react";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
 
 import { AppShell } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
