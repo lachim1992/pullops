@@ -364,6 +364,131 @@ function PatchPanelDetailPage() {
           </CommandGroup>
         </CommandList>
       </CommandDialog>
+
+      <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Přidat kabely do panelu</DialogTitle>
+          </DialogHeader>
+          <div className="text-xs text-muted-foreground">
+            Zaklikni kabely v pořadí, v jakém mají obsadit volné porty. První vybraný kabel obsadí
+            nejnižší volný port, další následují.
+          </div>
+          {(() => {
+            const freePortsCount = (panel.data?.ports ?? []).filter((p: any) => !p.cable).length;
+            const freeCables = (cablesQ.data ?? []).filter((c: any) => {
+              if (c.status === "CANCELLED") return false;
+              return !c.from_port_id;
+            });
+            const q = bulkSearch.trim().toLowerCase();
+            const filtered = q
+              ? freeCables.filter((c: any) => {
+                  const ep = c.to_endpoint_id ? endpointById.get(c.to_endpoint_id) : null;
+                  const hay = [c.code, ep?.code, ep?.label, c.status]
+                    .filter(Boolean)
+                    .join(" ")
+                    .toLowerCase();
+                  return hay.includes(q);
+                })
+              : freeCables;
+            return (
+              <>
+                <div className="flex items-center gap-2 rounded-sm border border-input px-2">
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                  <input
+                    autoFocus
+                    value={bulkSearch}
+                    onChange={(e) => setBulkSearch(e.target.value)}
+                    placeholder="Hledat kabel podle kódu, endpointu…"
+                    className="flex-1 bg-transparent py-2 text-sm outline-none"
+                  />
+                </div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>
+                    Volné porty: <b className="font-mono">{freePortsCount}</b> · Vybráno:{" "}
+                    <b className="font-mono">{bulkSelected.length}</b>
+                  </span>
+                  {bulkSelected.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setBulkSelected([])}
+                      className="hover:underline"
+                    >
+                      Zrušit výběr
+                    </button>
+                  )}
+                </div>
+                <div className="max-h-[50vh] overflow-y-auto rounded-sm border border-border">
+                  {filtered.length === 0 ? (
+                    <div className="p-4 text-center text-sm text-muted-foreground">
+                      Žádné volné kabely.
+                    </div>
+                  ) : (
+                    <ul className="divide-y divide-border">
+                      {filtered.map((c: any) => {
+                        const ep = c.to_endpoint_id ? endpointById.get(c.to_endpoint_id) : null;
+                        const order = bulkSelected.indexOf(c.id);
+                        const selected = order !== -1;
+                        const firstFree = (panel.data?.ports ?? [])
+                          .filter((p: any) => !p.cable)
+                          .sort((a: any, b: any) => a.port_number - b.port_number);
+                        const portNo = selected ? firstFree[order]?.port_number : null;
+                        return (
+                          <li key={c.id}>
+                            <button
+                              type="button"
+                              onClick={() => toggleBulk(c.id)}
+                              className={`flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-muted/40 ${
+                                selected ? "bg-primary/5" : ""
+                              }`}
+                            >
+                              <span
+                                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border font-mono text-[11px] ${
+                                  selected
+                                    ? "border-primary bg-primary text-primary-foreground"
+                                    : "border-border text-muted-foreground"
+                                }`}
+                              >
+                                {selected ? order + 1 : ""}
+                              </span>
+                              <span className="font-mono text-sm">{c.code}</span>
+                              {ep && (
+                                <span className="truncate text-xs text-muted-foreground">
+                                  → {ep.code}
+                                  {ep.label ? ` · ${ep.label}` : ""}
+                                </span>
+                              )}
+                              <span className="ml-auto flex items-center gap-2">
+                                {portNo != null && (
+                                  <span className="font-mono text-[10px] text-primary">
+                                    → port #{portNo}
+                                  </span>
+                                )}
+                                <span className="font-mono text-[10px] text-muted-foreground">
+                                  {c.status}
+                                </span>
+                              </span>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+              </>
+            );
+          })()}
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setBulkOpen(false)}>
+              <X className="mr-1 h-4 w-4" /> Zrušit
+            </Button>
+            <Button onClick={bulkAssign} disabled={bulkSelected.length === 0}>
+              Přiřadit {bulkSelected.length > 0 ? `(${bulkSelected.length})` : ""}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppShell>
+
   );
 }
