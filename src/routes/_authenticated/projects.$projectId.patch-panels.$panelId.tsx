@@ -67,6 +67,10 @@ function PatchPanelDetailPage() {
   const [notes, setNotes] = useState("");
   const [labels, setLabels] = useState<Record<string, string>>({});
   const [assignPortId, setAssignPortId] = useState<string | null>(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkSearch, setBulkSearch] = useState("");
+  const [bulkSelected, setBulkSelected] = useState<string[]>([]);
+
 
   useEffect(() => {
     const d = panel.data;
