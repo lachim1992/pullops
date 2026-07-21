@@ -449,21 +449,15 @@ function PlanWorkspace(props: {
 
       {tab === "queue" && (
         <QueueTab
-          cables={filteredCables}
-          bundles={bundles}
-          onlyTodo={onlyTodo}
-          setOnlyTodo={setOnlyTodo}
-          note={note}
-          setNote={setNote}
-          selectedCableId={selectedCableId}
-          setSelectedCableId={setSelectedCableId}
+          cables={cables}
           onToggle={onToggleCable}
+          onToggleQueue={onToggleQueue}
         />
       )}
 
       {tab === "spools" && (
         <SpoolsTab
-          spools={allSpools}
+          planBlock={planBlock}
           dayBlocks={allDayBlocks.filter(
             (b) => b.floorPlanId == null || b.floorPlanId === plan?.id,
           )}
@@ -471,6 +465,7 @@ function PlanWorkspace(props: {
           onToggle={onToggleCable}
         />
       )}
+
     </div>
   );
 }
