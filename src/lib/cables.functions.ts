@@ -271,15 +271,16 @@ async function tryTrunkRoute(
   supabase: any,
   cable: any,
   ctx: { reserveFromM: number; reserveToM: number; overrideM: number | null },
-): Promise<number | null> {
-  if (ctx.overrideM != null && ctx.overrideM >= 0) return ctx.overrideM;
+): Promise<{ meters: number; bundleId: string | null; polyline: NormPoint[] } | null> {
+  if (ctx.overrideM != null && ctx.overrideM >= 0) {
+    return { meters: ctx.overrideM, bundleId: null, polyline: [] };
+  }
   const rackPortId: string | null = cable.from_port_id ?? cable.to_port_id ?? null;
   if (!rackPortId) return null;
   const otherEndpointId: string | null =
     cable.from_port_id ? cable.to_endpoint_id : cable.from_endpoint_id;
   if (!otherEndpointId) return null;
 
-  // Resolve rack anchor (x,y on floor plan) from the port -> panel -> rack chain.
   const { data: port } = await supabase
     .from("patch_ports")
     .select("panel_id")
@@ -318,7 +319,6 @@ async function tryTrunkRoute(
       .maybeSingle(),
   ]);
 
-  if (!bundles || bundles.length === 0) return null;
   const calibration = cal
     ? {
         a: { x: Number(cal.point_a_norm_x), y: Number(cal.point_a_norm_y) },
@@ -329,7 +329,7 @@ async function tryTrunkRoute(
   const mpu = metersPerNormUnit(calibration);
   if (mpu == null) return null;
 
-  const parsed: Bundle[] = bundles.map((b: any) => ({
+  const parsed: Bundle[] = (bundles ?? []).map((b: any) => ({
     id: b.id as string,
     rackId: (b.rack_id as string | null) ?? null,
     isPrimary: Boolean(b.is_primary),
@@ -346,8 +346,13 @@ async function tryTrunkRoute(
     rackId: rack.id as string,
   });
   if (!route) return null;
-  return route.normLen * mpu + ctx.reserveFromM + ctx.reserveToM;
+  return {
+    meters: route.normLen * mpu + ctx.reserveFromM + ctx.reserveToM,
+    bundleId: route.bundleId,
+    polyline: route.polyline,
+  };
 }
+
 
 const CABLE_RECOMPUTE_COLS =
   "id, cable_type_id, route_id, override_length_m, from_endpoint_id, to_endpoint_id, from_port_id, to_port_id";
