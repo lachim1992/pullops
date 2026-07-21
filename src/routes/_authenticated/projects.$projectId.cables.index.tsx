@@ -27,6 +27,7 @@ import {
 } from "@/lib/cables.functions";
 import { listCableTypes } from "@/lib/cableTypes.functions";
 import { listEndpoints } from "@/lib/endpoints.functions";
+import { listPatchPortsForProject } from "@/lib/patchPanels.functions";
 
 const STATUSES = ["PLANNED", "PULLED", "TERMINATED", "DONE", "CANCELLED"] as const;
 type Status = (typeof STATUSES)[number];
@@ -43,6 +44,7 @@ function CablesPage() {
   const listTypesFn = useServerFn(listCableTypes);
   const listEpFn = useServerFn(listEndpoints);
   const recomputeFn = useServerFn(recomputeProjectLengths);
+  const listPortsFn = useServerFn(listPatchPortsForProject);
   const qc = useQueryClient();
   const [filter, setFilter] = useState<Status | "ALL">("ALL");
 
@@ -58,6 +60,10 @@ function CablesPage() {
     queryKey: ["endpoints", projectId],
     queryFn: () => listEpFn({ data: { projectId } }),
   });
+  const ports = useQuery({
+    queryKey: ["patch-ports", projectId],
+    queryFn: () => listPortsFn({ data: { projectId } }),
+  });
 
   const typeById = useMemo(() => {
     const m = new Map<string, string>();
@@ -69,6 +75,13 @@ function CablesPage() {
     (eps.data ?? []).forEach((e) => m.set(e.id, e.code));
     return m;
   }, [eps.data]);
+  const portLabel = useMemo(() => {
+    const m = new Map<string, string>();
+    (ports.data ?? []).forEach((p) =>
+      m.set(p.id, `${p.panel_code}/${String(p.port_number).padStart(2, "0")}`),
+    );
+    return m;
+  }, [ports.data]);
 
   const filtered = (cables.data ?? []).filter((c) =>
     filter === "ALL" ? true : c.status === filter,
@@ -167,10 +180,18 @@ function CablesPage() {
                   </td>
                   <td className="p-2">{c.cable_type_id ? typeById.get(c.cable_type_id) : "—"}</td>
                   <td className="p-2 font-mono text-xs">
-                    {c.from_endpoint_id ? epById.get(c.from_endpoint_id) : "—"}
+                    {c.from_port_id
+                      ? portLabel.get(c.from_port_id) ?? "port"
+                      : c.from_endpoint_id
+                        ? epById.get(c.from_endpoint_id)
+                        : "—"}
                   </td>
                   <td className="p-2 font-mono text-xs">
-                    {c.to_endpoint_id ? epById.get(c.to_endpoint_id) : "—"}
+                    {c.to_port_id
+                      ? portLabel.get(c.to_port_id) ?? "port"
+                      : c.to_endpoint_id
+                        ? epById.get(c.to_endpoint_id)
+                        : "—"}
                   </td>
                   <td className="p-2">
                     <select

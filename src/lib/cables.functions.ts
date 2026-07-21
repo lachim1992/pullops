@@ -52,7 +52,7 @@ export const listCables = createServerFn({ method: "GET" })
     const { data: rows, error } = await supabase
       .from("cables")
       .select(
-        "id, code, status, cable_type_id, route_id, from_endpoint_id, to_endpoint_id, computed_length_m, override_length_m, notes, updated_at",
+        "id, code, status, cable_type_id, route_id, from_endpoint_id, to_endpoint_id, from_port_id, to_port_id, computed_length_m, override_length_m, notes, updated_at",
       )
       .eq("project_id", data.projectId)
       .order("code", { ascending: true });
