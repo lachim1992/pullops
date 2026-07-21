@@ -472,10 +472,24 @@ function PullManagerPage() {
                             </Select>
                           </div>
                           <div className="col-span-2 text-sm">
-                            {p.plannedLengthM != null ? `${p.plannedLengthM.toFixed(1)} m` : "— m"}
-                            {p.note && (
-                              <div className="text-[10px] text-amber-600">{p.note}</div>
-                            )}
+                            {(() => {
+                              const eq = equalizedLength.get(i);
+                              const base = p.plannedLengthM;
+                              const bumped = eq != null && base != null && eq > base;
+                              return (
+                                <>
+                                  <div>{eq != null ? `${eq.toFixed(1)} m` : "— m"}</div>
+                                  {bumped && (
+                                    <div className="text-[10px] text-primary">
+                                      roller: +{(eq! - base!).toFixed(1)} m (plán {base!.toFixed(1)})
+                                    </div>
+                                  )}
+                                  {p.note && (
+                                    <div className="text-[10px] text-amber-600">{p.note}</div>
+                                  )}
+                                </>
+                              );
+                            })()}
                           </div>
                           <div className="col-span-4">
                             <Select
