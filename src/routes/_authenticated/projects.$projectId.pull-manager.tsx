@@ -532,7 +532,83 @@ function PullManagerPage() {
                   </CardContent>
                 </Card>
               )}
+
+              {pairs.length > 0 && (
+                <Card>
+                  <CardHeader className="space-y-1">
+                    <CardTitle className="text-lg">Krok 3 — Roller (spárování cívek)</CardTitle>
+                    <div className="text-xs text-muted-foreground">
+                      Cívky na jednom rolleru musí táhnout stejnou délku. Vyberte dvě a více cívek a přidejte skupinu — plánovaná délka se srovná na nejdelší z nich.
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex flex-wrap gap-2">
+                      {pairs
+                        .map((p) => p.spoolId)
+                        .filter((x, i, arr): x is string => !!x && arr.indexOf(x) === i)
+                        .map((sid) => {
+                          const s = spoolById.get(sid);
+                          const picked = groupPick.includes(sid);
+                          const inGroup = rollerGroups.findIndex((g) => g.includes(sid));
+                          return (
+                            <button
+                              key={sid}
+                              type="button"
+                              onClick={() => toggleGroupPick(sid)}
+                              className={`rounded-md border px-3 py-2 text-xs font-mono transition-colors ${
+                                picked
+                                  ? "border-primary bg-primary/10"
+                                  : inGroup >= 0
+                                    ? "border-amber-500/60 bg-amber-500/10"
+                                    : "hover:bg-muted"
+                              }`}
+                            >
+                              {s?.serial_no ?? sid.slice(0, 6)}
+                              {inGroup >= 0 && (
+                                <span className="ml-1 text-amber-700">· G{inGroup + 1}</span>
+                              )}
+                            </button>
+                          );
+                        })}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={addRollerGroup} disabled={groupPick.length < 2}>
+                        Přidat skupinu ({groupPick.length})
+                      </Button>
+                      {groupPick.length > 0 && (
+                        <Button size="sm" variant="ghost" onClick={() => setGroupPick([])}>
+                          Zrušit výběr
+                        </Button>
+                      )}
+                    </div>
+                    {rollerGroups.length > 0 && (
+                      <div className="space-y-1">
+                        {rollerGroups.map((g, gi) => (
+                          <div
+                            key={gi}
+                            className="flex items-center gap-2 rounded border bg-muted/30 px-2 py-1 text-xs"
+                          >
+                            <Badge variant="outline">G{gi + 1}</Badge>
+                            <span className="font-mono">
+                              {g.map((s) => spoolById.get(s)?.serial_no ?? s.slice(0, 6)).join(" + ")}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="ml-auto h-6 w-6"
+                              onClick={() => removeRollerGroup(gi)}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
+
 
             <TabsContent value="active" className="space-y-3">
               {!activeRound ? (
