@@ -44,6 +44,7 @@ function CablesPage() {
   const listTypesFn = useServerFn(listCableTypes);
   const listEpFn = useServerFn(listEndpoints);
   const recomputeFn = useServerFn(recomputeProjectLengths);
+  const listPortsFn = useServerFn(listPatchPortsForProject);
   const qc = useQueryClient();
   const [filter, setFilter] = useState<Status | "ALL">("ALL");
 
@@ -59,6 +60,10 @@ function CablesPage() {
     queryKey: ["endpoints", projectId],
     queryFn: () => listEpFn({ data: { projectId } }),
   });
+  const ports = useQuery({
+    queryKey: ["patch-ports", projectId],
+    queryFn: () => listPortsFn({ data: { projectId } }),
+  });
 
   const typeById = useMemo(() => {
     const m = new Map<string, string>();
@@ -70,6 +75,13 @@ function CablesPage() {
     (eps.data ?? []).forEach((e) => m.set(e.id, e.code));
     return m;
   }, [eps.data]);
+  const portLabel = useMemo(() => {
+    const m = new Map<string, string>();
+    (ports.data ?? []).forEach((p) =>
+      m.set(p.id, `${p.panel_code}/${String(p.port_number).padStart(2, "0")}`),
+    );
+    return m;
+  }, [ports.data]);
 
   const filtered = (cables.data ?? []).filter((c) =>
     filter === "ALL" ? true : c.status === filter,
