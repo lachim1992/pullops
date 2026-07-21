@@ -239,9 +239,22 @@ function PatchPanelDetailPage() {
         </div>
       </div>
 
-      <h2 className="mb-2 text-sm font-semibold uppercase tracking-widest text-muted-foreground">
-        Porty ({panel.data.ports.length})
-      </h2>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground">
+          Porty ({panel.data.ports.length})
+        </h2>
+        <Button
+          size="sm"
+          onClick={() => {
+            setBulkSelected([]);
+            setBulkSearch("");
+            setBulkOpen(true);
+          }}
+        >
+          <Plus className="mr-1 h-4 w-4" /> Přidat kabely
+        </Button>
+      </div>
+
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {panel.data.ports.map((p: any) => {
           const cable = p.cable as {
