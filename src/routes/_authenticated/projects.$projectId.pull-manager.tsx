@@ -404,7 +404,7 @@ function PullManagerPage() {
                       size="lg"
                       className="h-12 text-base"
                       onClick={addPair}
-                      disabled={selected.length !== 2 || !!activeRound}
+                      disabled={selected.length !== 2 || !!activeRound || pairs.length >= spoolCapacity}
                     >
                       Spojit → kabel
                     </Button>
