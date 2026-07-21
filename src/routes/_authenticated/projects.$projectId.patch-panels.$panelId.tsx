@@ -146,7 +146,44 @@ function PatchPanelDetailPage() {
     }
   }
 
+  async function bulkAssign() {
+    if (!panel.data) return;
+    const freePorts = panel.data.ports
+      .filter((p: any) => !p.cable)
+      .sort((a: any, b: any) => a.port_number - b.port_number);
+    if (bulkSelected.length === 0) {
+      toast.error("Vyber alespoň jeden kabel");
+      return;
+    }
+    if (bulkSelected.length > freePorts.length) {
+      toast.error(`Volných portů je jen ${freePorts.length}, vybráno ${bulkSelected.length}`);
+      return;
+    }
+    try {
+      for (let i = 0; i < bulkSelected.length; i++) {
+        await updateCableFn({
+          data: { id: bulkSelected[i], fromPortId: freePorts[i].id },
+        });
+      }
+      toast.success(`Přiřazeno ${bulkSelected.length} kabelů`);
+      setBulkOpen(false);
+      setBulkSelected([]);
+      setBulkSearch("");
+      qc.invalidateQueries({ queryKey: ["patch-panel", panelId] });
+      qc.invalidateQueries({ queryKey: ["cables", projectId] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Chyba");
+    }
+  }
+
+  function toggleBulk(cableId: string) {
+    setBulkSelected((prev) =>
+      prev.includes(cableId) ? prev.filter((x) => x !== cableId) : [...prev, cableId],
+    );
+  }
+
   if (panel.isLoading) {
+
     return (
       <AppShell projectId={projectId}>
         <div className="text-muted-foreground">Načítám…</div>
