@@ -760,12 +760,22 @@ function QueueTab({
 /* ----------------------------- Spools tab ----------------------------- */
 
 function SpoolsTab({
-  spools,
+  planBlock,
   dayBlocks,
   cables,
   onToggle,
 }: {
-  spools: SpoolRow[];
+  planBlock: {
+    id: string;
+    floorPlanId: string;
+    name: string;
+    spoolCount: number;
+    spoolLengthM: number;
+    totalUsed: number;
+    totalCapacity: number;
+    hasPhysical: boolean;
+    spools: SpoolRow[];
+  } | null;
   dayBlocks: DayBlock[];
   cables: PullCable[];
   onToggle: (c: PullCable, done: boolean) => void;
@@ -776,20 +786,15 @@ function SpoolsTab({
     return m;
   }, [cables]);
 
-  const byType = new Map<string, SpoolRow[]>();
-  for (const s of spools) {
-    const arr = byType.get(s.typeCode) ?? [];
-    arr.push(s);
-    byType.set(s.typeCode, arr);
-  }
-
-  if (spools.length === 0 && dayBlocks.length === 0) {
+  if ((!planBlock || planBlock.spools.length === 0) && dayBlocks.length === 0) {
     return (
       <div className="rounded-sm border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
-        Spulky nejde nasimulovat, dokud kabely nemají trasu a kalibraci.
+        Pro tento plán nejsou přiřazené fyzické špulky ani žádné kabely ve frontě. V editoru plánu
+        přiřaď špulky v záložce „Metráž & Špulky" a na mapě označ kabely k tahání.
       </div>
     );
   }
+
 
   const hasBlocks = dayBlocks.length > 0;
 
