@@ -426,7 +426,9 @@ export const getPullModeData = createServerFn({ method: "GET" })
         branchPoints: (c.branch_points as unknown as NormPoint[]) ?? [],
         bundleId: (c.bundle_id as string | null) ?? null,
         notes: (c.notes as string | null) ?? null,
+        queuedForPull: Boolean(c.queued_for_pull),
       });
+
     }
 
     type CableEntry = { id: string; code: string; meters: number; typeCode: string };
