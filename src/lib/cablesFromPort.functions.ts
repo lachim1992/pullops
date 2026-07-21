@@ -10,10 +10,9 @@ import { computeBestRoute, type Bundle } from "@/lib/trunkRouting";
 
 
 /**
- * Auto-assign every cable on a floor plan (that has a to_endpoint on this plan)
- * to the nearest cable_bundle on the same plan, computing straight-line
- * branch_points from the bundle anchor to the endpoint position.
- * Only touches cables that don't yet have a bundle_id.
+ * Recompute every cable route on a floor plan. The router may choose a trunk
+ * route or a direct rack→endpoint route when direct is shorter; both are valid
+ * generated routes and must be persisted as branch_points.
  */
 export const autoAssignBundlesForPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -111,11 +110,11 @@ export const autoAssignBundlesForPlan = createServerFn({ method: "POST" })
       const rp = rackId ? rackPos.get(rackId) : undefined;
       if (!rp) { skipped++; continue; }
       const route = computeBestRoute({ rack: rp, endpoint: pos, bundles: routerBundles });
-      if (!route.polyline.length || !route.usedBundleIds.length) { skipped++; continue; }
+      if (route.polyline.length < 2) { skipped++; continue; }
       const { error: uerr } = await supabase
         .from("cables")
         .update({
-          bundle_id: route.usedBundleIds[0],
+          bundle_id: route.usedBundleIds[0] ?? null,
           branch_points: route.polyline as unknown as never,
         })
         .eq("id", c.id);
@@ -246,11 +245,11 @@ export const autoAssignBundlesForProject = createServerFn({ method: "POST" })
         endpoint: ep.pos,
         bundles: routerBundles,
       });
-      if (!route.polyline.length || !route.usedBundleIds.length) { skipped++; continue; }
+      if (route.polyline.length < 2) { skipped++; continue; }
       const { error: uerr } = await supabase
         .from("cables")
         .update({
-          bundle_id: route.usedBundleIds[0],
+          bundle_id: route.usedBundleIds[0] ?? null,
           branch_points: route.polyline as unknown as never,
         })
         .eq("id", c.id);
@@ -272,7 +271,7 @@ export const autoAssignBundlesForProject = createServerFn({ method: "POST" })
 
 /**
  * List cables belonging to a floor plan that have branch_points recorded,
- * plus their to_endpoint coords and bundle id — for rendering branches on the plan.
+ * plus their to_endpoint coords and optional bundle id — for rendering routes on the plan.
  */
 export const listPlanBranches = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -292,13 +291,13 @@ export const listPlanBranches = createServerFn({ method: "GET" })
       .from("cables")
       .select("id, code, bundle_id, branch_points, to_endpoint_id")
       .eq("project_id", data.projectId)
-      .not("bundle_id", "is", null)
+      .not("branch_points", "is", null)
       .in("to_endpoint_id", epIds);
     if (error) throw new Error(error.message);
     return (cables ?? []).map((c) => ({
       id: c.id as string,
       code: c.code as string,
-      bundleId: c.bundle_id as string,
+      bundleId: c.bundle_id as string | null,
       branchPoints: (c.branch_points as unknown as NormPoint[]) ?? [],
       toEndpointId: c.to_endpoint_id as string | null,
     }));
