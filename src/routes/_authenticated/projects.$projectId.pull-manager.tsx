@@ -226,19 +226,21 @@ function PullManagerPage() {
         data: {
           projectId,
           dayPlanId,
-          items: pairs.map((p) => ({
+          items: pairs.map((p, i) => ({
             fromEndpointId: p.fromEndpointId,
             toEndpointId: p.toEndpointId,
             cableTypeId: p.cableTypeId,
             spoolId: p.spoolId!,
-            plannedLengthM: p.plannedLengthM,
+            plannedLengthM: equalizedLength.get(i) ?? p.plannedLengthM,
             code: p.code,
           })),
+          rollerGroups: rollerGroups.length ? rollerGroups : undefined,
         },
       });
       toast.success("Kolo tahání spuštěno.");
       setPairs([]);
       setSelected([]);
+      setRollerGroups([]);
       qc.invalidateQueries({ queryKey: ["pull-manager", projectId] });
     } catch (e: any) {
       toast.error(e?.message ?? "Chyba spuštění kola");
