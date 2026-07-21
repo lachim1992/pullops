@@ -643,83 +643,119 @@ function Attr({ label, value }: { label: string; value: string }) {
 /* ----------------------------- Queue tab ----------------------------- */
 
 function QueueTab({
-  cables, bundles, onlyTodo, setOnlyTodo, note, setNote, selectedCableId, setSelectedCableId, onToggle,
+  cables,
+  onToggle,
+  onToggleQueue,
 }: {
   cables: PullCable[];
-  bundles: Bundle[];
-  onlyTodo: boolean;
-  setOnlyTodo: (v: boolean) => void;
-  note: string;
-  setNote: (v: string) => void;
-  selectedCableId: string | null;
-  setSelectedCableId: (id: string | null) => void;
   onToggle: (c: PullCable, done: boolean) => void;
+  onToggleQueue: (c: PullCable) => void;
 }) {
-  const selected = cables.find((c) => c.id === selectedCableId) ?? null;
+  const queued = cables.filter((c) => c.queuedForPull && c.status !== "PULLED");
+  const pulled = cables.filter((c) => c.status === "PULLED");
+  const queuedMeters = queued.reduce((a, c) => a + (c.meters ?? 0), 0);
+  const pulledMeters = pulled.reduce((a, c) => a + (c.meters ?? 0), 0);
+
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-      <section className="rounded-sm border border-border bg-card">
-        <div className="flex items-center justify-between border-b border-border p-3">
-          <div className="font-mono text-sm font-semibold uppercase">Fronta tahání</div>
-          <label className="flex items-center gap-2 text-xs text-muted-foreground">
-            <input type="checkbox" checked={onlyTodo} onChange={(e) => setOnlyTodo(e.target.checked)} />
-            jen nehotové
-          </label>
+    <div className="space-y-4">
+      <section className="rounded-sm border-2 border-accent bg-card">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border p-3">
+          <div className="flex items-center gap-2">
+            <Circle className="h-4 w-4 text-accent" />
+            <h2 className="font-mono text-sm font-bold uppercase">Označené k tahání</h2>
+            <Badge variant="outline" className="font-mono text-[10px]">
+              {queued.length} kabelů · {queuedMeters.toFixed(1)} m
+            </Badge>
+          </div>
+          <Button
+            size="sm"
+            disabled={queued.length === 0}
+            onClick={() =>
+              toast.info(
+                `Fronta ${queued.length} kabelů je připravena. Přejdi do Manažera tahání.`,
+              )
+            }
+          >
+            Odeslat k tahání
+          </Button>
         </div>
-        <div className="max-h-[560px] divide-y divide-border overflow-y-auto">
-          {cables.map((c) => {
-            const done = c.status === "PULLED";
-            const active = c.id === selectedCableId;
-            return (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => setSelectedCableId(c.id)}
-                className={`flex w-full items-center gap-2 p-3 text-left transition-colors hover:bg-muted/50 ${
-                  active ? "bg-muted" : ""
-                }`}
-              >
-                {done ? (
-                  <CheckCircle2 className="h-5 w-5 text-accent" />
-                ) : (
-                  <Circle className="h-5 w-5 text-muted-foreground" />
-                )}
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-mono text-sm font-semibold">{c.code}</span>
-                  <span className="block truncate text-xs text-muted-foreground">
-                    {c.fromEndpointCode ?? "?"} → {c.toEndpointCode ?? "?"} · {c.typeCode} ·{" "}
-                    {c.meters == null ? "—" : `${c.meters.toFixed(1)} m`}
-                  </span>
-                </span>
-                <Badge variant={done ? "secondary" : "outline"} className="font-mono text-[10px]">
-                  {done ? "HOTOVO" : "TAHAT"}
-                </Badge>
-              </button>
-            );
-          })}
-          {cables.length === 0 && (
-            <div className="p-6 text-center text-sm text-muted-foreground">Ve frontě nic není.</div>
+        <div className="max-h-[400px] divide-y divide-border overflow-y-auto">
+          {queued.length === 0 && (
+            <div className="p-6 text-center text-sm text-muted-foreground">
+              Na mapě klikni na endpoint a u kabelu vyber „TAHAT" — objeví se zde.
+            </div>
           )}
+          {queued.map((c) => (
+            <div key={c.id} className="flex items-center gap-2 p-3">
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-mono text-sm font-semibold">{c.code}</span>
+                <span className="block truncate text-xs text-muted-foreground">
+                  {c.fromEndpointCode ?? "?"} → {c.toEndpointCode ?? "?"} · {c.typeCode} ·{" "}
+                  {c.meters == null ? "—" : `${c.meters.toFixed(1)} m`}
+                </span>
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onToggleQueue(c)}
+                className="h-8 px-2 font-mono text-[10px]"
+              >
+                Odebrat
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => onToggle(c, true)}
+                className="h-8 px-2 font-mono text-[10px]"
+              >
+                Nataženo
+              </Button>
+            </div>
+          ))}
         </div>
       </section>
-      <aside>
-        {selected ? (
-          <CableDetail
-            cable={selected}
-            bundleCode={bundles.find((b) => b.id === selected.bundleId)?.code ?? null}
-            note={note}
-            setNote={setNote}
-            onToggle={onToggle}
-          />
-        ) : (
-          <div className="rounded-sm border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-            Vyber kabel z fronty.
+
+      <section className="rounded-sm border border-border bg-card">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border p-3">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-primary" />
+            <h2 className="font-mono text-sm font-bold uppercase">Nataženo</h2>
+            <Badge variant="outline" className="font-mono text-[10px]">
+              {pulled.length} kabelů · {pulledMeters.toFixed(1)} m
+            </Badge>
           </div>
-        )}
-      </aside>
+        </div>
+        <div className="max-h-[400px] divide-y divide-border overflow-y-auto">
+          {pulled.length === 0 && (
+            <div className="p-6 text-center text-sm text-muted-foreground">
+              Zatím žádný natažený kabel.
+            </div>
+          )}
+          {pulled.map((c) => (
+            <div key={c.id} className="flex items-center gap-2 p-3">
+              <CheckCircle2 className="h-5 w-5 shrink-0 text-primary" />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-mono text-sm font-semibold">{c.code}</span>
+                <span className="block truncate text-xs text-muted-foreground">
+                  {c.fromEndpointCode ?? "?"} → {c.toEndpointCode ?? "?"} · {c.typeCode} ·{" "}
+                  {c.meters == null ? "—" : `${c.meters.toFixed(1)} m`}
+                </span>
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onToggle(c, false)}
+                className="h-8 px-2 font-mono text-[10px]"
+              >
+                Vrátit
+              </Button>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
+
 
 /* ----------------------------- Spools tab ----------------------------- */
 
