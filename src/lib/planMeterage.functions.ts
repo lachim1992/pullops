@@ -203,6 +203,12 @@ export const getPlanMeterage = createServerFn({ method: "GET" })
         return { lengthM: m, totalM: m, reserveTotal, routeId: null, note: "ruční délka" };
       }
 
+      // Prefer the stored computed_length_m (recomputed via trunk-aware engine)
+      if (c.computed_length_m != null) {
+        const m = Number(c.computed_length_m);
+        return { lengthM: m, totalM: m, reserveTotal, routeId: null, note: null };
+      }
+
       let routeId: string | null = null;
       let pts: NormPoint[] = [];
       let manualLen: number | null = null;
