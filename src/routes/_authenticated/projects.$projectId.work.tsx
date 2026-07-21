@@ -845,52 +845,36 @@ function SpoolsTab({
           );
         })}
 
-      {spools.length > 0 && (
-        <>
-          {hasBlocks && (
-            <div className="border-t border-dashed border-border pt-2 font-mono text-xs uppercase tracking-wide text-muted-foreground">
-              Nezařazené kabely (bez denního bloku)
+      {planBlock && planBlock.spools.length > 0 && (
+        <section className="rounded-sm border border-border bg-card">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border p-3">
+            <div className="flex items-center gap-2">
+              <PackageOpen className="h-4 w-4 text-muted-foreground" />
+              <h2 className="font-mono text-sm font-bold uppercase">{planBlock.name}</h2>
+              <Badge variant="outline" className="font-mono text-[10px]">
+                {planBlock.hasPhysical ? "Fyzické špulky" : "Odhad"}
+              </Badge>
+              <Badge variant="outline" className="font-mono text-[10px]">
+                {planBlock.spoolCount} ks
+              </Badge>
             </div>
-          )}
-          {Array.from(byType.entries()).map(([typeCode, list]) => {
-            let typePulled = 0;
-            let typePlanned = 0;
-            for (const s of list) {
-              typePlanned += s.used;
-              for (const c of s.cables) {
-                if (cableById.get(c.id)?.status === "PULLED") typePulled += c.meters;
-              }
-            }
-            return (
-              <section key={typeCode} className="rounded-sm border border-border bg-card">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border p-3">
-                  <div className="flex items-center gap-2">
-                    <PackageOpen className="h-4 w-4 text-muted-foreground" />
-                    <h2 className="font-mono text-sm font-bold uppercase">{typeCode}</h2>
-                    <Badge variant="outline" className="font-mono text-[10px]">
-                      {list.length} {list.length === 1 ? "spulka" : list.length < 5 ? "spulky" : "spulek"}
-                    </Badge>
-                  </div>
-                  <div className="font-mono text-xs text-muted-foreground">
-                    nataženo {typePulled.toFixed(1)} / plán {typePlanned.toFixed(1)} m ·{" "}
-                    zbývá {Math.max(0, typePlanned - typePulled).toFixed(1)} m
-                  </div>
-                </div>
-                <div className="grid gap-4 p-4 lg:grid-cols-2">
-                  {list.map((spool) => (
-                    <SpoolCard
-                      key={`${typeCode}-${spool.index}`}
-                      spool={spool}
-                      cableById={cableById}
-                      onToggle={onToggle}
-                    />
-                  ))}
-                </div>
-              </section>
-            );
-          })}
-        </>
+            <div className="font-mono text-xs text-muted-foreground">
+              využito {planBlock.totalUsed.toFixed(1)} / {planBlock.totalCapacity.toFixed(0)} m
+            </div>
+          </div>
+          <div className="grid gap-4 p-4 lg:grid-cols-2">
+            {planBlock.spools.map((spool) => (
+              <SpoolCard
+                key={`${planBlock.id}-${spool.index}`}
+                spool={spool}
+                cableById={cableById}
+                onToggle={onToggle}
+              />
+            ))}
+          </div>
+        </section>
       )}
+
     </div>
   );
 }
