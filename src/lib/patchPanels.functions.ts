@@ -51,6 +51,31 @@ export const listPatchPanels = createServerFn({ method: "GET" })
     return rows ?? [];
   });
 
+export const listPatchPortsForProject = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ projectId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: panels, error: pe } = await supabase
+      .from("patch_panels")
+      .select("id, code")
+      .eq("project_id", data.projectId);
+    if (pe) throw new Error(dbErrorMessage(pe));
+    const panelCode = new Map<string, string>();
+    for (const p of panels ?? []) panelCode.set(p.id as string, p.code as string);
+    const { data: ports, error } = await supabase
+      .from("patch_ports")
+      .select("id, port_number, panel_id")
+      .eq("project_id", data.projectId);
+    if (error) throw new Error(dbErrorMessage(error));
+    return (ports ?? []).map((p: any) => ({
+      id: p.id as string,
+      port_number: p.port_number as number,
+      panel_id: p.panel_id as string,
+      panel_code: panelCode.get(p.panel_id) ?? "",
+    }));
+  });
+
 export const getPatchPanel = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
