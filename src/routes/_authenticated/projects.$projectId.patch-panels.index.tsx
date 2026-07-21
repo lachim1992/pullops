@@ -31,6 +31,7 @@ import {
   getPatchPanel,
   listPatchPanels,
 } from "@/lib/patchPanels.functions";
+import { updateCable } from "@/lib/cables.functions";
 import { assignPanelToRack, createRack, deleteRack, listRacks } from "@/lib/racks.functions";
 import { listFloorPlans } from "@/lib/floorPlans.functions";
 
