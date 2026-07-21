@@ -200,47 +200,57 @@ export const autoAssignBundlesForPlan = createServerFn({ method: "POST" })
     const { data: cables, error } = await query;
     if (error) throw new Error(error.message);
 
+    // Group cables by (bundle, rack) so cluster spines are shared.
+    type Grouped = { bundlePts: NormPoint[]; items: ClusterItem[]; bundleId: string };
+    const groups = new Map<string, Grouped>();
     let assigned = 0;
     let skipped = 0;
+
     for (const c of cables ?? []) {
       const epId = c.to_endpoint_id as string | null;
-      if (!epId) {
-        skipped++;
-        continue;
-      }
+      if (!epId) { skipped++; continue; }
       const pos = epMap.get(epId);
-      if (!pos) {
-        skipped++;
-        continue;
-      }
+      if (!pos) { skipped++; continue; }
       const nb = nearestBundle(pos, bundleList);
-      if (!nb) {
-        skipped++;
-        continue;
-      }
+      if (!nb) { skipped++; continue; }
       const bundlePts = bundleList.find((b) => b.id === nb.id)!.points;
-      const anchorEp = closestPointOnPolyline(pos, bundlePts);
-      const branch: NormPoint[] = [];
-      // rack origin (if cable comes from a port on a rack on this plan)
+      const epLoc = locateOnBundle(pos, bundlePts);
+      if (!epLoc) { skipped++; continue; }
       const portId = c.from_port_id as string | null;
       const rackId = portId ? portToRack.get(portId) : undefined;
       const rp = rackId ? rackPos.get(rackId) : undefined;
-      if (rp) {
-        branch.push(rp);
-        const anchorRack = closestPointOnPolyline(rp, bundlePts);
-        if (anchorRack) branch.push(anchorRack.point);
+      const rackLoc = rp ? locateOnBundle(rp, bundlePts) : null;
+      const key = `${nb.id}::${rackId ?? "none"}`;
+      let g = groups.get(key);
+      if (!g) {
+        g = { bundlePts, items: [], bundleId: nb.id };
+        groups.set(key, g);
       }
-      if (anchorEp) branch.push(anchorEp.point);
-      branch.push(pos);
-      const { error: uerr } = await supabase
-        .from("cables")
-        .update({ bundle_id: nb.id, branch_points: branch } as never)
-        .eq("id", c.id as string);
-      if (uerr) throw new Error(uerr.message);
-      assigned++;
+      g.items.push({
+        cableId: c.id as string,
+        endpoint: pos,
+        epLoc,
+        rack: rp ?? null,
+        rackLoc,
+      });
+    }
+
+    for (const g of groups.values()) {
+      const branches = clusterItemsOnBundle(g.bundlePts, g.items);
+      for (const it of g.items) {
+        const branch = branches.get(it.cableId);
+        if (!branch) continue;
+        const { error: uerr } = await supabase
+          .from("cables")
+          .update({ bundle_id: g.bundleId, branch_points: branch } as never)
+          .eq("id", it.cableId);
+        if (uerr) throw new Error(uerr.message);
+        assigned++;
+      }
     }
     return { assigned, skipped, reason: "ok" as const };
   });
+
 
 /**
  * Project-wide auto-assign: for every cable with a to_endpoint, pick the
