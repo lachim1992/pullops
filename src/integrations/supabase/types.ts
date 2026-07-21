@@ -349,6 +349,7 @@ export type Database = {
           override_length_m: number | null
           project_id: string
           pulled_at: string | null
+          queued_for_pull: boolean
           route_id: string | null
           status: Database["public"]["Enums"]["cable_status"]
           tested_at: string | null
@@ -373,6 +374,7 @@ export type Database = {
           override_length_m?: number | null
           project_id: string
           pulled_at?: string | null
+          queued_for_pull?: boolean
           route_id?: string | null
           status?: Database["public"]["Enums"]["cable_status"]
           tested_at?: string | null
@@ -397,6 +399,7 @@ export type Database = {
           override_length_m?: number | null
           project_id?: string
           pulled_at?: string | null
+          queued_for_pull?: boolean
           route_id?: string | null
           status?: Database["public"]["Enums"]["cable_status"]
           tested_at?: string | null
