@@ -1203,6 +1203,65 @@ export type Database = {
           },
         ]
       }
+      floor_plan_spools: {
+        Row: {
+          created_at: string
+          floor_plan_id: string
+          id: string
+          organization_id: string
+          project_id: string
+          sort_order: number
+          spool_id: string
+        }
+        Insert: {
+          created_at?: string
+          floor_plan_id: string
+          id?: string
+          organization_id: string
+          project_id: string
+          sort_order?: number
+          spool_id: string
+        }
+        Update: {
+          created_at?: string
+          floor_plan_id?: string
+          id?: string
+          organization_id?: string
+          project_id?: string
+          sort_order?: number
+          spool_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "floor_plan_spools_floor_plan_id_fkey"
+            columns: ["floor_plan_id"]
+            isOneToOne: false
+            referencedRelation: "floor_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "floor_plan_spools_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "floor_plan_spools_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "floor_plan_spools_spool_id_fkey"
+            columns: ["spool_id"]
+            isOneToOne: false
+            referencedRelation: "spools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       floor_plans: {
         Row: {
           created_at: string
