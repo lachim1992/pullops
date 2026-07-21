@@ -927,6 +927,13 @@ function PlanEditorPage() {
             Kalibrace
           </Button>
           <Button
+            variant={mode === "meterage" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setMode("meterage")}
+          >
+            Metráž & Spulky
+          </Button>
+          <Button
             variant={mode === "publish" ? "default" : "ghost"}
             size="sm"
             onClick={() => setMode("publish")}
