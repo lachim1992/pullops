@@ -64,7 +64,7 @@ export const getPlanMeterage = createServerFn({ method: "GET" })
       supabase
         .from("cables")
         .select(
-          "id, code, cable_type_id, from_endpoint_id, to_endpoint_id, from_port_id, to_port_id, status, override_length_m",
+          "id, code, cable_type_id, from_endpoint_id, to_endpoint_id, from_port_id, to_port_id, status, override_length_m, computed_length_m",
         )
         .eq("project_id", projectId),
       supabase.from("cable_types").select("id, code, default_reserve_m").eq("project_id", projectId),
