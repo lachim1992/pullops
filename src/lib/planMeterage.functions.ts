@@ -259,14 +259,22 @@ export const getPlanMeterage = createServerFn({ method: "GET" })
     // Build cables list grouped by plan (only cables belonging to day plans on this floor plan)
     const planIds = new Set((plansRes.data ?? []).map((p: any) => p.id as string));
 
-    // Backfill stored computed_length_m for cables that have a rack side but
-    // no cached length yet, so the trunk-aware engine feeds the plan view.
+    // Endpoints belonging to this floor plan (used to gather floor-plan-wide cables)
+    const floorPlanEpIds = new Set<string>();
+    for (const e of endpointsRes.data ?? []) {
+      if ((e as any).floor_plan_id === floorPlanId) floorPlanEpIds.add((e as any).id as string);
+    }
+
+    // Backfill stored computed_length_m for cables on this floor plan that have
+    // a rack side but no cached length yet.
     const staleCables = (cablesRes.data ?? []).filter((c: any) => {
-      const dp = planByCable.get(c.id as string);
-      if (!dp || !planIds.has(dp)) return false;
+      const onFp =
+        (c.from_endpoint_id && floorPlanEpIds.has(c.from_endpoint_id)) ||
+        (c.to_endpoint_id && floorPlanEpIds.has(c.to_endpoint_id));
+      if (!onFp) return false;
       if (c.override_length_m != null) return false;
       if (c.computed_length_m != null) return false;
-      return c.from_port_id || c.to_port_id;
+      return c.from_port_id || c.to_port_id || (c.from_endpoint_id && c.to_endpoint_id);
     });
     if (staleCables.length > 0) {
       const results = await Promise.all(
@@ -288,23 +296,26 @@ export const getPlanMeterage = createServerFn({ method: "GET" })
       });
     }
 
-    const cablesByPlan = new Map<string, CableRow[]>();
+    // Build the row for every cable on this floor plan
+    const allRows: CableRow[] = [];
     for (const c of cablesRes.data ?? []) {
       const cc = c as any;
-      const dp = planByCable.get(cc.id as string);
-      if (!dp || !planIds.has(dp)) continue;
+      const onFp =
+        (cc.from_endpoint_id && floorPlanEpIds.has(cc.from_endpoint_id)) ||
+        (cc.to_endpoint_id && floorPlanEpIds.has(cc.to_endpoint_id));
+      if (!onFp) continue;
       const comp = computeForCable(cc);
       const epA = cc.from_endpoint_id ? epById.get(cc.from_endpoint_id) : null;
       const epB = cc.to_endpoint_id ? epById.get(cc.to_endpoint_id) : null;
       const bundle = bundleByCable.get(cc.id as string) ?? null;
-      const row: CableRow = {
+      allRows.push({
         cableId: cc.id as string,
         code: cc.code as string,
         cableTypeId: (cc.cable_type_id as string | null) ?? null,
         cableTypeCode: cc.cable_type_id ? typeById.get(cc.cable_type_id)?.code ?? null : null,
         fromEndpointId: (cc.from_endpoint_id as string | null) ?? null,
         toEndpointId: (cc.to_endpoint_id as string | null) ?? null,
-        fromLabel: epA ? `${epA.code}${epA.label ? " · " + epA.label : ""}` : "—",
+        fromLabel: epA ? `${epA.code}${epA.label ? " · " + epA.label : ""}` : cc.from_port_id ? "PP" : "—",
         toLabel: epB ? `${epB.code}${epB.label ? " · " + epB.label : ""}` : cc.to_port_id ? "PP" : "—",
         lengthM: comp.lengthM,
         reserveM: comp.reserveTotal,
@@ -315,16 +326,110 @@ export const getPlanMeterage = createServerFn({ method: "GET" })
         spoolSerial: null,
         status: (cc.status as string) ?? "PLANNED",
         note: comp.note,
+      });
+    }
+
+    // Floor-plan-wide summary
+    const fpsRes = await supabase
+      .from("floor_plan_spools")
+      .select("spool_id")
+      .eq("floor_plan_id", floorPlanId);
+    const assignedSpoolIds = new Set<string>(
+      (fpsRes.data ?? []).map((r: any) => r.spool_id as string),
+    );
+    const assignedSpools = (spoolsRes.data ?? [])
+      .filter((s: any) => assignedSpoolIds.has(s.id as string))
+      .map((s: any) => ({
+        id: s.id as string,
+        serial: s.serial_no as string,
+        cableTypeId: (s.cable_type_id as string | null) ?? null,
+        cableTypeCode: s.cable_type_id ? typeById.get(s.cable_type_id)?.code ?? null : null,
+        currentM: Number(s.current_length_m ?? 0),
+        initialM: Number(s.initial_length_m ?? 0),
+        status: (s.status as string) ?? null,
+      }));
+    const availableSpools = (spoolsRes.data ?? [])
+      .filter((s: any) => !assignedSpoolIds.has(s.id as string))
+      .map((s: any) => ({
+        id: s.id as string,
+        serial: s.serial_no as string,
+        cableTypeId: (s.cable_type_id as string | null) ?? null,
+        cableTypeCode: s.cable_type_id ? typeById.get(s.cable_type_id)?.code ?? null : null,
+        currentM: Number(s.current_length_m ?? 0),
+        initialM: Number(s.initial_length_m ?? 0),
+        status: (s.status as string) ?? null,
+      }));
+
+    let overallRouteM = 0;
+    let overallReserveM = 0;
+    let overallTotalM = 0;
+    let overallMissing = 0;
+    const overallByType = new Map<string, { typeCode: string | null; routeM: number; reserveM: number; totalM: number; count: number }>();
+    for (const r of allRows) {
+      const routeM = r.lengthM != null && r.reserveM != null ? r.lengthM - r.reserveM : 0;
+      const totM = r.totalM ?? 0;
+      if (r.totalM == null) overallMissing += 1;
+      overallRouteM += routeM;
+      overallReserveM += r.reserveM;
+      overallTotalM += totM;
+      const key = r.cableTypeId ?? "__none__";
+      const cur = overallByType.get(key) ?? { typeCode: r.cableTypeCode, routeM: 0, reserveM: 0, totalM: 0, count: 0 };
+      cur.routeM += routeM;
+      cur.reserveM += r.reserveM;
+      cur.totalM += totM;
+      cur.count += 1;
+      overallByType.set(key, cur);
+    }
+    let assignedAvailableM = 0;
+    const assignedAvailableByType = new Map<string, number>();
+    for (const s of assignedSpools) {
+      assignedAvailableM += s.currentM;
+      const k = s.cableTypeId ?? "__none__";
+      assignedAvailableByType.set(k, (assignedAvailableByType.get(k) ?? 0) + s.currentM);
+    }
+    const overallCoverage = Array.from(overallByType.entries()).map(([t, v]) => {
+      const avail = assignedAvailableByType.get(t) ?? 0;
+      return {
+        cableTypeId: t === "__none__" ? null : t,
+        typeCode: v.typeCode,
+        cableCount: v.count,
+        neededM: Math.round(v.totalM * 10) / 10,
+        availableM: Math.round(avail * 10) / 10,
+        deficitM: Math.round(Math.max(0, v.totalM - avail) * 10) / 10,
       };
+    });
+
+    const overall = {
+      cableCount: allRows.length,
+      missingCount: overallMissing,
+      routeM: Math.round(overallRouteM * 10) / 10,
+      reserveM: Math.round(overallReserveM * 10) / 10,
+      totalM: Math.round(overallTotalM * 10) / 10,
+      availableM: Math.round(assignedAvailableM * 10) / 10,
+      deficitM: Math.round(Math.max(0, overallTotalM - assignedAvailableM) * 10) / 10,
+      coverage: overallCoverage,
+      cables: allRows,
+      assignedSpools,
+      availableSpools,
+      hasCalibration: !!calibration,
+    };
+
+    // Per-day-plan sub-lists (existing behaviour)
+    const cablesByPlan = new Map<string, CableRow[]>();
+    const rowById = new Map(allRows.map((r) => [r.cableId, r] as const));
+    for (const c of cablesRes.data ?? []) {
+      const cc = c as any;
+      const dp = planByCable.get(cc.id as string);
+      if (!dp || !planIds.has(dp)) continue;
+      const row = rowById.get(cc.id as string);
+      if (!row) continue;
       const arr = cablesByPlan.get(dp) ?? [];
       arr.push(row);
       cablesByPlan.set(dp, arr);
     }
 
-    // Per-plan summary
     const plans = (plansRes.data ?? []).map((p: any) => {
       const cables = cablesByPlan.get(p.id as string) ?? [];
-      // group by bundle: bundled cables contribute max length (parallel), unbundled contribute total
       const bundleMax = new Map<string, number>();
       let needed = 0;
       let materialTotal = 0;
@@ -385,7 +490,46 @@ export const getPlanMeterage = createServerFn({ method: "GET" })
       };
     });
 
-    return { plans };
+    return { overall, plans };
+  });
+
+export const assignSpoolToFloorPlan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ projectId: uuid, floorPlanId: uuid, spoolId: uuid }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: proj } = await supabase
+      .from("projects")
+      .select("organization_id")
+      .eq("id", data.projectId)
+      .single();
+    if (!proj) throw new Error("Projekt neexistuje.");
+    const ins = await supabase.from("floor_plan_spools").insert({
+      project_id: data.projectId,
+      organization_id: (proj as any).organization_id,
+      floor_plan_id: data.floorPlanId,
+      spool_id: data.spoolId,
+    } as never);
+    if (ins.error) throw new Error(ins.error.message);
+    return { ok: true };
+  });
+
+export const unassignSpoolFromFloorPlan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ floorPlanId: uuid, spoolId: uuid }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const del = await supabase
+      .from("floor_plan_spools")
+      .delete()
+      .eq("floor_plan_id", data.floorPlanId)
+      .eq("spool_id", data.spoolId);
+    if (del.error) throw new Error(del.error.message);
+    return { ok: true };
   });
 
 /** Toggle a bundle for a set of cables within a day plan. */
