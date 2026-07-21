@@ -384,7 +384,9 @@ export const getPullModeData = createServerFn({ method: "GET" })
       branchPoints: NormPoint[];
       bundleId: string | null;
       notes: string | null;
+      queuedForPull: boolean;
     };
+
 
     const bundleCodeById = new Map<string, string>();
     for (const b of bundlesRes.data ?? []) {
