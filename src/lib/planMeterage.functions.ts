@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { computeCableLength, type NormPoint } from "@/lib/length";
+import { recomputeOne } from "@/lib/cables.functions";
 
 const uuid = z.string().uuid();
 
