@@ -404,7 +404,7 @@ export const recomputeCableLength = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { data: cable, error } = await supabase
       .from("cables")
-      .select("id, cable_type_id, route_id, override_length_m, from_endpoint_id, to_endpoint_id")
+      .select(CABLE_RECOMPUTE_COLS)
       .eq("id", data.cableId)
       .maybeSingle();
     if (error) throw new Error(dbErrorMessage(error));
