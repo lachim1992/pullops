@@ -307,14 +307,17 @@ function PlanWorkspace(props: {
   endpoints: Endpoint[];
   patchPanels: PatchPanel[];
   cables: PullCable[];
-  allSpools: Array<{
-    typeCode: string;
-    index: number;
-    used: number;
-    capacity: number;
-    wasted: number;
-    cables: Array<{ id: string; code: string; meters: number }>;
-  }>;
+  planBlock: {
+    id: string;
+    floorPlanId: string;
+    name: string;
+    spoolCount: number;
+    spoolLengthM: number;
+    totalUsed: number;
+    totalCapacity: number;
+    hasPhysical: boolean;
+    spools: SpoolRow[];
+  } | null;
   allDayBlocks: DayBlock[];
   tab: Tab;
   setTab: (t: Tab) => void;
@@ -327,13 +330,15 @@ function PlanWorkspace(props: {
   note: string;
   setNote: (v: string) => void;
   onToggleCable: (c: PullCable, done: boolean) => void;
+  onToggleQueue: (c: PullCable) => void;
 }) {
   const {
-    plan, bundles, endpoints, patchPanels, cables, allSpools, allDayBlocks,
+    plan, bundles, endpoints, patchPanels, cables, planBlock, allDayBlocks,
     tab, setTab, selectedCableId, setSelectedCableId,
     selectedEndpointId, setSelectedEndpointId,
-    onlyTodo, setOnlyTodo, note, setNote, onToggleCable,
+    onlyTodo, setOnlyTodo, note, setNote, onToggleCable, onToggleQueue,
   } = props;
+
   const [hoveredCableId, setHoveredCableId] = useState<string | null>(null);
 
 
