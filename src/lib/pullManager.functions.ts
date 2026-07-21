@@ -345,6 +345,7 @@ export const startPullRound = createServerFn({ method: "POST" })
             code: z.string().min(1),
           }),
         ),
+        rollerGroups: z.array(z.array(uuid)).optional(),
       })
       .parse(d),
   )
