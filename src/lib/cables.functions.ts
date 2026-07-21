@@ -2,7 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { computeCableLength, type NormPoint } from "@/lib/length";
+import { computeCableLength, metersPerNormUnit, type NormPoint } from "@/lib/length";
+import { computeRouteViaTrunk, type Bundle } from "@/lib/trunkRouting";
 import { dbErrorMessage } from "@/lib/dbErrors";
 
 const CableStatus = z.enum(["PLANNED", "PULLED", "TERMINATED", "DONE", "CANCELLED"]);
