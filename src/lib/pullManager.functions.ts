@@ -394,6 +394,12 @@ export const startPullRound = createServerFn({ method: "POST" })
       })),
     });
     if (rpcErr) throw new Error(dbErrorMessage(rpcErr));
+    if (data.rollerGroups && data.rollerGroups.length > 0) {
+      await supabase
+        .from("pull_rounds")
+        .update({ notes: JSON.stringify({ rollerGroups: data.rollerGroups }) } as never)
+        .eq("id", roundId as string);
+    }
     return { roundId: roundId as string };
   });
 
