@@ -1493,6 +1493,12 @@ function PlanEditorPage() {
             </div>
           )}
 
+          {mode === "meterage" && (
+            <MeteragePanel projectId={projectId} floorPlanId={planId} />
+          )}
+
+
+
           {mode === "publish" && (
             <div className="rounded-sm border border-border p-3 text-sm">
               <div className="mb-2 font-semibold">Zadat plán do režimu tahání</div>
