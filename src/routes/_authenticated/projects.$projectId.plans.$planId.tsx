@@ -34,7 +34,7 @@ import {
   unassignSpoolFromPlan,
 } from "@/lib/planSpools.functions";
 import { runOptimizer } from "@/lib/pullOptimizer.functions";
-import { getPlanMeterage, setPlanCableBundle } from "@/lib/planMeterage.functions";
+import { getPlanMeterage, setPlanCableBundle, assignSpoolToFloorPlan, unassignSpoolFromFloorPlan } from "@/lib/planMeterage.functions";
 import { listProjectMembersLite } from "@/lib/defects.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Textarea } from "@/components/ui/textarea";
@@ -3188,8 +3188,13 @@ function MeteragePanel({ projectId, floorPlanId }: { projectId: string; floorPla
   const qc = useQueryClient();
   const meterageFn = useServerFn(getPlanMeterage);
   const bundleFn = useServerFn(setPlanCableBundle);
+  const assignFpSpoolFn = useServerFn(assignSpoolToFloorPlan);
+  const unassignFpSpoolFn = useServerFn(unassignSpoolFromFloorPlan);
   const [selected, setSelected] = useState<Record<string, Set<string>>>({});
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [showCables, setShowCables] = useState(false);
+  const [spoolPickerOpen, setSpoolPickerOpen] = useState(false);
+  const [spoolFilter, setSpoolFilter] = useState("");
 
   const q = useQuery({
     queryKey: ["plan-meterage", projectId, floorPlanId],
@@ -3197,6 +3202,7 @@ function MeteragePanel({ projectId, floorPlanId }: { projectId: string; floorPla
   });
 
   const plans = q.data?.plans ?? [];
+  const overall = q.data?.overall;
 
   function toggleSel(planId: string, cableId: string) {
     setSelected((prev) => {
@@ -3234,20 +3240,241 @@ function MeteragePanel({ projectId, floorPlanId }: { projectId: string; floorPla
     }
   }
 
+  async function assignFpSpool(spoolId: string) {
+    try {
+      await assignFpSpoolFn({ data: { projectId, floorPlanId, spoolId } });
+      qc.invalidateQueries({ queryKey: ["plan-meterage", projectId, floorPlanId] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Chyba přiřazení");
+    }
+  }
+
+  async function unassignFpSpool(spoolId: string) {
+    try {
+      await unassignFpSpoolFn({ data: { floorPlanId, spoolId } });
+      qc.invalidateQueries({ queryKey: ["plan-meterage", projectId, floorPlanId] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Chyba");
+    }
+  }
+
   if (q.isLoading) {
     return <div className="rounded-sm border border-border p-3 text-xs text-muted-foreground">Načítám metráž…</div>;
   }
 
-  if (plans.length === 0) {
+  const overallDeficit = (overall?.deficitM ?? 0) > 0;
+  const filteredAvailable = (overall?.availableSpools ?? []).filter((s: any) => {
+    const f = spoolFilter.trim().toLowerCase();
+    if (!f) return true;
     return (
-      <div className="rounded-sm border border-border p-3 text-xs text-muted-foreground">
-        Zatím žádný denní plán. Vytvořte plán v záložce „5 · Zadat plán".
-      </div>
+      (s.serial ?? "").toLowerCase().includes(f) ||
+      (s.cableTypeCode ?? "").toLowerCase().includes(f)
     );
-  }
+  });
 
   return (
     <div className="space-y-3">
+      {/* ============= FLOOR-PLAN OVERALL ============= */}
+      {overall && (
+        <div className="rounded-sm border border-border">
+          <div className="border-b border-border bg-muted/40 px-3 py-2 text-sm font-semibold">
+            Celková metráž plánu
+          </div>
+          <div className="space-y-3 p-3">
+            {!overall.hasCalibration && (
+              <div className="rounded-sm border border-destructive/50 bg-destructive/10 p-2 text-[11px] text-destructive">
+                Plán není zkalibrován — délky nelze spolehlivě spočítat. Nakalibrujte v záložce „1 · Kalibrace".
+              </div>
+            )}
+            {overall.missingCount > 0 && (
+              <div className="rounded-sm border border-amber-500/50 bg-amber-500/10 p-2 text-[11px] text-amber-700 dark:text-amber-400">
+                {overall.missingCount} kabelů nemá spočítanou trasu (chybí endpoint/port/racek nebo trasa).
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+              <div className="rounded-sm border border-border p-2">
+                <div className="text-[10px] text-muted-foreground">Kabelů celkem</div>
+                <div className="font-mono text-lg font-semibold">{overall.cableCount}</div>
+              </div>
+              <div className="rounded-sm border border-border p-2">
+                <div className="text-[10px] text-muted-foreground">Trasy (z kalibrace)</div>
+                <div className="font-mono text-lg font-semibold">{overall.routeM.toFixed(1)} m</div>
+              </div>
+              <div className="rounded-sm border border-border p-2">
+                <div className="text-[10px] text-muted-foreground">Rezervy (nastavení)</div>
+                <div className="font-mono text-lg font-semibold">{overall.reserveM.toFixed(1)} m</div>
+              </div>
+              <div className="rounded-sm border-2 border-primary/60 bg-primary/5 p-2">
+                <div className="text-[10px] text-muted-foreground">Metráž celkem</div>
+                <div className="font-mono text-lg font-bold text-primary">{overall.totalM.toFixed(1)} m</div>
+              </div>
+            </div>
+
+            {/* Coverage by type */}
+            {overall.coverage.length > 0 && (
+              <div className="rounded-sm border border-border">
+                <div className="border-b border-border bg-muted/30 px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Pokrytí dle typu kabelu
+                </div>
+                <div className="divide-y divide-border">
+                  {overall.coverage.map((c: any, idx: number) => (
+                    <div key={idx} className="grid grid-cols-4 gap-2 px-2 py-1.5 text-[11px] font-mono">
+                      <span className="font-semibold">{c.typeCode ?? "— bez typu —"}</span>
+                      <span className="text-muted-foreground">{c.cableCount} kab.</span>
+                      <span>
+                        {c.neededM.toFixed(0)} / {c.availableM.toFixed(0)} m
+                      </span>
+                      <span className={c.deficitM > 0 ? "text-destructive text-right" : "text-emerald-600 dark:text-emerald-400 text-right"}>
+                        {c.deficitM > 0 ? `-${c.deficitM.toFixed(0)} m` : "OK"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className={`border-t border-border px-2 py-1.5 text-[11px] font-mono ${overallDeficit ? "bg-destructive/10 text-destructive" : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"}`}>
+                  {overallDeficit
+                    ? `Deficit celkem: ${overall.deficitM.toFixed(1)} m`
+                    : `Rezerva celkem: +${(overall.availableM - overall.totalM).toFixed(1)} m`}
+                </div>
+              </div>
+            )}
+
+            {/* Assigned spools */}
+            <div className="rounded-sm border border-border">
+              <div className="flex items-center justify-between border-b border-border bg-muted/30 px-2 py-1">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Přiřazené špulky ({overall.assignedSpools.length})
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-6 text-[10px]"
+                  onClick={() => setSpoolPickerOpen((v) => !v)}
+                >
+                  {spoolPickerOpen ? "Zavřít" : "+ Přiřadit špulky"}
+                </Button>
+              </div>
+              {overall.assignedSpools.length === 0 ? (
+                <div className="p-3 text-center text-[11px] text-muted-foreground">
+                  Zatím žádná špulka. Přiřaďte fyzické špulky ze skladu pomocí tlačítka výše.
+                </div>
+              ) : (
+                <div className="divide-y divide-border">
+                  {overall.assignedSpools.map((s: any) => (
+                    <div key={s.id} className="flex items-center justify-between gap-2 px-2 py-1.5 text-[11px] font-mono">
+                      <span className="font-semibold">#{s.serial}</span>
+                      <span className="text-muted-foreground">{s.cableTypeCode ?? "—"}</span>
+                      <span>{s.currentM.toFixed(0)} / {s.initialM.toFixed(0)} m</span>
+                      <button
+                        type="button"
+                        className="rounded-sm border border-border px-1.5 py-0.5 text-[10px] hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => unassignFpSpool(s.id)}
+                      >
+                        Odebrat
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {spoolPickerOpen && (
+                <div className="border-t border-border p-2">
+                  <Input
+                    placeholder="Hledat podle sériového čísla nebo typu…"
+                    value={spoolFilter}
+                    onChange={(e) => setSpoolFilter(e.target.value)}
+                    className="mb-2 h-7 text-[11px]"
+                  />
+                  {filteredAvailable.length === 0 ? (
+                    <div className="text-center text-[11px] text-muted-foreground">
+                      Žádné volné špulky.
+                    </div>
+                  ) : (
+                    <div className="max-h-60 divide-y divide-border overflow-y-auto rounded-sm border border-border">
+                      {filteredAvailable.map((s: any) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          className="flex w-full items-center justify-between gap-2 px-2 py-1.5 text-[11px] font-mono hover:bg-muted/40"
+                          onClick={() => assignFpSpool(s.id)}
+                        >
+                          <span className="font-semibold">#{s.serial}</span>
+                          <span className="text-muted-foreground">{s.cableTypeCode ?? "—"}</span>
+                          <span>{s.currentM.toFixed(0)} m</span>
+                          <span className="text-primary">+ přidat</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Cables list toggle */}
+            <div>
+              <button
+                type="button"
+                onClick={() => setShowCables((v) => !v)}
+                className="flex w-full items-center justify-between gap-2 rounded-sm border border-border bg-muted/30 px-2 py-1.5 text-[11px]"
+              >
+                <span className="font-semibold">Seznam všech kabelů ({overall.cableCount})</span>
+                {showCables ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+              </button>
+              {showCables && (
+                <div className="mt-2 overflow-x-auto rounded-sm border border-border">
+                  <table className="w-full text-[10px]">
+                    <thead className="bg-muted/40 text-muted-foreground">
+                      <tr>
+                        <th className="px-2 py-1 text-left">Kód</th>
+                        <th className="px-2 py-1 text-left">Typ</th>
+                        <th className="px-2 py-1 text-left">Trasa</th>
+                        <th className="px-2 py-1 text-right">Trasa m</th>
+                        <th className="px-2 py-1 text-right">Rezerva</th>
+                        <th className="px-2 py-1 text-right font-semibold">Celkem</th>
+                        <th className="px-2 py-1 text-left">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {overall.cables.map((c: any) => {
+                        const routeLen = c.lengthM != null && c.reserveM != null ? c.lengthM - c.reserveM : null;
+                        return (
+                          <tr key={c.cableId} className="hover:bg-muted/30">
+                            <td className="px-2 py-1 font-mono font-semibold">{c.code}</td>
+                            <td className="px-2 py-1 font-mono">{c.cableTypeCode ?? "—"}</td>
+                            <td className="px-2 py-1 truncate max-w-[180px]">
+                              {c.fromLabel} → {c.toLabel}
+                            </td>
+                            <td className="px-2 py-1 text-right font-mono">
+                              {routeLen != null ? routeLen.toFixed(1) : "—"}
+                            </td>
+                            <td className="px-2 py-1 text-right font-mono">{c.reserveM.toFixed(1)}</td>
+                            <td className="px-2 py-1 text-right font-mono font-semibold">
+                              {c.totalM != null ? c.totalM.toFixed(1) : "—"}
+                            </td>
+                            <td className="px-2 py-1 font-mono">
+                              <span className={c.note ? "text-amber-600 dark:text-amber-400" : ""} title={c.note ?? undefined}>
+                                {c.status}
+                                {c.note ? " ⚠" : ""}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============= PER-DAY-PLAN BLOCKS ============= */}
+      {plans.length === 0 ? (
+        <div className="rounded-sm border border-dashed border-border p-3 text-center text-[11px] text-muted-foreground">
+          Zatím žádný denní plán tahání. Vytvořte jej v záložce „5 · Zadat plán" pro rozdělení metráže na jednotlivá kola.
+        </div>
+      ) : null}
       {plans.map((p: any) => {
         const isOpen = expanded[p.id] ?? true;
         const sum = p.summary;
