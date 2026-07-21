@@ -112,12 +112,15 @@ function PullManagerPage() {
       toast.error("Vyberte právě dva endpointy.");
       return;
     }
+    if (pairs.length >= spoolCapacity) {
+      toast.error(`Kolo je plné — cívek na plánu je jen ${spoolCapacity}.`);
+      return;
+    }
     const [a, b] = selected;
     if (pairs.some((p) => (p.fromEndpointId === a && p.toEndpointId === b) || (p.fromEndpointId === b && p.toEndpointId === a))) {
       toast.error("Tato relace už je v seznamu.");
       return;
     }
-    // default cable type from either endpoint kind? just null; user picks.
     try {
       const res = await proposeFn({
         data: {
@@ -148,6 +151,38 @@ function PullManagerPage() {
       toast.error(e?.message ?? "Chyba návrhu");
     }
   }
+
+  // Effective planned length per pair, equalized within roller groups (max wins).
+  const equalizedLength = useMemo(() => {
+    const m = new Map<number, number | null>();
+    pairs.forEach((p, i) => m.set(i, p.plannedLengthM));
+    for (const grp of rollerGroups) {
+      const idxs = pairs
+        .map((p, i) => (p.spoolId && grp.includes(p.spoolId) ? i : -1))
+        .filter((i) => i >= 0);
+      const lens = idxs.map((i) => pairs[i].plannedLengthM).filter((x): x is number => x != null);
+      if (lens.length === 0) continue;
+      const max = Math.max(...lens);
+      for (const i of idxs) m.set(i, max);
+    }
+    return m;
+  }, [pairs, rollerGroups]);
+
+  function toggleGroupPick(spoolId: string) {
+    setGroupPick((prev) => (prev.includes(spoolId) ? prev.filter((x) => x !== spoolId) : [...prev, spoolId]));
+  }
+  function addRollerGroup() {
+    if (groupPick.length < 2) {
+      toast.error("Vyberte alespoň dvě cívky.");
+      return;
+    }
+    setRollerGroups((prev) => [...prev.filter((g) => !g.some((s) => groupPick.includes(s))), [...groupPick]]);
+    setGroupPick([]);
+  }
+  function removeRollerGroup(idx: number) {
+    setRollerGroups((prev) => prev.filter((_, i) => i !== idx));
+  }
+
 
   async function reproposeAll() {
     if (!dayPlanId || pairs.length === 0) return;
