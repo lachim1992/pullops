@@ -99,7 +99,7 @@ export const Route = createFileRoute("/_authenticated/projects/$projectId/plans/
   component: PlanEditorPage,
 });
 
-type Mode = "calibrate" | "endpoint" | "route" | "rack" | "bundle" | "port" | "publish";
+type Mode = "calibrate" | "endpoint" | "route" | "rack" | "bundle" | "port" | "publish" | "meterage";
 
 type BundleSegmentType = "DIRECT" | "TRAY" | "WALL" | "CEILING";
 type BundleSegment = { type: BundleSegmentType; extra_pct: number };
