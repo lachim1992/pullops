@@ -212,7 +212,7 @@ export const getPullModeData = createServerFn({ method: "GET" })
     const { supabase } = context;
     const spoolLen = data.defaultSpoolLengthM;
 
-    const [plansRes, calsRes, endpointsRes, bundlesRes, typesRes, kindsRes, cablesRes, panelsRes, dayPlansRes, dayPlanCablesRes, planSpoolsRes, spoolsRes] =
+    const [plansRes, calsRes, endpointsRes, bundlesRes, typesRes, kindsRes, cablesRes, panelsRes, dayPlansRes, dayPlanCablesRes, planSpoolsRes, floorPlanSpoolsRes, spoolsRes] =
       await Promise.all([
         supabase
           .from("floor_plans")
@@ -246,7 +246,7 @@ export const getPullModeData = createServerFn({ method: "GET" })
         supabase
           .from("cables")
           .select(
-            "id, code, status, cable_type_id, override_length_m, branch_points, from_endpoint_id, to_endpoint_id, bundle_id, notes",
+            "id, code, status, cable_type_id, override_length_m, branch_points, from_endpoint_id, to_endpoint_id, bundle_id, notes, queued_for_pull",
           )
           .eq("project_id", data.projectId)
           .order("code", { ascending: true }),
@@ -270,14 +270,20 @@ export const getPullModeData = createServerFn({ method: "GET" })
           .eq("project_id", data.projectId)
           .order("sort_order", { ascending: true }),
         supabase
+          .from("floor_plan_spools")
+          .select("floor_plan_id, spool_id, sort_order")
+          .eq("project_id", data.projectId)
+          .order("sort_order", { ascending: true }),
+        supabase
           .from("spools")
           .select("id, serial_no, cable_type_id, current_length_m")
           .eq("project_id", data.projectId),
       ]);
 
-    for (const res of [plansRes, calsRes, endpointsRes, bundlesRes, typesRes, kindsRes, cablesRes, panelsRes, dayPlansRes, dayPlanCablesRes, planSpoolsRes, spoolsRes]) {
+    for (const res of [plansRes, calsRes, endpointsRes, bundlesRes, typesRes, kindsRes, cablesRes, panelsRes, dayPlansRes, dayPlanCablesRes, planSpoolsRes, floorPlanSpoolsRes, spoolsRes]) {
       if (res.error) throw new Error(res.error.message);
     }
+
 
 
     const docIds = (plansRes.data ?? [])
