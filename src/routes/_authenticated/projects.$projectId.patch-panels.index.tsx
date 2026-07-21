@@ -342,20 +342,38 @@ function PanelRow({
                     #{p.port_number}
                   </span>
                   {p.cable ? (
-                    <Link
-                      to="/projects/$projectId/cables/$cableId"
-                      params={{ projectId, cableId: p.cable.id }}
-                      className="flex-1 truncate font-mono hover:underline"
-                    >
-                      {p.cable.code}
-                    </Link>
+                    <>
+                      <Link
+                        to="/projects/$projectId/cables/$cableId"
+                        params={{ projectId, cableId: p.cable.id }}
+                        className="flex-1 truncate font-mono hover:underline"
+                      >
+                        {p.cable.code}
+                      </Link>
+                      <Badge variant="secondary" className="font-mono text-[10px]">
+                        {p.cable.status}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        title="Odpojit kabel od portu"
+                        onClick={() => unassign(p.cable!.id)}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </>
                   ) : (
-                    <span className="flex-1 text-muted-foreground italic">volný</span>
-                  )}
-                  {p.cable && (
-                    <Badge variant="secondary" className="font-mono text-[10px]">
-                      {p.cable.status}
-                    </Badge>
+                    <>
+                      <span className="flex-1 text-muted-foreground italic">volný</span>
+                      <Link
+                        to="/projects/$projectId/patch-panels/$panelId"
+                        params={{ projectId, panelId: panel.id }}
+                        className="font-mono text-[10px] text-primary hover:underline"
+                      >
+                        + doplnit kabel
+                      </Link>
+                    </>
                   )}
                 </div>
               ))}
