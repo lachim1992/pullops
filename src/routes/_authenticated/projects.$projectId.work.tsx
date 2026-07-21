@@ -1298,24 +1298,35 @@ function PullMap({
                   <div className="mt-1 max-h-40 space-y-1 overflow-y-auto">
                     {selectedEndpointCables.map((c) => {
                       const cdone = c.status === "PULLED";
+                      const queued = c.queuedForPull;
+                      const label = cdone ? "HOTOVO" : queued ? "VE FRONTĚ" : "TAHAT →";
+                      const tone = cdone
+                        ? "border-primary/40 bg-primary/10 text-foreground"
+                        : queued
+                          ? "border-accent bg-accent/10 text-foreground"
+                          : "border-border hover:border-primary hover:bg-primary/5 text-muted-foreground";
                       return (
                         <button
                           key={c.id}
                           type="button"
-                          onClick={(e) => { e.stopPropagation(); onToggle?.(c, !cdone); }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (cdone) {
+                              onToggle?.(c, false);
+                            } else {
+                              onToggleQueue?.(c);
+                            }
+                          }}
                           disabled={!onToggle}
-                          className={`flex w-full items-center justify-between gap-2 rounded-sm border px-2 py-1 font-mono text-[10px] transition-colors ${
-                            cdone
-                              ? "border-primary/40 bg-primary/10 text-foreground"
-                              : "border-border hover:border-primary hover:bg-primary/5 text-muted-foreground"
-                          }`}
-                          title={cdone ? "Klikni pro vrácení na TAHAT" : "Klikni pro označení HOTOVO"}
+                          className={`flex w-full items-center justify-between gap-2 rounded-sm border px-2 py-1 font-mono text-[10px] transition-colors ${tone}`}
+                          title={cdone ? "Klikni pro vrácení" : queued ? "Klikni pro odebrání z fronty" : "Klikni pro zařazení do fronty"}
                         >
                           <span>{c.code}</span>
-                          <span className={cdone ? "text-primary" : "text-accent"}>{cdone ? "HOTOVO" : "TAHAT →"}</span>
+                          <span className={cdone ? "text-primary" : queued ? "text-accent" : "text-accent"}>{label}</span>
                         </button>
                       );
                     })}
+
                   </div>
                 </div>
               )}
