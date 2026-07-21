@@ -419,7 +419,7 @@ export const createCableFromPort = createServerFn({ method: "POST" })
     if (eperr) throw new Error(eperr.message);
     const endpointId = (epRow as { id: string }).id;
 
-    // Nearest bundle on this plan
+    // Nearest bundle on this plan (route via best trunk / direct)
     const { data: bundles } = await supabase
       .from("cable_bundles")
       .select("id, points")
@@ -430,7 +430,6 @@ export const createCableFromPort = createServerFn({ method: "POST" })
       points: (b.points as unknown as NormPoint[]) ?? [],
     }));
     const epPos: NormPoint = { x: data.endpoint.x, y: data.endpoint.y };
-    const nearest = nearestBundle(epPos, bundleList);
 
     // Resolve rack position for the port (start of the trace)
     const { data: portRow } = await supabase
@@ -458,20 +457,21 @@ export const createCableFromPort = createServerFn({ method: "POST" })
     }
 
     let branch: NormPoint[] | null = null;
-    if (nearest) {
-      const bundlePts = bundleList.find((b) => b.id === nearest.id)!.points;
-      const anchorEp = closestPointOnPolyline(epPos, bundlePts);
-      const arr: NormPoint[] = [];
-      if (rackPoint) {
-        arr.push(rackPoint);
-        const anchorRack = closestPointOnPolyline(rackPoint, bundlePts);
-        if (anchorRack) arr.push(anchorRack.point);
-      }
-      if (anchorEp) arr.push(anchorEp.point);
-      arr.push(epPos);
-      branch = arr;
-    } else if (rackPoint) {
-      branch = [rackPoint, epPos];
+    let usedBundleId: string | null = null;
+    if (rackPoint) {
+      const routerBundles: Bundle[] = bundleList.map((b) => ({
+        id: b.id,
+        points: b.points,
+        rackId: null,
+        isPrimary: false,
+      }));
+      const route = computeBestRoute({
+        rack: rackPoint,
+        endpoint: epPos,
+        bundles: routerBundles,
+      });
+      branch = route.polyline.length ? route.polyline : [rackPoint, epPos];
+      usedBundleId = route.usedBundleIds[0] ?? null;
     }
 
     // Create cable
@@ -484,7 +484,7 @@ export const createCableFromPort = createServerFn({ method: "POST" })
         cable_type_id: data.cableTypeId ?? null,
         from_port_id: data.portId,
         to_endpoint_id: endpointId,
-        bundle_id: nearest?.id ?? null,
+        bundle_id: usedBundleId,
         branch_points: branch,
         created_by: userId,
       } as never)
@@ -495,6 +495,7 @@ export const createCableFromPort = createServerFn({ method: "POST" })
     return {
       cableId: (cabRow as { id: string }).id,
       endpointId,
-      bundleId: nearest?.id ?? null,
+      bundleId: usedBundleId,
     };
   });
+
