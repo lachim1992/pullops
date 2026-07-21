@@ -34,7 +34,7 @@ import {
   unassignSpoolFromPlan,
 } from "@/lib/planSpools.functions";
 import { runOptimizer } from "@/lib/pullOptimizer.functions";
-import { getPlanMeterage, setPlanCableBundle } from "@/lib/planMeterage.functions";
+import { getPlanMeterage, setPlanCableBundle, assignSpoolToFloorPlan, unassignSpoolFromFloorPlan } from "@/lib/planMeterage.functions";
 import { listProjectMembersLite } from "@/lib/defects.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Textarea } from "@/components/ui/textarea";
