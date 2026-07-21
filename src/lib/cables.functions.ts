@@ -204,10 +204,15 @@ export async function recomputeOne(supabase: any, cable: any): Promise<number | 
   if (trunkResult != null) {
     await supabase
       .from("cables")
-      .update({ computed_length_m: trunkResult })
+      .update({
+        computed_length_m: trunkResult.meters,
+        bundle_id: trunkResult.bundleId,
+        branch_points: trunkResult.polyline as unknown as never,
+      })
       .eq("id", cable.id);
-    return trunkResult;
+    return trunkResult.meters;
   }
+
 
   let manualRouteLengthM: number | null = null;
   let routePoints: NormPoint[] = [];
