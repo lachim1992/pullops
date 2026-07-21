@@ -716,9 +716,25 @@ export const getPullModeData = createServerFn({ method: "GET" })
         wasted: Math.max(0, s.capacity - s.used),
       })),
       dayBlocks,
+      planBlocks,
       hoursByType,
     };
   });
+
+export const setCableQueuedForPull = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ cableId: z.string().uuid(), queued: z.boolean() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("cables")
+      .update({ queued_for_pull: data.queued } as never)
+      .eq("id", data.cableId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 
 export const setCablePullStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
