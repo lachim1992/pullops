@@ -2,7 +2,121 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { closestPointOnPolyline, nearestBundle, type NormPoint } from "@/lib/length";
+import { closestPointOnPolyline, nearestBundle, normDistance, type NormPoint } from "@/lib/length";
+
+// --- Clustering helpers -----------------------------------------------------
+
+type Loc = { segIndex: number; t: number; point: NormPoint; arc: number };
+
+function locateOnBundle(p: NormPoint, poly: NormPoint[]): Loc | null {
+  if (poly.length < 2) return null;
+  let best: { segIndex: number; t: number; point: NormPoint; d2: number } | null = null;
+  for (let i = 1; i < poly.length; i++) {
+    const a = poly[i - 1];
+    const b = poly[i];
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const len2 = dx * dx + dy * dy;
+    let t = 0;
+    if (len2 > 0) {
+      t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2;
+      t = Math.max(0, Math.min(1, t));
+    }
+    const point = { x: a.x + t * dx, y: a.y + t * dy };
+    const ddx = p.x - point.x;
+    const ddy = p.y - point.y;
+    const d2 = ddx * ddx + ddy * ddy;
+    if (!best || d2 < best.d2) best = { segIndex: i - 1, t, point, d2 };
+  }
+  if (!best) return null;
+  // cumulative arc-length up to the located point
+  let arc = 0;
+  for (let i = 0; i < best.segIndex; i++) arc += normDistance(poly[i], poly[i + 1]);
+  arc += normDistance(poly[best.segIndex], best.point);
+  return { segIndex: best.segIndex, t: best.t, point: best.point, arc };
+}
+
+function pointAtArc(poly: NormPoint[], target: number): NormPoint {
+  if (poly.length < 2) return poly[0] ?? { x: 0, y: 0 };
+  let remaining = Math.max(0, target);
+  for (let i = 1; i < poly.length; i++) {
+    const seg = normDistance(poly[i - 1], poly[i]);
+    if (remaining <= seg || i === poly.length - 1) {
+      const t = seg > 0 ? Math.min(1, remaining / seg) : 0;
+      return {
+        x: poly[i - 1].x + (poly[i].x - poly[i - 1].x) * t,
+        y: poly[i - 1].y + (poly[i].y - poly[i - 1].y) * t,
+      };
+    }
+    remaining -= seg;
+  }
+  return poly[poly.length - 1];
+}
+
+/** Distance threshold along a trunk within which endpoints share a spine. */
+const CLUSTER_ARC_THRESHOLD = 0.06;
+/** Max direct endpoint-to-endpoint distance to still be considered same cluster. */
+const CLUSTER_DIRECT_THRESHOLD = 0.08;
+
+type ClusterItem = {
+  cableId: string;
+  endpoint: NormPoint;
+  epLoc: Loc;
+  rack: NormPoint | null;
+  rackLoc: Loc | null;
+};
+
+/** Group items sharing a trunk into arc-adjacent clusters and emit branch_points. */
+function clusterItemsOnBundle(
+  bundlePts: NormPoint[],
+  items: ClusterItem[],
+): Map<string, NormPoint[]> {
+  const out = new Map<string, NormPoint[]>();
+  if (items.length === 0) return out;
+  const sorted = [...items].sort((a, b) => a.epLoc.arc - b.epLoc.arc);
+  let cluster: ClusterItem[] = [];
+  const flush = () => {
+    if (cluster.length === 0) return;
+    const arcs = cluster.map((c) => c.epLoc.arc);
+    const midArc = (Math.min(...arcs) + Math.max(...arcs)) / 2;
+    const spine = pointAtArc(bundlePts, midArc);
+    const centroid = {
+      x: cluster.reduce((s, c) => s + c.endpoint.x, 0) / cluster.length,
+      y: cluster.reduce((s, c) => s + c.endpoint.y, 0) / cluster.length,
+    };
+    for (const it of cluster) {
+      const branch: NormPoint[] = [];
+      if (it.rack) {
+        branch.push(it.rack);
+        if (it.rackLoc) branch.push(it.rackLoc.point);
+      }
+      branch.push(spine);
+      if (cluster.length > 1) branch.push(centroid);
+      branch.push(it.endpoint);
+      out.set(it.cableId, branch);
+    }
+    cluster = [];
+  };
+  for (const it of sorted) {
+    if (cluster.length === 0) {
+      cluster.push(it);
+      continue;
+    }
+    const last = cluster[cluster.length - 1];
+    const arcOk = it.epLoc.arc - last.epLoc.arc <= CLUSTER_ARC_THRESHOLD;
+    const directOk = normDistance(it.endpoint, last.endpoint) <= CLUSTER_DIRECT_THRESHOLD;
+    if (arcOk && directOk) {
+      cluster.push(it);
+    } else {
+      flush();
+      cluster.push(it);
+    }
+  }
+  flush();
+  return out;
+}
+
+
 
 /**
  * Auto-assign every cable on a floor plan (that has a to_endpoint on this plan)
@@ -86,47 +200,57 @@ export const autoAssignBundlesForPlan = createServerFn({ method: "POST" })
     const { data: cables, error } = await query;
     if (error) throw new Error(error.message);
 
+    // Group cables by (bundle, rack) so cluster spines are shared.
+    type Grouped = { bundlePts: NormPoint[]; items: ClusterItem[]; bundleId: string };
+    const groups = new Map<string, Grouped>();
     let assigned = 0;
     let skipped = 0;
+
     for (const c of cables ?? []) {
       const epId = c.to_endpoint_id as string | null;
-      if (!epId) {
-        skipped++;
-        continue;
-      }
+      if (!epId) { skipped++; continue; }
       const pos = epMap.get(epId);
-      if (!pos) {
-        skipped++;
-        continue;
-      }
+      if (!pos) { skipped++; continue; }
       const nb = nearestBundle(pos, bundleList);
-      if (!nb) {
-        skipped++;
-        continue;
-      }
+      if (!nb) { skipped++; continue; }
       const bundlePts = bundleList.find((b) => b.id === nb.id)!.points;
-      const anchorEp = closestPointOnPolyline(pos, bundlePts);
-      const branch: NormPoint[] = [];
-      // rack origin (if cable comes from a port on a rack on this plan)
+      const epLoc = locateOnBundle(pos, bundlePts);
+      if (!epLoc) { skipped++; continue; }
       const portId = c.from_port_id as string | null;
       const rackId = portId ? portToRack.get(portId) : undefined;
       const rp = rackId ? rackPos.get(rackId) : undefined;
-      if (rp) {
-        branch.push(rp);
-        const anchorRack = closestPointOnPolyline(rp, bundlePts);
-        if (anchorRack) branch.push(anchorRack.point);
+      const rackLoc = rp ? locateOnBundle(rp, bundlePts) : null;
+      const key = `${nb.id}::${rackId ?? "none"}`;
+      let g = groups.get(key);
+      if (!g) {
+        g = { bundlePts, items: [], bundleId: nb.id };
+        groups.set(key, g);
       }
-      if (anchorEp) branch.push(anchorEp.point);
-      branch.push(pos);
-      const { error: uerr } = await supabase
-        .from("cables")
-        .update({ bundle_id: nb.id, branch_points: branch } as never)
-        .eq("id", c.id as string);
-      if (uerr) throw new Error(uerr.message);
-      assigned++;
+      g.items.push({
+        cableId: c.id as string,
+        endpoint: pos,
+        epLoc,
+        rack: rp ?? null,
+        rackLoc,
+      });
+    }
+
+    for (const g of groups.values()) {
+      const branches = clusterItemsOnBundle(g.bundlePts, g.items);
+      for (const it of g.items) {
+        const branch = branches.get(it.cableId);
+        if (!branch) continue;
+        const { error: uerr } = await supabase
+          .from("cables")
+          .update({ bundle_id: g.bundleId, branch_points: branch } as never)
+          .eq("id", it.cableId);
+        if (uerr) throw new Error(uerr.message);
+        assigned++;
+      }
     }
     return { assigned, skipped, reason: "ok" as const };
   });
+
 
 /**
  * Project-wide auto-assign: for every cable with a to_endpoint, pick the
@@ -220,17 +344,15 @@ export const autoAssignBundlesForProject = createServerFn({ method: "POST" })
     let skipped = 0;
     const missingBundlesOnPlans = new Set<string>();
 
+    // Group by (plan, bundle, rack) to share a spine across nearby endpoints.
+    type Grouped = { bundlePts: NormPoint[]; bundleId: string; items: ClusterItem[] };
+    const groups = new Map<string, Grouped>();
+
     for (const c of cables ?? []) {
       const epId = c.to_endpoint_id as string | null;
-      if (!epId) {
-        skipped++;
-        continue;
-      }
+      if (!epId) { skipped++; continue; }
       const ep = epInfo.get(epId);
-      if (!ep) {
-        skipped++;
-        continue;
-      }
+      if (!ep) { skipped++; continue; }
       const bundleList = bundlesByPlan.get(ep.plan) ?? [];
       if (bundleList.length === 0) {
         missingBundlesOnPlans.add(ep.plan);
@@ -238,33 +360,46 @@ export const autoAssignBundlesForProject = createServerFn({ method: "POST" })
         continue;
       }
       const nb = nearestBundle(ep.pos, bundleList);
-      if (!nb) {
-        skipped++;
-        continue;
-      }
+      if (!nb) { skipped++; continue; }
       const bundlePts = bundleList.find((b) => b.id === nb.id)!.points;
-      const anchorEp = closestPointOnPolyline(ep.pos, bundlePts);
+      const epLoc = locateOnBundle(ep.pos, bundlePts);
+      if (!epLoc) { skipped++; continue; }
 
-      const branch: NormPoint[] = [];
       const portId = c.from_port_id as string | null;
       const rackId = portId ? portToRack.get(portId) : undefined;
       const rack = rackId ? rackById.get(rackId) : undefined;
-      // Only prepend rack if it lives on the SAME plan as the endpoint
-      if (rack && rack.plan === ep.plan) {
-        branch.push(rack.pos);
-        const anchorRack = closestPointOnPolyline(rack.pos, bundlePts);
-        if (anchorRack) branch.push(anchorRack.point);
-      }
-      if (anchorEp) branch.push(anchorEp.point);
-      branch.push(ep.pos);
+      const rackSamePlan = rack && rack.plan === ep.plan ? rack.pos : null;
+      const rackLoc = rackSamePlan ? locateOnBundle(rackSamePlan, bundlePts) : null;
 
-      const { error: uerr } = await supabase
-        .from("cables")
-        .update({ bundle_id: nb.id, branch_points: branch } as never)
-        .eq("id", c.id as string);
-      if (uerr) throw new Error(uerr.message);
-      assigned++;
+      const key = `${ep.plan}::${nb.id}::${rackId ?? "none"}`;
+      let g = groups.get(key);
+      if (!g) {
+        g = { bundlePts, bundleId: nb.id, items: [] };
+        groups.set(key, g);
+      }
+      g.items.push({
+        cableId: c.id as string,
+        endpoint: ep.pos,
+        epLoc,
+        rack: rackSamePlan,
+        rackLoc,
+      });
     }
+
+    for (const g of groups.values()) {
+      const branches = clusterItemsOnBundle(g.bundlePts, g.items);
+      for (const it of g.items) {
+        const branch = branches.get(it.cableId);
+        if (!branch) continue;
+        const { error: uerr } = await supabase
+          .from("cables")
+          .update({ bundle_id: g.bundleId, branch_points: branch } as never)
+          .eq("id", it.cableId);
+        if (uerr) throw new Error(uerr.message);
+        assigned++;
+      }
+    }
+
 
     return {
       assigned,
