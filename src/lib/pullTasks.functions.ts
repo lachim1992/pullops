@@ -621,35 +621,59 @@ export const getPullModeData = createServerFn({ method: "GET" })
     });
 
 
-    // Unassigned cables → global fallback packing per type
-    const unassignedByType = new Map<string, Array<{ id: string; code: string; meters: number }>>();
-    for (const c of cableRows) {
-      if (c.meters == null) continue;
-      if (assignedCableIds.has(c.id)) continue;
-      const arr = unassignedByType.get(c.typeCode) ?? [];
-      arr.push({ id: c.id, code: c.code, meters: c.meters });
-      unassignedByType.set(c.typeCode, arr);
+    // Physical spools assigned per floor plan (preferred source for Rezim tahani).
+    const physSpoolsByFloorPlan = new Map<string, PhysSpool[]>();
+    for (const a of floorPlanSpoolsRes.data ?? []) {
+      const info = spoolInfoById.get(a.spool_id as string);
+      if (!info) continue;
+      const fpid = a.floor_plan_id as string;
+      if (!physSpoolsByFloorPlan.has(fpid)) physSpoolsByFloorPlan.set(fpid, []);
+      physSpoolsByFloorPlan.get(fpid)!.push({
+        id: a.spool_id as string,
+        serialNo: info.serial,
+        typeCode: info.typeCode,
+        capacity: info.capacity,
+      });
     }
-    const spools: Spool[] = [];
-    for (const [typeCode, list] of unassignedByType) {
-      list.sort((a, b) => b.meters - a.meters);
-      let index = 1;
-      const local: Spool[] = [];
-      for (const cable of list) {
-        if (cable.meters > spoolLen) {
-          local.push({ index: index++, typeCode, used: cable.meters, capacity: cable.meters, cables: [cable] });
-          continue;
-        }
-        const fit = local.find((s) => s.capacity === spoolLen && s.used + cable.meters <= spoolLen);
-        if (fit) {
-          fit.used += cable.meters;
-          fit.cables.push(cable);
-        } else {
-          local.push({ index: index++, typeCode, used: cable.meters, capacity: spoolLen, cables: [cable] });
-        }
+
+    // Build plan-level blocks: one block per floor plan, containing physical spools
+    // from floor_plan_spools, packed with cables that live on that plan
+    // (queued_for_pull OR already PULLED — the interesting subset for the pulling view).
+    const planBlocks = plans.map((p) => {
+      const phys = physSpoolsByFloorPlan.get(p.id) ?? [];
+      const entries: CableEntry[] = [];
+      for (const c of cableRows) {
+        if (c.floorPlanId !== p.id) continue;
+        if (c.meters == null) continue;
+        // Include cables that are queued for pulling or already pulled, plus assignment happens greedily
+        if (!c.queuedForPull && c.status !== "PULLED") continue;
+        entries.push({ id: c.id, code: c.code, meters: c.meters, typeCode: c.typeCode });
       }
-      spools.push(...local);
-    }
+      const blockSpools = phys.length > 0
+        ? packBlockPhysical(entries, phys)
+        : packBlock(entries, Math.max(1, phys.length || 1), spoolLen);
+      const totalUsed = blockSpools.reduce((a, s) => a + s.used, 0);
+      const totalCapacity = blockSpools.reduce((a, s) => a + s.capacity, 0);
+      return {
+        id: `plan-${p.id}`,
+        floorPlanId: p.id,
+        name: p.name,
+        spoolCount: blockSpools.length,
+        spoolLengthM: spoolLen,
+        totalUsed,
+        totalCapacity,
+        spools: blockSpools.map((s) => ({
+          ...s,
+          serialNo: s.serialNo ?? null,
+          wasted: Math.max(0, s.capacity - s.used),
+        })),
+        hasPhysical: phys.length > 0,
+      };
+    });
+
+    // Empty legacy fallback — plan-level packing is the source of truth now.
+    const spools: Spool[] = [];
+
 
     const byType = new Map<string, Array<{ id: string; code: string; meters: number }>>();
     for (const c of cableRows) {
