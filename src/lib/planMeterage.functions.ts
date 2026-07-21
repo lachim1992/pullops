@@ -258,6 +258,36 @@ export const getPlanMeterage = createServerFn({ method: "GET" })
 
     // Build cables list grouped by plan (only cables belonging to day plans on this floor plan)
     const planIds = new Set((plansRes.data ?? []).map((p: any) => p.id as string));
+
+    // Backfill stored computed_length_m for cables that have a rack side but
+    // no cached length yet, so the trunk-aware engine feeds the plan view.
+    const staleCables = (cablesRes.data ?? []).filter((c: any) => {
+      const dp = planByCable.get(c.id as string);
+      if (!dp || !planIds.has(dp)) return false;
+      if (c.override_length_m != null) return false;
+      if (c.computed_length_m != null) return false;
+      return c.from_port_id || c.to_port_id;
+    });
+    if (staleCables.length > 0) {
+      const results = await Promise.all(
+        staleCables.map((c: any) =>
+          recomputeOne(supabase, {
+            id: c.id,
+            cable_type_id: c.cable_type_id,
+            route_id: null,
+            override_length_m: c.override_length_m,
+            from_endpoint_id: c.from_endpoint_id,
+            to_endpoint_id: c.to_endpoint_id,
+            from_port_id: c.from_port_id,
+            to_port_id: c.to_port_id,
+          }).catch(() => null),
+        ),
+      );
+      staleCables.forEach((c: any, i: number) => {
+        if (results[i] != null) c.computed_length_m = results[i];
+      });
+    }
+
     const cablesByPlan = new Map<string, CableRow[]>();
     for (const c of cablesRes.data ?? []) {
       const cc = c as any;
