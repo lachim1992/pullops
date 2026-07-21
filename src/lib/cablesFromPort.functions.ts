@@ -91,9 +91,13 @@ export const autoAssignBundlesForPlan = createServerFn({ method: "POST" })
     const { data: cables, error } = await query;
     if (error) throw new Error(error.message);
 
-    // Group cables by (bundle, rack) so cluster spines are shared.
-    type Grouped = { bundlePts: NormPoint[]; items: ClusterItem[]; bundleId: string };
-    const groups = new Map<string, Grouped>();
+    const routerBundles: Bundle[] = bundleList.map((b) => ({
+      id: b.id,
+      points: b.points,
+      rackId: null,
+      isPrimary: false,
+    }));
+
     let assigned = 0;
     let skipped = 0;
 
@@ -102,45 +106,25 @@ export const autoAssignBundlesForPlan = createServerFn({ method: "POST" })
       if (!epId) { skipped++; continue; }
       const pos = epMap.get(epId);
       if (!pos) { skipped++; continue; }
-      const nb = nearestBundle(pos, bundleList);
-      if (!nb) { skipped++; continue; }
-      const bundlePts = bundleList.find((b) => b.id === nb.id)!.points;
-      const epLoc = locateOnBundle(pos, bundlePts);
-      if (!epLoc) { skipped++; continue; }
       const portId = c.from_port_id as string | null;
       const rackId = portId ? portToRack.get(portId) : undefined;
       const rp = rackId ? rackPos.get(rackId) : undefined;
-      const rackLoc = rp ? locateOnBundle(rp, bundlePts) : null;
-      const key = `${nb.id}::${rackId ?? "none"}`;
-      let g = groups.get(key);
-      if (!g) {
-        g = { bundlePts, items: [], bundleId: nb.id };
-        groups.set(key, g);
-      }
-      g.items.push({
-        cableId: c.id as string,
-        endpoint: pos,
-        epLoc,
-        rack: rp ?? null,
-        rackLoc,
-      });
-    }
-
-    for (const g of groups.values()) {
-      const branches = clusterItemsOnBundle(g.bundlePts, g.items);
-      for (const it of g.items) {
-        const branch = branches.get(it.cableId);
-        if (!branch) continue;
-        const { error: uerr } = await supabase
-          .from("cables")
-          .update({ bundle_id: g.bundleId, branch_points: branch } as never)
-          .eq("id", it.cableId);
-        if (uerr) throw new Error(uerr.message);
-        assigned++;
-      }
+      if (!rp) { skipped++; continue; }
+      const route = computeBestRoute({ rack: rp, endpoint: pos, bundles: routerBundles });
+      if (!route.polyline.length || !route.usedBundleIds.length) { skipped++; continue; }
+      const { error: uerr } = await supabase
+        .from("cables")
+        .update({
+          bundle_id: route.usedBundleIds[0],
+          branch_points: route.polyline as unknown as never,
+        })
+        .eq("id", c.id);
+      if (uerr) throw new Error(uerr.message);
+      assigned++;
     }
     return { assigned, skipped, reason: "ok" as const };
   });
+
 
 
 /**
