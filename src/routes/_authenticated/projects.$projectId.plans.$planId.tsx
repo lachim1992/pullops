@@ -325,7 +325,7 @@ function PlanEditorPage() {
 
   // Native non-passive wheel listener → smooth zoom without page scroll
   useEffect(() => {
-    const el = viewportRef.current;
+    const el = viewportEl;
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
@@ -336,7 +336,7 @@ function PlanEditorPage() {
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
-  }, []);
+  }, [viewportEl]);
 
   // Global pan handlers so drag doesn't get stuck when leaving the viewport.
   // Uses direct DOM writes + rAF; no React re-render until mouseup.
