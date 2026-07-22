@@ -446,7 +446,7 @@ function PlanEditorPage() {
       el.removeEventListener("touchend", onEnd);
       el.removeEventListener("touchcancel", onEnd);
     };
-  }, []);
+  }, [viewportEl]);
 
   // Space bar → hold to pan with left mouse
   useEffect(() => {
