@@ -246,7 +246,12 @@ function PlanEditorPage() {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
-  const viewportRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const [viewportEl, setViewportEl] = useState<HTMLDivElement | null>(null);
+  const setViewport = useCallback((el: HTMLDivElement | null) => {
+    viewportRef.current = el;
+    setViewportEl(el);
+  }, []);
   const contentRef = useRef<HTMLDivElement>(null);
   const panStateRef = useRef<{ startX: number; startY: number; ox: number; oy: number } | null>(
     null,
