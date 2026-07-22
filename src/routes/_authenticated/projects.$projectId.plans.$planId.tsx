@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -246,7 +246,12 @@ function PlanEditorPage() {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
-  const viewportRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const [viewportEl, setViewportEl] = useState<HTMLDivElement | null>(null);
+  const setViewport = useCallback((el: HTMLDivElement | null) => {
+    viewportRef.current = el;
+    setViewportEl(el);
+  }, []);
   const contentRef = useRef<HTMLDivElement>(null);
   const panStateRef = useRef<{ startX: number; startY: number; ox: number; oy: number } | null>(
     null,
@@ -320,7 +325,7 @@ function PlanEditorPage() {
 
   // Native non-passive wheel listener → smooth zoom without page scroll
   useEffect(() => {
-    const el = viewportRef.current;
+    const el = viewportEl;
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
@@ -331,7 +336,7 @@ function PlanEditorPage() {
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
-  }, []);
+  }, [viewportEl]);
 
   // Global pan handlers so drag doesn't get stuck when leaving the viewport.
   // Uses direct DOM writes + rAF; no React re-render until mouseup.
@@ -362,7 +367,7 @@ function PlanEditorPage() {
 
   // Touch support: single-finger pan, two-finger pinch zoom (mobile).
   useEffect(() => {
-    const el = viewportRef.current;
+    const el = viewportEl;
     if (!el) return;
     let mode: "none" | "pan" | "pinch" = "none";
     let startX = 0;
@@ -441,7 +446,7 @@ function PlanEditorPage() {
       el.removeEventListener("touchend", onEnd);
       el.removeEventListener("touchcancel", onEnd);
     };
-  }, []);
+  }, [viewportEl]);
 
   // Space bar → hold to pan with left mouse
   useEffect(() => {
@@ -946,7 +951,7 @@ function PlanEditorPage() {
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div
-          ref={viewportRef}
+          ref={setViewport}
           className="field-plan-viewer relative h-[calc(100vh-220px)] min-h-[560px] w-full overflow-hidden rounded-sm border border-border bg-muted"
           style={{ cursor: isPanning ? "grabbing" : spaceDownRef.current ? "grab" : "default", touchAction: "none" }}
           onMouseDown={handleViewportMouseDown}
