@@ -367,7 +367,7 @@ function PlanEditorPage() {
 
   // Touch support: single-finger pan, two-finger pinch zoom (mobile).
   useEffect(() => {
-    const el = viewportRef.current;
+    const el = viewportEl;
     if (!el) return;
     let mode: "none" | "pan" | "pinch" = "none";
     let startX = 0;
