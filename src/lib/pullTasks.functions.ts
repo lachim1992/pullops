@@ -481,7 +481,13 @@ export const getPullModeData = createServerFn({ method: "GET" })
       });
     }
 
-    /** Pack cables into a fixed set of physical spools (FFD by type). */
+    /**
+     * Distribute cables across physical spools — one cable per spool per "round",
+     * because cables in the same pulling batch cannot share a spool (you can't
+     * physically pull two cables off the same reel simultaneously). We spread
+     * evenly: pick the spool of matching type with the FEWEST cables (ties
+     * broken by least used meters) that still has capacity.
+     */
     function packBlockPhysical(entries: CableEntry[], phys: PhysSpool[]): Spool[] {
       const spools: Spool[] = phys.map((p, i) => ({
         index: i + 1,
@@ -491,7 +497,6 @@ export const getPullModeData = createServerFn({ method: "GET" })
         serialNo: p.serialNo,
         cables: [],
       }));
-      // Group entries by typeCode, longest-first
       const byType = new Map<string, CableEntry[]>();
       for (const e of entries) {
         const arr = byType.get(e.typeCode) ?? [];
@@ -500,14 +505,16 @@ export const getPullModeData = createServerFn({ method: "GET" })
       }
       for (const [tc, list] of byType) {
         list.sort((a, b) => b.meters - a.meters);
-        const pool = spools.filter((s) => s.typeCode === tc);
         for (const cable of list) {
-          const fit = pool.find((s) => s.used + cable.meters <= s.capacity);
-          if (fit) {
-            fit.used += cable.meters;
-            fit.cables.push(cable);
+          const pool = spools.filter(
+            (s) => s.typeCode === tc && s.used + cable.meters <= s.capacity,
+          );
+          if (pool.length > 0) {
+            pool.sort((a, b) => a.cables.length - b.cables.length || a.used - b.used);
+            const target = pool[0];
+            target.used += cable.meters;
+            target.cables.push(cable);
           } else {
-            // Overflow: add virtual spool of exactly cable length
             spools.push({
               index: spools.length + 1,
               typeCode: tc,
@@ -521,6 +528,7 @@ export const getPullModeData = createServerFn({ method: "GET" })
       }
       return spools;
     }
+
 
     /** Pack a list of cable entries into a fixed number of spools of given length using FFD. */
     function packBlock(
